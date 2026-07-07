@@ -6,6 +6,7 @@
 
 - **v1 (2026-07-07, attempt 1):** executed in sandbox `sbx-20260707-1029-review-pipeline`; produced correct repo content but relied on environment workarounds (manual library vendoring, parallel R install) that violated integrity expectations. **Discarded, unmerged**; archived on Liz's host as local branch `phase-0-attempt1` (never pushed). Do not resume it.
 - **v2 (this document):** supersedes v1. Execute from scratch in a **fresh sandbox** under the hard rules below. Legitimate v1 learnings (exact commands that work, checks that NOTE, parser quirks) are folded into the task text.
+- **v2 execution amendment (2026-07-07, during Task 1, signed off by Liz):** R 4.6.1 does not transmit its default `HTTPUserAgent` option (undocumented — absent from the 4.6 series release NEWS; verified by local header capture), so PPM saw a generic libcurl client and served source tarballs over the correct URLs — 113 local compiles instead of binaries. Remedy, as a general rule rather than a per-step patch: sandbox-wide `HTTPUserAgent` in `/etc/R/Rprofile.site` (new Step 5a) plus explicit belt-and-braces lines in the two scripted PPM install commands; see the Global Constraints entry. The Task 1 library was discarded and reinstalled as PPM binaries (option A).
 - **v2 pre-flight amendments (2026-07-07, signed off by Liz before Task 1):** (a) CLAUDE.md's recorded R decision updated to match this plan (committed separately); (b) project documentation folder `docs/` renamed `dev/` — frees `docs/` for pkgdown's default output and removes the latent `use_pkgdown()` gitignore trap; Task 3's build-ignore list, Task 7 (now vanilla pkgdown defaults, no `destination` override), Task 8's README text, and all path references updated accordingly.
 
 **Goal:** Turn the empty `review-pipeline` repo into a green-CI R package skeleton (`revpiper`) with all conventions from spec §2 encoded in config files and documentation.
@@ -41,6 +42,8 @@
 | Anything else | Unauthorised — STOP and ask |
 
 If a package install would compile from source because no binary exists, PAUSE and report which package and why before proceeding — binary installs are the expectation.
+
+**R package installs — binary detection (amendment, 2026-07-07):** PPM decides binary-vs-source per request from the client's `User-Agent`, and R 4.6.1 does not transmit its default `HTTPUserAgent` option (undocumented change; PPM then silently serves source over the same URLs). This applies to ANY step that installs R packages, present or future. The sandbox-wide fix is Task 1 Step 5a (`/etc/R/Rprofile.site`); the scripted install commands also set the option explicitly to guard subprocess contexts that skip the site profile (`--vanilla`/`--no-site-file`). If any install reports `installing *source* package`, stop and re-check the User-Agent before suspecting anything else.
 
 - Package name `revpiper`; exported prefix `rev_` (no exports in Phase 0).
 - Declared floor `R (>= 4.2)`; no post-4.2 language features.
@@ -136,14 +139,26 @@ sudo sh -c "echo 'export LANG=C.UTF-8' >> /etc/sandbox-persistent.sh; echo 'expo
 
 (Version-suffixed library prevents cross-version contamination; C.UTF-8 avoids a spurious R CMD check locale WARNING seen in attempt 1.)
 
-- [ ] **Step 6: install the R toolchain — PPM binaries, the only authorised route.**
+- [ ] **Step 5a: PPM binary detection — set the R User-Agent sandbox-wide.** (Amendment, 2026-07-07 — see Global Constraints.) Persist the canonical PPM line in the site profile so every R session presents an R User-Agent:
 
 ```bash
-Rscript -e 'options(Ncpus = max(1L, parallel::detectCores() - 1L)); install.packages(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","renv","pkgdown"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))' 2>&1 | tee /tmp/r-toolchain-install.log | tail -3
-grep -c "installing \*source\* package" /tmp/r-toolchain-install.log
+sudo tee -a /etc/R/Rprofile.site >/dev/null <<'EOF'
+options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))
+EOF
+Rscript -e 'cat(getOption("HTTPUserAgent"), "\n")'
 ```
 
-Expected: final grep prints `0` (all binary). If it is nonzero, PAUSE and report which packages compiled from source and why before continuing (Global Constraints).
+Expected: `R/4.6.1 R (4.6.1 aarch64-unknown-linux-gnu aarch64 linux-gnu)`.
+
+- [ ] **Step 6: install the R toolchain — PPM binaries, the only authorised route.** (The explicit `HTTPUserAgent` line is belt-and-braces on top of Step 5a, for any context where the site profile is skipped.)
+
+```bash
+Rscript -e 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); options(Ncpus = max(1L, parallel::detectCores() - 1L)); install.packages(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","renv","pkgdown"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))' 2>&1 | tee /tmp/r-toolchain-install.log | tail -3
+grep -c "installing \*source\* package" /tmp/r-toolchain-install.log
+grep -c "installing \*binary\* package" /tmp/r-toolchain-install.log
+```
+
+Expected: the `*source*` grep prints `0` and the `*binary*` grep is nonzero (all binary). If `*source*` is nonzero, PAUSE and report which packages compiled from source and why before continuing (Global Constraints).
 
 - [ ] **Step 7: verify.**
 
@@ -242,7 +257,7 @@ encoding: "UTF-8"
 - [ ] **Step 2:** install the toolchain into the renv project library by the same PPM-binary route as Task 1 Step 6 *(network hard rule and source-compile pause apply)*:
 
 ```bash
-Rscript -e 'renv::load("."); options(repos = c(PPM = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))); renv::install(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","pkgdown"))'
+Rscript -e 'renv::load("."); options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); options(repos = c(PPM = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))); renv::install(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","pkgdown"))'
 Rscript -e 'renv::load("."); renv::settings$snapshot.type("all"); renv::snapshot(prompt = FALSE)'
 ```
 
