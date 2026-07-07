@@ -39,6 +39,9 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   committed back into the spec via PR (spec §8.2).
 
 ## Project status pointers
+- Superpowers specs/plans live in dev/superpowers/{specs,plans}/ —
+  never write into docs/ (gitignored pkgdown output). This overrides
+  the superpowers skills' default docs/superpowers/ location.
 - Design spec: dev/superpowers/specs/2026-07-07-revpiper-design.md
 - Active plan: dev/superpowers/plans/2026-07-07-phase-0-bootstrap.md (v2;
   v1 was executed and discarded — see its Status section; do not resume
