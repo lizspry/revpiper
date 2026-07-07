@@ -9,3 +9,5 @@
 ^\.vscode$
 ^\.Rprofile$
 ^\.lintr$
+^\.github$
+^codecov\.yml$
