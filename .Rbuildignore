@@ -1,3 +1,5 @@
+^renv$
+^renv\.lock$
 ^LICENSE\.md$
 ^\.claude$
 ^\.superpowers$
@@ -5,3 +7,5 @@
 ^CLAUDE\.md$
 ^[.]?air[.]toml$
 ^\.vscode$
+^\.Rprofile$
+^\.lintr$
