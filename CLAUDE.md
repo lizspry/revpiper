@@ -29,7 +29,10 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
 - Every user-facing change adds a NEWS.md bullet in the same PR.
 
 ## Rhythm
-- Plan → get Liz's sign-off → implement in small reviewed steps.
+- Plan → get Liz's sign-off → pre-flight → implement in small reviewed steps.
+  A signed-off plan is itself the trigger for the pre-flight check
+  (~/.claude/rules/preflight.md): run it in the executing sandbox before the
+  first task; findings are fixed by plan amendment before execution.
 - Open questions resolve at their owning phase's planning step and are
   committed back into the spec via PR (spec §8.2).
 
