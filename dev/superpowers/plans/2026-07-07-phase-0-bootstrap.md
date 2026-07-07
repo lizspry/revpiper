@@ -6,6 +6,7 @@
 
 - **v1 (2026-07-07, attempt 1):** executed in sandbox `sbx-20260707-1029-review-pipeline`; produced correct repo content but relied on environment workarounds (manual library vendoring, parallel R install) that violated integrity expectations. **Discarded, unmerged**; archived on Liz's host as local branch `phase-0-attempt1` (never pushed). Do not resume it.
 - **v2 (this document):** supersedes v1. Execute from scratch in a **fresh sandbox** under the hard rules below. Legitimate v1 learnings (exact commands that work, checks that NOTE, parser quirks) are folded into the task text.
+- **v2 execution amendment 3 (2026-07-07, during Task 3, signed off by Liz):** R CMD check's "future file timestamps" step probes external time APIs — `worldclockapi.com` and `worldtimeapi.org`, both policy-blocked (reported per the network hard rule) — producing an "unable to verify current time" NOTE that trips the `error_on = "note"` gates. Liz chose R's documented switch over allowlisting: `_R_CHECK_SYSTEM_CLOCK_=0` persisted in the sandbox environment (Task 1 Step 5). Sandbox-only; CI unaffected.
 - **v2 execution amendment 2 (2026-07-07, after Task 2, signed off by Liz):** GitHub repo renamed `review-pipeline` → `revpiper` (resolving spec §1.5's decided-at-first-push question ahead of its deadline, before Tasks 3/7/8 hardcode the repo path). URL references below updated; spec updated per §8.2. Local working folders keep the old name — the sandbox mount depends on it, and R reads only DESCRIPTION.
 - **v2 execution amendment (2026-07-07, during Task 1, signed off by Liz):** R 4.6.1 does not transmit its default `HTTPUserAgent` option (undocumented — absent from the 4.6 series release NEWS; verified by local header capture), so PPM saw a generic libcurl client and served source tarballs over the correct URLs — 113 local compiles instead of binaries. Remedy, as a general rule rather than a per-step patch: sandbox-wide `HTTPUserAgent` in `/etc/R/Rprofile.site` (new Step 5a) plus explicit belt-and-braces lines in the two scripted PPM install commands; see the Global Constraints entry. The Task 1 library was discarded and reinstalled as PPM binaries (option A).
 - **v2 pre-flight amendments (2026-07-07, signed off by Liz before Task 1):** (a) CLAUDE.md's recorded R decision updated to match this plan (committed separately); (b) project documentation folder `docs/` renamed `dev/` — frees `docs/` for pkgdown's default output and removes the latent `use_pkgdown()` gitignore trap; Task 3's build-ignore list, Task 7 (now vanilla pkgdown defaults, no `destination` override), Task 8's README text, and all path references updated accordingly.
@@ -136,9 +137,10 @@ RV=$(Rscript -e 'cat(paste(R.version$major, sub("[.].*","",R.version$minor), sep
 mkdir -p ~/R/library/$RV
 sudo sh -c "echo 'export R_LIBS_USER=\$HOME/R/library/$RV' >> /etc/sandbox-persistent.sh"
 sudo sh -c "echo 'export LANG=C.UTF-8' >> /etc/sandbox-persistent.sh; echo 'export LC_ALL=C.UTF-8' >> /etc/sandbox-persistent.sh"
+sudo sh -c "echo 'export _R_CHECK_SYSTEM_CLOCK_=0' >> /etc/sandbox-persistent.sh"
 ```
 
-(Version-suffixed library prevents cross-version contamination; C.UTF-8 avoids a spurious R CMD check locale WARNING seen in attempt 1.)
+(Version-suffixed library prevents cross-version contamination; C.UTF-8 avoids a spurious R CMD check locale WARNING seen in attempt 1. `_R_CHECK_SYSTEM_CLOCK_=0` disables the check's external clock probe — `worldclockapi.com`/`worldtimeapi.org` are policy-blocked, otherwise yielding a NOTE; amendment 2026-07-07.)
 
 - [ ] **Step 5a: PPM binary detection — set the R User-Agent sandbox-wide.** (Amendment, 2026-07-07 — see Global Constraints.) Persist the canonical PPM line in the site profile so every R session presents an R User-Agent:
 
