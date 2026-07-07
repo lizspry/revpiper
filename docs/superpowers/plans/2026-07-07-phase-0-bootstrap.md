@@ -97,7 +97,7 @@ Expected: no "Blocked by network policy" responses (non-403 status codes like 40
 - [ ] **Step 3: system dependencies via apt.**
 
 ```bash
-sudo apt-get update && sudo apt-get install -y pandoc qpdf libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev libjpeg-dev
+sudo apt-get update && sudo apt-get install -y pandoc qpdf lsb-release libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev libjpeg-dev
 ```
 
 Expected: exit 0. *(Network hard rule applies — and no distro-mixing, apt pinning, or manual .deb fetches under any circumstances.)*
@@ -105,8 +105,9 @@ Expected: exit 0. *(Network hard rule applies — and no distro-mixing, apt pinn
 - [ ] **Step 3a: install R (4.6.1) from CRAN's official Ubuntu apt repository.**
 
 ```bash
-curl -fsSL https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee /etc/apt/trusted.gpg.d/cran.asc >/dev/null
-echo "deb https://cloud.r-project.org/bin/linux/ubuntu resolute-cran40/" | sudo tee /etc/apt/sources.list.d/cran.list
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee /etc/apt/keyrings/cran.asc >/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/cran.asc] https://cloud.r-project.org/bin/linux/ubuntu resolute-cran40/" | sudo tee /etc/apt/sources.list.d/cran.list
 sudo apt-get update && sudo apt-get install -y r-base r-base-dev
 R --version | head -1
 ```
@@ -240,7 +241,7 @@ encoding: "UTF-8"
 - [ ] **Step 2:** install the toolchain into the renv project library by the same PPM-binary route as Task 1 Step 6 *(network hard rule and source-compile pause apply)*:
 
 ```bash
-Rscript -e 'renv::load("."); renv::install(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","pkgdown"))'
+Rscript -e 'renv::load("."); options(repos = c(PPM = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))); renv::install(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","pkgdown"))'
 Rscript -e 'renv::load("."); renv::settings$snapshot.type("all"); renv::snapshot(prompt = FALSE)'
 ```
 
@@ -252,7 +253,7 @@ Rscript -e 'renv::load("."); renv::settings$snapshot.type("all"); renv::snapshot
 **Files:** Create `.github/workflows/{R-CMD-check,test-coverage,pkgdown,format-suggest}.yaml` (tidy bundle — format-suggest ships in the current bundle; pr-commands no longer does), plus `lint.yaml`, `codecov.yml`.
 
 - [ ] **Step 1:** `Rscript -e 'usethis::local_project(".", force = TRUE); usethis::use_tidy_github_actions(); usethis::use_github_action("lint")'`
-- [ ] **Step 2:** verify five workflows present; read R-CMD-check.yaml's matrix (expect macOS/Windows/Ubuntu × release/devel/oldrel-1..3); do not hand-edit.
+- [ ] **Step 2:** verify five workflows present; read R-CMD-check.yaml's matrix (expect macOS/Windows/Ubuntu × release/devel/oldrel-1..4 — oldrel-4 is the declared 4.2 floor). If the bundle's matrix stops at oldrel-3, the floor is never CI-tested: STOP and flag for a decision rather than hand-editing.
 - [ ] **Step 3:** commit.
 
 ### Task 7: pkgdown scaffolding
