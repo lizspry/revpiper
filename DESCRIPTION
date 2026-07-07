@@ -1,0 +1,22 @@
+Package: revpiper
+Title: Systematic Review Data Processing and Presentation Pipelines
+Version: 0.0.0.9000
+Authors@R: 
+    person("Liz", "Spry", , "liz.spry@gmail.com", role = c("aut", "cre"))
+Description: Takes systematic review teams from extracted data to
+    manuscript-ready tables and figures through user-authored
+    specifications: a data dictionary describing their extraction files,
+    declared assembly and automated cleaning, audited manual corrections,
+    and a tiered, re-runnable derivation layer.
+License: MIT + file LICENSE
+URL: https://github.com/lizspry/revpiper
+BugReports: https://github.com/lizspry/revpiper/issues
+Depends: 
+    R (>= 4.2)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/testthat/parallel: true
