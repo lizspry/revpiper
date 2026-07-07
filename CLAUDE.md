@@ -1,7 +1,7 @@
 # revpiper — instructions for AI sessions
 
-Read first: docs/conventions.md (rules) and
-docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
+Read first: dev/conventions.md (rules) and
+dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
 
 ## Hard rules
 - **Network policy:** whenever anything is blocked by network policy (HTTP
@@ -25,7 +25,7 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   (set by claude-config settings; verify with `git var GIT_AUTHOR_IDENT`
   at session start and before each commit).
 - main is protected; never commit to it. One branch per task.
-- TDD for all feature code. Run the pre-push suite (docs/conventions.md)
+- TDD for all feature code. Run the pre-push suite (dev/conventions.md)
   before declaring any branch ready.
 - Raw data under any project's data/raw/ is read-only, always.
 - Every user-facing change adds a NEWS.md bullet in the same PR.
@@ -39,7 +39,7 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   committed back into the spec via PR (spec §8.2).
 
 ## Project status pointers
-- Design spec: docs/superpowers/specs/2026-07-07-revpiper-design.md
-- Active plan: docs/superpowers/plans/2026-07-07-phase-0-bootstrap.md (v2;
+- Design spec: dev/superpowers/specs/2026-07-07-revpiper-design.md
+- Active plan: dev/superpowers/plans/2026-07-07-phase-0-bootstrap.md (v2;
   v1 was executed and discarded — see its Status section; do not resume
   the archived phase-0-attempt1 branch).

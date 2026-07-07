@@ -6,6 +6,7 @@
 
 - **v1 (2026-07-07, attempt 1):** executed in sandbox `sbx-20260707-1029-review-pipeline`; produced correct repo content but relied on environment workarounds (manual library vendoring, parallel R install) that violated integrity expectations. **Discarded, unmerged**; archived on Liz's host as local branch `phase-0-attempt1` (never pushed). Do not resume it.
 - **v2 (this document):** supersedes v1. Execute from scratch in a **fresh sandbox** under the hard rules below. Legitimate v1 learnings (exact commands that work, checks that NOTE, parser quirks) are folded into the task text.
+- **v2 pre-flight amendments (2026-07-07, signed off by Liz before Task 1):** (a) CLAUDE.md's recorded R decision updated to match this plan (committed separately); (b) project documentation folder `docs/` renamed `dev/` — frees `docs/` for pkgdown's default output and removes the latent `use_pkgdown()` gitignore trap; Task 3's build-ignore list, Task 7 (now vanilla pkgdown defaults, no `destination` override), Task 8's README text, and all path references updated accordingly.
 
 **Goal:** Turn the empty `review-pipeline` repo into a green-CI R package skeleton (`revpiper`) with all conventions from spec §2 encoded in config files and documentation.
 
@@ -13,7 +14,7 @@
 
 **Tech Stack:** R (the sandbox-provisioned version — see hard rule; package floor 4.2), devtools/usethis, testthat 3e, Air, lintr, renv (dev only), r-lib GitHub Actions, pkgdown, Codecov.
 
-**Spec:** `docs/superpowers/specs/2026-07-07-revpiper-design.md` (§2 conventions, §8.4 Phase 0). Read §2 before executing.
+**Spec:** `dev/superpowers/specs/2026-07-07-revpiper-design.md` (§2 conventions, §8.4 Phase 0). Read §2 before executing.
 
 ## Global Constraints
 
@@ -62,7 +63,7 @@ renv/, renv.lock, .Rprofile                      # dev environment (Rbuildignore
 .github/workflows/{R-CMD-check,test-coverage,pkgdown,lint,format-suggest}.yaml
 codecov.yml, _pkgdown.yml
 NEWS.md
-docs/conventions.md                              # standing conventions (already on main)
+dev/conventions.md                               # standing conventions (already on main)
 CLAUDE.md                                        # AI-session rules (already on main)
 README.md                                        # replaced stub + badges
 ```
@@ -189,7 +190,7 @@ dir.create("R", showWarnings = FALSE)
 usethis::use_mit_license("Liz Spry")
 usethis::use_testthat(3)
 usethis::use_package_doc(open = FALSE)
-usethis::use_build_ignore(c(".claude", ".superpowers", "docs", "CLAUDE.md"))
+usethis::use_build_ignore(c(".claude", ".superpowers", "dev", "CLAUDE.md"))
 '
 grep -q "Config/testthat/parallel" DESCRIPTION || sed -i '/Config\/testthat\/edition/a Config/testthat/parallel: true' DESCRIPTION
 ```
@@ -266,12 +267,11 @@ Rscript -e 'renv::load("."); renv::settings$snapshot.type("all"); renv::snapshot
 url: https://lizspry.github.io/review-pipeline/
 template:
   bootstrap: 5
-destination: pkgdown-site
 ```
 
-(`destination` because pkgdown's default `docs/` collides with our specs/plans; CI's gh-pages deploy ignores it.) Ensure `.Rbuildignore` gains `^_pkgdown\.yml$` and `^pkgdown-site$`; `.gitignore` gains `pkgdown-site/`.
+(pkgdown's default output `docs/` is free now that project documentation lives in `dev/` — v2 amendment; CI deploys the gh-pages branch, so `docs/` stays local-only.) Verify `use_pkgdown()` added `^_pkgdown\.yml$` and `^docs$` to `.Rbuildignore` and `docs` to `.gitignore`; add whichever is missing.
 
-- [ ] **Step 2: build the site locally.** `Rscript -e 'pkgdown::build_site(preview = FALSE)'` — expect success into `pkgdown-site/`; confirm `docs/superpowers/` untouched.
+- [ ] **Step 2: build the site locally.** `Rscript -e 'pkgdown::build_site(preview = FALSE)'` — expect success into `docs/`; confirm `dev/` untouched and `git status` shows no `docs/` entries (ignored, untracked).
 - [ ] **Step 3:** commit.
 
 ### Task 8: NEWS and README
@@ -304,7 +304,7 @@ and cleaning, audited manual corrections, and a re-runnable derivation
 layer — rather than code you write.
 
 **Status: pre-alpha.** The design is documented in
-[`docs/superpowers/specs/`](docs/superpowers/specs/); implementation is
+[`dev/superpowers/specs/`](dev/superpowers/specs/); implementation is
 in progress and nothing here is usable yet.
 
 ## Installation
