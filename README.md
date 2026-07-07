@@ -1,4 +1,4 @@
-# review-pipeline
+# revpiper
 
 revpiper: an R package turning systematic-review extraction data into manuscript-ready outputs via user-authored specifications.
 
