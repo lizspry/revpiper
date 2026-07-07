@@ -19,9 +19,27 @@
 
 **HARD RULE — network policy (overrides everything, including any fallback text anywhere in this plan):** whenever anything is blocked by network policy (HTTP 403 "Blocked by network policy"), STOP that line of work immediately, tell Liz the exact domain(s), and wait for her to allowlist them. Never substitute source compilation, manual vendoring of libraries, or alternative download channels without asking first. This applies even where a plan documents a fallback.
 
-**HARD RULE — installed software and versions:** before installing any software or package, check whether it (or another version of it) is already present. If what is present, or what would be installed, differs from what was recommended or agreed with Liz, STOP and ask which version to use. Never install a second/parallel version of a provisioned runtime without her explicit approval. *Recorded decision for this project (Liz, 2026-07-07): the dev R is the sandbox-provisioned R; the renv lockfile pins that version; CI covers current R.*
+**HARD RULE — software (presence, versions, and sources):** for each piece of required software, check what is installed before installing anything.
 
-**Authorised download channels (and no others — there are NO fallback channels anywhere in this plan):** Ubuntu apt archives; Posit Public Package Manager binaries via `packagemanager.posit.co` (note: its downloads redirect to `rspm-sync.rstudio.com`, which Liz must allowlist before execution); `cloud.r-project.org` for CRAN *metadata queries only* (e.g. the name-availability index); GitHub + `release-assets.githubusercontent.com` for the Air installer. If a package install would compile from source because no binary exists, PAUSE and report which package and why before proceeding — binary installs are the expectation.
+- Installed, version consistent with the plan → use it.
+- Installed, version differs from the plan → STOP and ask which to use.
+- Not installed → install the version the plan names (or current stable, if it names none) from its designated source in the table below, as the sole version — never a second/parallel install of an existing runtime.
+- Designated source blocked by network policy → report the exact domain(s) and wait (network hard rule above). No substitute channels.
+
+*Recorded decision (Liz, 2026-07-07; supersedes "the dev R is the sandbox-provisioned R" — the image was verified to ship no R at all):* the dev R is the current CRAN release (**4.6.1**), installed via the R-interpreter source below as the sole R; the renv lockfile pins that version; CI covers the version matrix.
+
+**Authorised sources, by purpose (and no others — there are NO fallback channels anywhere in this plan):**
+
+| Purpose | Source |
+|---|---|
+| R interpreter | CRAN's official Ubuntu apt repository on `cloud.r-project.org` (suite `resolute-cran40`; signing key `marutter_pubkey.asc` from the same domain) |
+| R packages (binary installs) | Posit Public Package Manager, `packagemanager.posit.co` (downloads redirect to `rspm-sync.rstudio.com`, allowlisted) |
+| CRAN metadata queries (e.g. the name-availability index) | `cloud.r-project.org` |
+| System tools & libraries (pandoc, qpdf, dev libs) | Ubuntu apt archives (`ports.ubuntu.com`) |
+| Air formatter | GitHub releases (`github.com` + `release-assets.githubusercontent.com`) |
+| Anything else | Unauthorised — STOP and ask |
+
+If a package install would compile from source because no binary exists, PAUSE and report which package and why before proceeding — binary installs are the expectation.
 
 - Package name `revpiper`; exported prefix `rev_` (no exports in Phase 0).
 - Declared floor `R (>= 4.2)`; no post-4.2 language features.
@@ -30,7 +48,7 @@
 - MIT license, copyright holder Liz Spry.
 - No `library()` calls in `R/` — ever.
 - usethis-first: prefer a usethis function over hand-writing any file it can generate.
-- **Workflow (option a):** the sandbox NEVER pushes. Work on branch `phase-0-bootstrap-v2`; commit locally with author `Claude Code (assistant to Liz Spry)` <liz.spry+claude@gmail.com> (set repo-local git config at session start); Liz fetches/pushes/opens the PR (Task 10). Squash-merge; `main` is branch-protected.
+- **Workflow (option a):** the sandbox NEVER pushes. Work on branch `phase-0-bootstrap-v2`; commit locally with author `claude` <liz.spry+claude@gmail.com> (set by claude-config settings; verify with `git var GIT_AUTHOR_IDENT` at session start and before each commit); Liz fetches/pushes/opens the PR (Task 10). Squash-merge; `main` is branch-protected.
 - Commit messages: plain imperative, no Conventional-Commits prefixes.
 
 ## File Structure (end state)
@@ -66,7 +84,7 @@ Rscript -e 'cat(length(rownames(installed.packages())), "packages preinstalled\n
 which pandoc qpdf gcc make
 ```
 
-Report the inventory in conversation. The provisioned R (standard Claude Code sandbox template ships one, e.g. 4.5.0 at `/opt/R/<ver>`) is the dev R. If anything looks anomalous (two Rs, missing compiler), STOP and ask.
+Report the inventory in conversation. Expected (verified 2026-07-07): **no R and no compiler are present** — R arrives in Step 3a, and `r-base-dev` brings the toolchain. If anything looks anomalous (an R already present, two Rs), STOP and ask per the software hard rule.
 
 - [ ] **Step 2: verify network reachability for every pre-authorised channel.**
 
@@ -83,6 +101,17 @@ sudo apt-get update && sudo apt-get install -y pandoc qpdf libcurl4-openssl-dev 
 ```
 
 Expected: exit 0. *(Network hard rule applies — and no distro-mixing, apt pinning, or manual .deb fetches under any circumstances.)*
+
+- [ ] **Step 3a: install R (4.6.1) from CRAN's official Ubuntu apt repository.**
+
+```bash
+curl -fsSL https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo tee /etc/apt/trusted.gpg.d/cran.asc >/dev/null
+echo "deb https://cloud.r-project.org/bin/linux/ubuntu resolute-cran40/" | sudo tee /etc/apt/sources.list.d/cran.list
+sudo apt-get update && sudo apt-get install -y r-base r-base-dev
+R --version | head -1
+```
+
+Expected: `R version 4.6.1`. (The suite was verified 2026-07-07 to serve arm64 binaries; the signing key is hosted on the same domain — `keyserver.ubuntu.com` is policy-blocked and not needed.)
 
 - [ ] **Step 4: install Air.**
 
