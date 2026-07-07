@@ -15,8 +15,10 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   present. If what is present, or what would be installed, differs from
   what was recommended or agreed with Liz, STOP and ask which version to
   use. Never install a second/parallel version of a provisioned runtime
-  without her explicit approval. (Recorded decision for this project:
-  the dev R is the sandbox-provisioned R.)
+  without her explicit approval. (Recorded decision for this project,
+  Liz 2026-07-07, per plan v2: the sandbox image ships no R; the dev R
+  is the current CRAN release (4.6.1), installed from CRAN's official
+  Ubuntu apt repository as the sole R.)
 - This sandbox NEVER pushes to GitHub. Commit locally on a feature
   branch; Liz fetches via the sandbox remote, pushes, and opens the PR.
 - Git author and committer must be "claude" <liz.spry+claude@gmail.com>
