@@ -138,7 +138,7 @@ The pipeline never demands prescribed column names. The user authors a **data di
 
 ### 3.3 Assembly (declared structure, not guidance and not a mapping engine)
 
-Assembly operations are a **small, closed, enumerable set** — reshape (transpose, pivot) and join (by declared keys) — so they are *declared* per input file in the dictionary and executed by a generic assembly step. Joins declare: keys, **granularity** (study-level join on the study key; estimate-level join on study key + user-declared estimate key, e.g. outcome + respondent — varies by review), and **expected relationship** (`one-to-one`, `one-to-many`), enforced via dplyr's `relationship` argument. Validation reports non-unique declared keys and unmatched rows (both directions, by study ID); the loud failure is reserved for the *undeclared* case (classically accidental many-to-many row explosion).
+Assembly operations are a **small, closed, enumerable set** — reshape (transpose, pivot) and join (by declared keys) — so they are *declared* per input file in the dictionary and executed by a generic assembly step. Joins declare — **each join independently, since keys and granularity can vary across the joins of a single review**: keys, **granularity** (study-level join on the study key; estimate-level join on study key + user-declared estimate key, e.g. outcome + respondent), and **expected relationship** (`one-to-one`, `one-to-many`), enforced via dplyr's `relationship` argument. Validation reports non-unique declared keys and unmatched rows (both directions, by study ID); the loud failure is reserved for the *undeclared* case (classically accidental many-to-many row explosion).
 
 **Guidance-vs-pipeline rule (general):** an operation belongs in the structured pipeline, declaratively, when it is (a) from an enumerable set, (b) parameterisable by declaration rather than judgment, (c) mechanically validatable. It belongs in guidance + the manual-corrections step when it requires human judgment about content. Reshapes, joins, coercions, recodes: pipeline. Fixing a mistyped author name, adjudicating duplicates: corrections.
 
@@ -190,8 +190,9 @@ Extraction-tool export formats (Covidence, DistillerSR, Excel forms) are a **nam
 ## 4. User workflow
 
 - **Step 0 — Install & scaffold (once):** `remotes::install_github(...)`; `revpiper::rev_project("my-review/")` creates `data/raw/`, `specs/` (dictionary, assembly, derivations, reference tables — as complete working examples wired to the bundled synthetic dataset), `derivations.R` (Tier-3 template), `corrections.csv` (headers + example), `run.R`, `output/`, renv initialisation, git init with `.gitignore`. **The example project runs successfully the moment it is created**; users swap in their reality piece by piece.
-- **Step 1 — Describe (iterative):** drop extraction sheet(s) into `data/raw/`; edit dictionary + assembly declarations. Tight loop: `rev_check()` (stages 1–3, diagnosis only, always safe) → read findings → fix spec or data → repeat.
-- **Step 2 — Clean, correct, derive (iterative, phased):** findings needing judgment become `corrections.csv` entries; `rev_clean()` (stages 1–4) produces the certified clean dataset — the artefact iterated to completion and eyeballed as a natural sign-off point. Then declare derivations; `rev_derive()` (stages 5–6) consumes the clean artefact. `rev_process()` composes all six stages — primarily for update/rerun consistency.
+- **Step 1 — Describe (iterative):** drop extraction sheet(s) into `data/raw/`; edit dictionary + assembly declarations. Tight loop: `rev_check()` → read findings → fix spec or data → repeat.
+- **Step 2 — Clean, correct, derive (iterative, phased):** findings needing judgment become `corrections.csv` entries; `rev_check()` again until clean; then `rev_clean()` certifies and writes the clean dataset — the artefact eyeballed as a natural sign-off point. Then declare derivations; `rev_derive()` (stages 5–6) consumes the clean artefact. `rev_process()` composes all six stages — primarily for update/rerun consistency.
+- **How findings flow through check/clean:** automated cleaning (stage 2) runs *before* validation on every run — deterministic, in-memory, re-derived from the untouched raw file each time — so machine-fixable issues never appear as findings, only as log counts. Findings are always the post-cleaning, post-corrections residual: what still needs either a spec fix or a new corrections entry. **`rev_check()` = full dry-run diagnosis (stages 1–4: assemble, clean, apply corrections, validate), writing nothing** — so it always reflects the user's corrections to date rather than re-reporting resolved findings. **`rev_clean()` = the same + certification + written artefacts/reports.**
 - **Step 3 — Present (module 2, previewed):** a declarative output spec + `rev_render()`, consuming only `output/`'s data contract; processing and presentation rerun independently.
 - **Step 4 — Update (the payoff):** new search results → update raw file → `rev_process()`. Corrections re-apply (stale ones fail loudly by name); derivations re-run identically; run summary + git diff show exactly what changed; outputs regenerate.
 
@@ -256,6 +257,8 @@ Infrastructure: testthat 3e, parallel, TDD, covr+Codecov measured-not-gated, ful
 | `revpiper` availability check; repo rename | First implementation step |
 | Documentation templates per function type | Phase 1, with real functions |
 
+**Resolution mechanism:** when a phase begins, its owned questions become the first tasks of that phase's planning step (typically short investigations). Each resolution is committed back into this spec as an amendment via PR, so the spec remains the living, dated record of decisions.
+
 ### 8.3 Explicitly out of scope for v1
 
 Interactive layer & dashboards; umbrella/scoping reviews; codebook→YAML generator; CRAN submission; pre-commit hooks; fledge.
@@ -263,7 +266,7 @@ Interactive layer & dashboards; umbrella/scoping reviews; codebook→YAML genera
 ### 8.4 Roadmap (each phase: spec → plan → TDD → review)
 
 - **Phase 0 — Bootstrap:** package skeleton via the usethis sequence; conventions doc (drafted from §2, doubling as repo CLAUDE.md source and Liz's standing template); CI green on a hello-world package. *Implementation prerequisites:* name availability check; sandbox network allowlisting for CRAN/Posit package mirrors (GitHub already allowed); switch `origin` to HTTPS and verify an end-to-end `git push`.
-- **Phase 1 — Spec machinery + stages 1–3** (dictionary parsing/validation, assemble, clean, validate, findings). The expressiveness risk burns down here.
+- **Phase 1 — Spec machinery + stages 1–3** (dictionary parsing/validation, assemble, clean, validate, findings). The expressiveness risk burns down here. *Phase 1 planning opens with its owned investigations — extraction-tool export formats (Covidence, DistillerSR; does reality export per-estimate rows or wide per-study sheets?) and the data-dict format-vs-CLI decision — before the stage-1 canonical-shape assumptions are finalised.*
 - **Phase 2 — Stages 4–6** (corrections, three-tier derive, metafor wrappers, certify, provenance).
 - **Phase 3 — Scaffold + synthetic review + vignettes** (`rev_project()`, designed synthetic dataset, getting-started + prepare-your-data vignettes, pkgdown live).
 - **Phase 4 — Dress rehearsal** (original-review specs + validation fixture; adjudicate divergences; fix gaps).
