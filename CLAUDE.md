@@ -19,9 +19,9 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   the dev R is the sandbox-provisioned R.)
 - This sandbox NEVER pushes to GitHub. Commit locally on a feature
   branch; Liz fetches via the sandbox remote, pushes, and opens the PR.
-- Git author must be "Claude Code (assistant to Liz Spry)"
-  <liz.spry+claude@gmail.com> (repo-local git config; set and verify with
-  `git config user.name` at session start).
+- Git author and committer must be "claude" <liz.spry+claude@gmail.com>
+  (set by claude-config settings; verify with `git var GIT_AUTHOR_IDENT`
+  at session start and before each commit).
 - main is protected; never commit to it. One branch per task.
 - TDD for all feature code. Run the pre-push suite (docs/conventions.md)
   before declaring any branch ready.
@@ -29,7 +29,10 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
 - Every user-facing change adds a NEWS.md bullet in the same PR.
 
 ## Rhythm
-- Plan → get Liz's sign-off → implement in small reviewed steps.
+- Plan → get Liz's sign-off → pre-flight → implement in small reviewed steps.
+  A signed-off plan is itself the trigger for the pre-flight check
+  (~/.claude/rules/preflight.md): run it in the executing sandbox before the
+  first task; findings are fixed by plan amendment before execution.
 - Open questions resolve at their owning phase's planning step and are
   committed back into the spec via PR (spec §8.2).
 
