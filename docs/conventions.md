@@ -4,12 +4,8 @@ Origin: revpiper design spec §2 (docs/superpowers/specs/2026-07-07-revpiper-des
 which holds the full rationale for every rule here. This file is the
 operational digest, reusable across projects.
 
-## Environment
-- On any network-policy block (HTTP 403): stop, report the exact
-  domain(s), wait for allowlisting. No substitute channels, source
-  compilation, or manual vendoring without explicit approval.
-- Inventory provisioned tooling before installing; use the provisioned
-  R as the dev R; never install parallel runtime versions unasked.
+Environment and sandbox operating rules live in CLAUDE.md (single
+source), not here — this document covers code conventions only.
 
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml

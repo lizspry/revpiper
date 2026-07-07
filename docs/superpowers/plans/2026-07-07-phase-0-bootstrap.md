@@ -19,9 +19,9 @@
 
 **HARD RULE — network policy (overrides everything, including any fallback text anywhere in this plan):** whenever anything is blocked by network policy (HTTP 403 "Blocked by network policy"), STOP that line of work immediately, tell Liz the exact domain(s), and wait for her to allowlist them. Never substitute source compilation, manual vendoring of libraries, or alternative download channels without asking first. This applies even where a plan documents a fallback.
 
-**HARD RULE — provisioned tooling:** inventory the sandbox's provisioned tooling before installing anything (`which -a R`, `R --version`, PATH, preinstalled packages). Use the **provisioned R as the dev R** — never install a second/parallel R version or replace provisioned runtimes without Liz's explicit approval. The renv lockfile pins the provisioned version; CI covers current R.
+**HARD RULE — installed software and versions:** before installing any software or package, check whether it (or another version of it) is already present. If what is present, or what would be installed, differs from what was recommended or agreed with Liz, STOP and ask which version to use. Never install a second/parallel version of a provisioned runtime without her explicit approval. *Recorded decision for this project (Liz, 2026-07-07): the dev R is the sandbox-provisioned R; the renv lockfile pins that version; CI covers current R.*
 
-**Pre-authorised download channels (and no others):** Ubuntu apt archives; CRAN via `cloud.r-project.org`; Posit Public Package Manager (binary) via `packagemanager.posit.co` (downloads redirect to `rspm-sync.rstudio.com` — if that redirect 403s, the pre-authorised alternative is CRAN **source** from `cloud.r-project.org` with proper apt-installed headers; announce which route was used); GitHub + `release-assets.githubusercontent.com` for the Air installer. Anything outside this list: STOP and ask.
+**Authorised download channels (and no others — there are NO fallback channels anywhere in this plan):** Ubuntu apt archives; Posit Public Package Manager binaries via `packagemanager.posit.co` (note: its downloads redirect to `rspm-sync.rstudio.com`, which Liz must allowlist before execution); `cloud.r-project.org` for CRAN *metadata queries only* (e.g. the name-availability index); GitHub + `release-assets.githubusercontent.com` for the Air installer. If a package install would compile from source because no binary exists, PAUSE and report which package and why before proceeding — binary installs are the expectation.
 
 - Package name `revpiper`; exported prefix `rev_` (no exports in Phase 0).
 - Declared floor `R (>= 4.2)`; no post-4.2 language features.
@@ -71,10 +71,10 @@ Report the inventory in conversation. The provisioned R (standard Claude Code sa
 - [ ] **Step 2: verify network reachability for every pre-authorised channel.**
 
 ```bash
-for u in https://cloud.r-project.org https://packagemanager.posit.co/cran/latest https://github.com https://release-assets.githubusercontent.com http://ports.ubuntu.com; do curl -s -o /dev/null --max-time 20 -w "%{http_code} $u\n" -I "$u"; done
+for u in https://cloud.r-project.org https://packagemanager.posit.co/cran/latest https://rspm-sync.rstudio.com https://github.com https://release-assets.githubusercontent.com http://ports.ubuntu.com; do curl -s -o /dev/null --max-time 20 -w "%{http_code} $u\n" -I "$u"; done
 ```
 
-Expected: no "Blocked by network policy" responses. **Any 403 → STOP, report the domain(s), wait for Liz.**
+Expected: no "Blocked by network policy" responses (non-403 status codes like 404 from bare CDN roots are fine). *(Network hard rule applies to every subsequent step; it is not restated.)*
 
 - [ ] **Step 3: system dependencies via apt.**
 
@@ -82,7 +82,7 @@ Expected: no "Blocked by network policy" responses. **Any 403 → STOP, report t
 sudo apt-get update && sudo apt-get install -y pandoc qpdf libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev libjpeg-dev
 ```
 
-Expected: exit 0. Any 403 in apt output → STOP and report (do not pin, mix distros, or fetch .debs manually).
+Expected: exit 0. *(Network hard rule applies — and no distro-mixing, apt pinning, or manual .deb fetches under any circumstances.)*
 
 - [ ] **Step 4: install Air.**
 
@@ -105,13 +105,14 @@ sudo sh -c "echo 'export LANG=C.UTF-8' >> /etc/sandbox-persistent.sh; echo 'expo
 
 (Version-suffixed library prevents cross-version contamination; C.UTF-8 avoids a spurious R CMD check locale WARNING seen in attempt 1.)
 
-- [ ] **Step 6: install the R toolchain — binaries first, announce the route.**
+- [ ] **Step 6: install the R toolchain — PPM binaries, the only authorised route.**
 
 ```bash
-Rscript -e 'options(Ncpus = max(1L, parallel::detectCores() - 1L)); install.packages(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","renv","pkgdown"), repos = "https://packagemanager.posit.co/cran/__linux__/$(lsb_release -cs)/latest")'
+Rscript -e 'options(Ncpus = max(1L, parallel::detectCores() - 1L)); install.packages(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","renv","pkgdown"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))' 2>&1 | tee /tmp/r-toolchain-install.log | tail -3
+grep -c "installing \*source\* package" /tmp/r-toolchain-install.log
 ```
 
-If PPM binary downloads 403 on `rspm-sync.rstudio.com`: the pre-authorised alternative is `repos = "https://cloud.r-project.org"` (source; headers from Step 3 make this clean). Announce which route ran. Any OTHER blocked domain → STOP.
+Expected: final grep prints `0` (all binary). If it is nonzero, PAUSE and report which packages compiled from source and why before continuing (Global Constraints).
 
 - [ ] **Step 7: verify.**
 
@@ -126,8 +127,7 @@ Expected: `MISSING: none`.
 **Files:** none committed; result recorded in the eventual PR description.
 
 - [ ] **Step 1:** `Rscript -e 'print(available::available("revpiper", browse = FALSE))'`
-  - If any of its upstream services 403 (attempt 1: bioconductor.org, rpkg-api.gepuro.net): STOP and report per the hard rule; Liz decides whether to allowlist or accept the manual subset below.
-  - Manual subset (pre-authorised, allowed domains only): CRAN index `"revpiper" %in% rownames(available.packages(repos = "https://cloud.r-project.org"))` → expect FALSE; CRAN archive `curl -sI https://cran.r-project.org/src/contrib/Archive/revpiper/` → expect 404; GitHub `curl -s "https://api.github.com/search/repositories?q=revpiper+in:name"` → expect `"total_count": 0`.
+  - If any of its upstream services 403 (attempt 1 hit: bioconductor.org, rpkg-api.gepuro.net): STOP and report per the network hard rule. **Liz then decides**: allowlist the domains, or explicitly direct the manual subset (CRAN index via available.packages, CRAN archive URL, GitHub search API — all on already-allowed domains). Do not run the subset without her direction.
 - [ ] **Step 2 (gate):** any collision or worrying meaning → STOP, report, decide a new name with Liz (spec §1.5). (Attempt-1 result, for reference: CRAN and GitHub clear.)
 
 ### Task 3: Branch and package skeleton
@@ -208,7 +208,7 @@ encoding: "UTF-8"
 **Files:** Create `renv/` (activate.R, settings.json), `renv.lock`, `.Rprofile`; usethis/renv manage `.Rbuildignore`/`.gitignore` entries.
 
 - [ ] **Step 1:** `Rscript -e 'renv::init(bare = TRUE, restart = FALSE)'`
-- [ ] **Step 2:** install the toolchain into the renv project library **by the same route as Task 1 Step 6** (announce route; same 403 rule):
+- [ ] **Step 2:** install the toolchain into the renv project library by the same PPM-binary route as Task 1 Step 6 *(network hard rule and source-compile pause apply)*:
 
 ```bash
 Rscript -e 'renv::load("."); renv::install(c("devtools","usethis","testthat","lintr","covr","roxygen2","rcmdcheck","available","pkgdown"))'

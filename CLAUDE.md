@@ -10,10 +10,13 @@ docs/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   substitute source compilation, manual vendoring of libraries, or
   alternative download channels without asking first. This applies even
   where a plan documents a fallback.
-- **Provisioned tooling:** inventory the sandbox's provisioned tooling
-  before installing anything. Use the provisioned R as the dev R; never
-  install a second/parallel R version or replace provisioned runtimes
-  without Liz's explicit approval.
+- **Installed software and versions:** before installing any software or
+  package, check whether it (or another version of it) is already
+  present. If what is present, or what would be installed, differs from
+  what was recommended or agreed with Liz, STOP and ask which version to
+  use. Never install a second/parallel version of a provisioned runtime
+  without her explicit approval. (Recorded decision for this project:
+  the dev R is the sandbox-provisioned R.)
 - This sandbox NEVER pushes to GitHub. Commit locally on a feature
   branch; Liz fetches via the sandbox remote, pushes, and opens the PR.
 - Git author must be "Claude Code (assistant to Liz Spry)"
