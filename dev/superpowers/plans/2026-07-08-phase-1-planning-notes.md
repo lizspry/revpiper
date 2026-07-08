@@ -124,6 +124,76 @@ Findings:
      arrival). Their roadmap (SQL/R/Python/pins sources) may eventually make their
      tooling directly useful here; revisit at the 1.0 review.
 
+3. **DECIDED (Liz, 2026-07-08, session 2) — D1: assembly scope and spec-file topology.**
+   Prompted by Liz's scope challenge ("is the package trying to do too much?"):
+   - **No user-facing reshape grammar.** Shape-normalisation happens via **readers**:
+     shipped per-tool importers (`reader: covidence`), a parameterised generic
+     Excel/CSV reader, or a user-written function in the project's `readers.R`
+     (documented contract: file in → canonical table out; quarantined-custom-code
+     pattern mirroring Tier-3; recurring shapes promoted into shipped importers).
+     Rationale: real export shapes are tool-specific patterns, not arbitrary — named
+     importers beat a grammar; user R code is massively in-distribution for AI
+     assistants whereas a bespoke grammar is not; a grammar would need the custom-code
+     escape hatch anyway.
+   - **Declared joins stay in the pipeline** (keys, granularity, relationship,
+     unmatched-row reporting) — the value is the validation around the join, which
+     users cannot safely replicate on uncleaned keys.
+   - **Topology: one dictionary YAML per input table** (cleaner to conceptualise, per
+     Liz) **+ one assembly YAML** (files → readers → tables; joins). Dictionaries
+     describe; assembly acts.
+   - **Key-first two-pass ordering (architectural):** per-table key hygiene (clean
+     declared key columns only) → per-table key validation (complete-then-block) →
+     table-scoped corrections (corrections entries gain an optional `table:` field;
+     execution engine lands with stage 4 in Phase 2, but stage-1 architecture bakes
+     the ordering in) → joins with relationship enforcement → full clean/corrections/
+     validation on the assembled table (cross-table checks need the joined data).
+   - Scaffolded AI-assist: `readers.R` template ships with a fill-in-the-blanks
+     assistant prompt block (contract, target shape, how to test with `rev_check()`).
+
+4. **DECIDED (Liz, 2026-07-08, session 2) — D2a: assisted authoring + draft generator.**
+   - v1 assisted-authoring stack: complete working templates (modify-don't-write);
+     embedded template guidance in review-methodology terms; per-artifact AI-prompt
+     scaffolds ("paste this + your file into your assistant"); findings quality as the
+     post-setup guidance loop; plus shipped assistant-facing skill docs (precedent:
+     data-dict's read/write-data-dict.md). AI *inside* the workflow stays deferred to
+     the interactive layer's own brainstorm.
+   - `rev_draft_dictionary()` comes into v1 (split from codebook→YAML parsing, which
+     stays v1.x): given an input table (post-reader), emit a **minimal** skeleton —
+     column `name` + inferred `type` + empty cross-cutting fields for the user to
+     fill. No observed-values commentary, no per-line prompts (Liz: scope creep;
+     cleaning concerns don't belong in dictionary authoring). Deliberately minimal:
+     this surface is a moving target pending user consultation; phase placement
+     decided in the plan.
+
+5. **DECIDED (Liz, 2026-07-08, session 2) — D2b: dictionary schema structure.**
+   - **Topology (amends D1's file layout):** one YAML per input table
+     (`specs/tables/<table>.yaml`) carrying the table's `source:` block (file, sheet,
+     reader — matching data-dict's own per-table `source` precedent), description,
+     roles, levels, and columns. The remaining between-table file reduces to
+     `specs/joins.yaml`. Routing: per-table facts → that table's file; between-table
+     facts → joins.yaml.
+   - **Mixed placement model:** one-per-table declarations top-level (`roles:`,
+     `levels:` with their keys); per-column facts on the column (level membership,
+     missing codes, constraints).
+   - **Constraints as booleans** (`required:`, `unique:`; no `primary_key` in v1 —
+     composite identity lives in levels/join keys). Documented divergence from
+     data-dict's `constraints:` list; mechanically mappable; goes in the convergence
+     log.
+   - **Roles are pipeline handles, never join logic** (joins declare their own
+     complete, composite key sets in joins.yaml). Phase 1 role vocabulary: `study_id`
+     only; grows per stage.
+   - **Levels kept**, renamed for readability: top-level `levels:` (name → keys),
+     per-column `constant_within_level:`. Liz's caveat (design element for findings
+     copy): a level violation can mean transcription error OR **undeclared
+     substructure** — some studies reveal substudies only through usually-constant
+     variables differing — so level-violation findings must route BOTH ways
+     ("corrections entry" vs "add/adjust a level key"), never presuming error.
+   - **Type names made user-friendly** (diverges from data-dict vocabulary; full set
+     proposed next): `categorical` replaces `enum`; `number(quantity)` splits into
+     `integer`/`decimal`. Field-name sense-check pass for non-technical friendliness
+     queued for later.
+   - Composite join keys explicitly supported in joins.yaml (m:m guard requires them).
+
 ## Session 1 pause point (2026-07-08)
 
 Both spec-mandated investigations DONE; two decisions recorded above. Environment:
