@@ -36,7 +36,7 @@ Health-science researchers conducting standard reviews (intervention/exposure–
 Package name **revpiper**; exported-function prefix **`rev_`**. Rationale: noun+`r` R-community convention; "piper" humanises the pipeline metaphor; "rev" keeps the review signal; no apparent collisions in the evidence-synthesis package cluster (revtools, metagear, synthesisr, PRISMA2020, appraise). `synthr` was rejected: one syllable from `synthesisr` (different purpose, same community) and "synth" connotes synthetic data/controls in statistics (`synthpop`, `synthdid`, `Synth`).
 
 - Mechanical availability check (`available::available("revpiper")`) is the first implementation step.
-- Rename window: cheap until the package is publicised and others' scripts call `rev_*` functions; the deadline for final conviction is **before inviting external users/contributors** (which precedes CRAN anyway). GitHub repo may stay `review-pipeline` or be renamed to match — decided at first push.
+- Rename window: cheap until the package is publicised and others' scripts call `rev_*` functions; the deadline for final conviction is **before inviting external users/contributors** (which precedes CRAN anyway). GitHub repo may stay `review-pipeline` or be renamed to match — decided at first push. **Resolved (Liz, 2026-07-07, before first push):** repo renamed to `revpiper`, so DESCRIPTION URLs, badges, and the pkgdown URL carry the final name from the start; local working folders may keep the old name (R reads only DESCRIPTION).
 
 ---
 

@@ -1,6 +1,6 @@
 # Coding conventions (standing template)
 
-Origin: revpiper design spec §2 (docs/superpowers/specs/2026-07-07-revpiper-design.md),
+Origin: revpiper design spec §2 (dev/superpowers/specs/2026-07-07-revpiper-design.md),
 which holds the full rationale for every rule here. This file is the
 operational digest, reusable across projects.
 

@@ -1,0 +1,16 @@
+^renv$
+^renv\.lock$
+^LICENSE\.md$
+^\.claude$
+^\.superpowers$
+^dev$
+^CLAUDE\.md$
+^[.]?air[.]toml$
+^\.vscode$
+^\.Rprofile$
+^\.lintr$
+^\.github$
+^codecov\.yml$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

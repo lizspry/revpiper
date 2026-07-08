@@ -1,0 +1,6 @@
+linters: linters_with_defaults(
+    library_call_linter(),
+    namespace_linter(),
+    backport_linter(r_version = "4.2.0")
+  )
+encoding: "UTF-8"
