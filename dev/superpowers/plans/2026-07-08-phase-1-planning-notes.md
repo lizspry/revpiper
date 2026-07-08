@@ -194,6 +194,59 @@ Findings:
      queued for later.
    - Composite join keys explicitly supported in joins.yaml (m:m guard requires them).
 
+6. **DECIDED (Liz, 2026-07-08, session 2) — D2c: types and per-column declarations (final).**
+   - **Six types (strict cleaning axis only):** `text` (free string; no values/range),
+     `categorical` (`values` REQUIRED — plain homogeneous list, string or numeric
+     entries; storage/coercion type inferred from the entries; mixed list = spec
+     error), `integer` / `decimal` (`range` and `units` optional; **no values on
+     numerics** — for integers a range IS the closed set), `boolean`, `date`
+     (`range` optional). `datetime` + time-zone apparatus dropped from v1.
+   - **Purpose/semantics axis (id / ordinal / quantity / labels) deliberately absent
+     from Phase 1**: not consumed by stages 1–3. Designed later beside its consumers
+     (Phase 2 derive: e.g. value→label maps deferred to derivation-mapping design,
+     §3.6; module 2: presentation). Divergences from data-dict vocabulary logged for
+     the 1.0 convergence review.
+   - Per-column: `description` (optional, retained), `required`/`unique` booleans,
+     `missing` codes, `constant_within_level`. `examples` documentation-only.
+   - **Spec-validation is a named check layer** (parse-time, file-and-entry precision,
+     did-you-mean; adapted S-ladder): unknown fields (closed schema); categorical
+     without values; values on non-categorical; range on text/categorical/boolean;
+     units on non-numeric; mixed-type values; level references to unknown keys; etc.
+     The full check list is a plan deliverable.
+
+## PROPOSED, AWAITING LIZ — D3: stage 2 cleaning operation set (session 2 pause)
+
+Closed, ordered, idempotent set of five ops, generated from the dictionary, counts
+logged per column, per-column named opt-outs (`clean: {trim: false}` or `clean: false`),
+defaults all on:
+1. Encoding normalisation (UTF-8; exotic unicode spaces/dashes → plain).
+2. Whitespace trim (leading/trailing only; internal whitespace never touched).
+3. Missing standardisation (empty / whitespace-only / declared `missing` codes → NA;
+   ""/whitespace built-in defaults always active).
+4. Type coercion to declared type; un-coercible values LEFT STANDING for stage-3
+   findings (never silently nulled).
+5. Categorical canonicalisation, safe cases only (case + trim distance from a declared
+   value; no fuzzy matching — "Adopton" is a finding, not a guess).
+Design spine: set is closed (judgment fixes belong in corrections); idempotent.
+
+## Session 2 pause point (2026-07-08)
+
+Design block progress: D1 (assembly scope/topology), D2a–c (authoring, dictionary
+schema, types) DECIDED and recorded above. D3 (cleaning ops) proposed, awaiting
+confirmation.
+
+**Resume agenda (design block, remainder):**
+1. Confirm/amend D3 (cleaning ops, above).
+2. Stage 3 check catalogue + check-code→routing table (adopt S/M/D-style codes;
+   includes level-violation dual routing per D2b and key-phase checks per D1).
+3. Findings object (`rev_findings`) + xlsx export + snapshot-tested message copy.
+4. File layout for stages 1–3 (spec §5 revisited against D1's readers/joins shape)
+   + mirror-rule tests; TDD build order.
+5. pkgdown rendered-.md set (queued from Phase 0).
+6. Then: design write-up → spec §8.2 amendments (PR) → superpowers:writing-plans for
+   the Phase 1 implementation plan. Documentation templates land during
+   implementation, with real functions (spec §8.2).
+
 ## Session 1 pause point (2026-07-08)
 
 Both spec-mandated investigations DONE; two decisions recorded above. Environment:
