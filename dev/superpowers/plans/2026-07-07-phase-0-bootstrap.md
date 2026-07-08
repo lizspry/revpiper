@@ -6,6 +6,7 @@
 
 - **v1 (2026-07-07, attempt 1):** executed in sandbox `sbx-20260707-1029-review-pipeline`; produced correct repo content but relied on environment workarounds (manual library vendoring, parallel R install) that violated integrity expectations. **Discarded, unmerged**; archived on Liz's host as local branch `phase-0-attempt1` (never pushed). Do not resume it.
 - **v2 (this document):** supersedes v1. Execute from scratch in a **fresh sandbox** under the hard rules below. Legitimate v1 learnings (exact commands that work, checks that NOTE, parser quirks) are folded into the task text.
+- **v2 execution amendment 5 (2026-07-08, after first CI run, signed off by Liz):** `format-suggest.yaml` replaced by the stock `format-check.yaml` from the same posit-dev/setup-air example set. Liz declined the `pull_request_target` + head-SHA-checkout pattern (elevated token privileges while executing untrusted fork code); format-check uses a plain `pull_request` trigger with `permissions: read-all` and fails on unformatted code rather than pushing suggestions. Side benefit: unlike `pull_request_target`, it can run on the bootstrap PR itself.
 - **v2 execution amendment 4 (2026-07-07, after Task 4, signed off by Liz):** concern that the piecewise skeleton (Task 3's `create_package` workaround) might have missed something was resolved by evidence: a reference `create_package()` run in a validly-named folder produces a byte-identical NAMESPACE and a DESCRIPTION strictly behind ours (`create_package` bundles only `use_description` + `use_namespace` + `R/`), and check/test/lint are all clean. Tasks 3–4 commits kept. The folder-name mismatch itself is retired host-side after merge — see the Task 10 exit checklist.
 - **v2 execution amendment 3 (2026-07-07, during Task 3, signed off by Liz):** R CMD check's "future file timestamps" step probes external time APIs — `worldclockapi.com` and `worldtimeapi.org`, both policy-blocked (reported per the network hard rule) — producing an "unable to verify current time" NOTE that trips the `error_on = "note"` gates. Liz chose R's documented switch over allowlisting: `_R_CHECK_SYSTEM_CLOCK_=0` persisted in the sandbox environment (Task 1 Step 5). Sandbox-only; CI unaffected.
 - **v2 execution amendment 2 (2026-07-07, after Task 2, signed off by Liz):** GitHub repo renamed `review-pipeline` → `revpiper` (resolving spec §1.5's decided-at-first-push question ahead of its deadline, before Tasks 3/7/8 hardcode the repo path). URL references below updated; spec updated per §8.2. Local working folders keep the old name — the sandbox mount depends on it, and R reads only DESCRIPTION.
@@ -66,7 +67,7 @@ R/revpiper-package.R                             # package-level doc, "_PACKAGE"
 tests/testthat.R, tests/testthat/test-package.R  # harness + smoke test
 air.toml, .lintr, .vscode/                       # formatter/linter config
 renv/, renv.lock, .Rprofile                      # dev environment (Rbuildignored)
-.github/workflows/{R-CMD-check,test-coverage,pkgdown,lint,format-suggest}.yaml
+.github/workflows/{R-CMD-check,test-coverage,pkgdown,lint,format-check}.yaml
 codecov.yml, _pkgdown.yml
 NEWS.md
 dev/conventions.md                               # standing conventions (already on main)
@@ -270,9 +271,10 @@ Rscript -e 'renv::load("."); renv::settings$snapshot.type("all"); renv::snapshot
 
 ### Task 6: CI workflows
 
-**Files:** Create `.github/workflows/{R-CMD-check,test-coverage,pkgdown,format-suggest}.yaml` (tidy bundle — format-suggest ships in the current bundle; pr-commands no longer does), plus `lint.yaml`, `codecov.yml`.
+**Files:** Create `.github/workflows/{R-CMD-check,test-coverage,pkgdown,format-check}.yaml` (tidy bundle — the bundle ships format-suggest, replaced per amendment 5; pr-commands no longer ships), plus `lint.yaml`, `codecov.yml`.
 
 - [ ] **Step 1:** `Rscript -e 'usethis::local_project(".", force = TRUE); usethis::use_tidy_github_actions(); usethis::use_github_action("lint")'`
+- [ ] **Step 1a (amendment 5):** replace format-suggest with the stock format-check example: `Rscript -e 'usethis::local_project(".", force = TRUE); usethis::use_github_action(url = "https://github.com/posit-dev/setup-air/blob/main/examples/format-check.yaml")'` then delete `.github/workflows/format-suggest.yaml`.
 - [ ] **Step 2:** verify five workflows present; read R-CMD-check.yaml's matrix (expect macOS/Windows/Ubuntu × release/devel/oldrel-1..4 — oldrel-4 is the declared 4.2 floor). If the bundle's matrix stops at oldrel-3, the floor is never CI-tested: STOP and flag for a decision rather than hand-editing.
 - [ ] **Step 3:** commit.
 
