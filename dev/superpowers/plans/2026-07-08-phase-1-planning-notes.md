@@ -214,7 +214,48 @@ Findings:
      units on non-numeric; mixed-type values; level references to unknown keys; etc.
      The full check list is a plan deliverable.
 
-## PROPOSED, AWAITING LIZ — D3: stage 2 cleaning operation set (session 2 pause)
+7. **DECIDED (Liz, 2026-07-09, session 3) — D3 (as amended): standardisation ops.**
+   The five-op set below confirmed, with session-3 amendments:
+   - **Encoding op is lossless for content**: UTF-8 + Unicode NFC, exotic whitespace →
+     plain, zero-width removed; NEVER diacritic-stripping/transliteration/quote-dash
+     substitution (author names like Müller pass through untouched).
+   - **Missing defaults minimal**: only ""/whitespace auto-missing. Per-column
+     `missing:` retained, but declared REACTIVELY — findings route "if this denotes
+     missing, declare it; if error, correct it". No built-in NR/-99 guessing.
+     [FLAGGED for later user-consultation confirmation: yaml-for-missing vs
+     corrections-for-errors split.]
+   - **Stage-2 artifact renamed `preprocessed-<table>.csv`** — "clean(ed)" reserved
+     for the certified post-corrections artifact. Stage 2's own name queued for the
+     terminology sense-check pass.
+   - **Composed keys**: minimal declarative `from: [author, year]` + `separator:` on a
+     column entry (concatenation only — not a derivation language); built post-
+     preprocessing; usable as join/level keys. Exists because joins can't wait for
+     Phase 2's derive stage.
+   - **`pattern:`** optional per-column regex validation (key-format drift within
+     tables); **near-miss suggestions** on unmatched-key findings (suggest-only,
+     resolved via corrections; NO automatic case-folding of key values).
+
+8. **DECIDED (Liz, 2026-07-09, session 3) — D4: run order and findings shape.**
+   - **Per-table validation** (Liz's restructure, adopted after pros/cons): every
+     v1 check is per-table; validating post-join would multiply study-level findings
+     across estimate rows. Run order:
+     `per table: read → standardise → compose keys → apply corrections → validate
+      (everything)` then `combine: joins (unless key errors) → join findings` then
+     one consolidated report. Non-key errors don't stop joins running
+     (complete-then-block: blocking applies to certification/downstream, not report
+     completeness); key errors block joins physically.
+   - **Single corrections model**: ALL corrections table-scoped predicates applied
+     pre-join (`table` column defaults away for single-input reviews). Predicate
+     targeting (subset/multi-row, within/across studies) + expected match count
+     already committed in spec §3.4.
+   - **Findings record schema**: `code` (stable check ID), `severity`, `table`
+     (names the preprocessed artifact rows refer to), `variable`, `study_id` (where
+     role declared), `rows` (numbered against preprocessed-<table>.csv), `message`,
+     `fix_options`. Same schema in console/data-frame/xlsx.
+   - A thin combination-check stage remains (join validations now; future cross-table
+     conditional rules would live there if ever added).
+
+## SUPERSEDED (recorded for audit) — original D3 proposal (session 2 pause)
 
 Closed, ordered, idempotent set of five ops, generated from the dictionary, counts
 logged per column, per-column named opt-outs (`clean: {trim: false}` or `clean: false`),
