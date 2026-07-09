@@ -299,6 +299,22 @@ Findings:
       used as a test case; a synthetic derivative may be created (nonstandard
       design caveat). Default remains designed synthetic fixtures.
 
+11. **DECIDED (Liz, 2026-07-09, spec review round) — D7: review amendments.**
+    - `categorical` type REMOVED (inferred storage contradicted prespecify-then-check).
+      Five types; `values` is an optional closed-set restriction on `text`, parallel
+      to `range` on numerics. Known limitation, accepted: non-contiguous numeric code
+      sets (e.g. 1, 2, 9) are not closed-checkable (range admits the gaps).
+    - Per-column `pattern` REMOVED; join near-miss suggestions remain the key-drift
+      net. Composition moved out of per-column fields into the top key/role block:
+      `study_id: covidence_id` or `study_id: {combine: [author, year], separator: "_"}`
+      — exists solely for study/merge keys.
+    - **v1 input contract: consensus rows only.** Multi-reviewer row-structure
+      declaration/handling = explicitly deferred decision (new §8.2 row).
+    - **data-dict coverage mapping is a plan deliverable**: every data-dict S/M/D
+      check marked adopted / adapted / N-A-with-reason in the check enumeration.
+    - Confirmed: the SPEC is the authoritative input to the implementation plan;
+      these notes are the rationale/audit trail.
+
 **DESIGN BLOCK COMPLETE (2026-07-09).** Next: spec §8.2 amendments committed to the
 design spec (this branch), Liz reviews, then superpowers:writing-plans for the Phase 1
 implementation plan.
