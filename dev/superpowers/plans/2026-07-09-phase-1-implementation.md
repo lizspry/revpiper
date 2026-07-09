@@ -54,15 +54,20 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
    safe" is preserved; the row numbers users see are inspectable. Spec §4 gets a
    one-line amendment when this plan is signed off.
 2. **New Imports** (each justified per Area 7, logged here + in the commit):
-   `yaml` (spec files; the maintained R YAML parser), `readxl` (Excel ingestion;
-   de-facto standard, no Java), `writexl` (findings export; zero-dependency, already
-   spec-logged §3.7), `dplyr` + `tidyr` (joins with `relationship` enforcement;
+   `yaml` (spec files; the maintained R YAML parser), `readr` (CSV ingestion:
+   platform-independent UTF-8/BOM handling — a core behaviour, since encoding
+   correctness is a product feature and users skew Windows; type-guessing disabled
+   via all-character cols), `readxl` (Excel ingestion, `.xls` AND `.xlsx`
+   auto-detected; de-facto standard, no Java), `writexl` (findings export;
+   zero-dependency, already spec-logged §3.7), `dplyr` + `tidyr` (joins with `relationship` enforcement;
    covidence pivot; Area 7 pre-approves), `stringi` (Unicode NFC + space/format-char
    classes — base R cannot NFC-normalise), `cli` (messages; first-logged dependency),
    `rlang` (`%||%`, abort classes; cli dependency anyway), `tibble` (comes with dplyr).
-3. **All raw ingestion is character.** `read.csv(colClasses = "character")` /
+3. **All raw ingestion is character.**
+   `readr::read_csv(col_types = readr::cols(.default = readr::col_character()))` /
    `readxl::read_excel(col_types = "text")`: types exist only through declared
-   coercion, so nothing is guessed before the dictionary speaks.
+   coercion, so nothing is guessed before the dictionary speaks. Extension dispatch:
+   `.csv` → readr; `.xls`/`.xlsx` → readxl (auto-detects format).
 4. **Name-only column = acknowledgment**: a `columns:` entry with `name` and no
    `type` claims existence only (R005 if absent) and is exempt from R006.
 5. **Boolean coercion accepts** exactly TRUE/FALSE (case-insensitive); **date** =
@@ -72,9 +77,11 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
 7. **Draft generator lands here (Task 13)** — schema-coupled, and we need it for the
    Phase 4 dress rehearsal.
 8. **pkgdown README+NEWS-only** (Task 14): primary mechanism `home: exclude` in
-   `_pkgdown.yml` verified against installed pkgdown docs at execution; acceptance =
-   no `CLAUDE.html` in the built site; if the mechanism doesn't exist, STOP and flag
-   (plan-vs-reality), do not improvise.
+   `_pkgdown.yml` verified against installed pkgdown docs at execution; acceptance is
+   **set-based** (Liz 2026-07-09): every top-level `.md` other than README/NEWS must
+   yield no html in the built site (robust to future .md additions), plus positive
+   checks that the homepage and changelog rendered; if the exclusion mechanism
+   doesn't exist, STOP and flag (plan-vs-reality), do not improvise.
 
 ## File map (provisional layout per spec §5)
 
@@ -203,8 +210,8 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 - [ ] **Step 2: add Imports + vendor standalones** (PPM binaries only; belt-and-braces UA line):
 
 ```r
-Rscript -e 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); renv::install(c("yaml","readxl","writexl","dplyr","tidyr","stringi","cli","rlang","tibble"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))'
-Rscript -e 'usethis::local_project("."); usethis::use_package("yaml"); usethis::use_package("readxl"); usethis::use_package("writexl"); usethis::use_package("dplyr"); usethis::use_package("tidyr"); usethis::use_package("stringi"); usethis::use_package("cli"); usethis::use_package("rlang"); usethis::use_package("tibble"); usethis::use_standalone("r-lib/rlang", "types-check")'
+Rscript -e 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); renv::install(c("yaml","readr","readxl","writexl","dplyr","tidyr","stringi","cli","rlang","tibble"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))'
+Rscript -e 'usethis::local_project("."); usethis::use_package("yaml"); usethis::use_package("readr"); usethis::use_package("readxl"); usethis::use_package("writexl"); usethis::use_package("dplyr"); usethis::use_package("tidyr"); usethis::use_package("stringi"); usethis::use_package("cli"); usethis::use_package("rlang"); usethis::use_package("tibble"); usethis::use_standalone("r-lib/rlang", "types-check")'
 Rscript -e 'renv::snapshot(prompt = FALSE)'
 ```
 
@@ -474,9 +481,10 @@ synthetic review).
   `findings` = rev_findings-shaped tibble (Task 9 constructor not yet available —
   return `fnd_stub()` rows: plain tibble with the findings columns; Task 9 swaps the
   constructor in one place))
-- Internal: `read_generic(source, project)` (csv via
-  `utils::read.csv(colClasses = "character", check.names = FALSE)` → tibble; xlsx via
-  `readxl::read_excel(col_types = "text")`; R001/R002), `resolve_reader(source,
+- Internal: `read_generic(source, project)` (`.csv` via
+  `readr::read_csv(col_types = readr::cols(.default = readr::col_character()),
+  show_col_types = FALSE)`; `.xls`/`.xlsx` via
+  `readxl::read_excel(col_types = "text")`; extension dispatch; R001/R002), `resolve_reader(source,
   project)` (NULL → generic; "covidence" → registry; else function named in
   `readers.R`, sourced via `source(local = new.env())`; unknown → Y018 abort),
   R003/R004 wrapping, R005/R006 against `dict$columns` (name-only exempt from R006).
@@ -745,10 +753,20 @@ home:
   exclude: [CLAUDE.md]
 ```
 
-Then `Rscript -e 'pkgdown::build_site(preview = FALSE)'`; acceptance:
-`!file.exists("docs/CLAUDE.html")` and README/NEWS pages present. If no exclusion
-mechanism exists in the installed pkgdown → STOP, report, amend plan (no
-improvisation).
+Then `Rscript -e 'pkgdown::build_site(preview = FALSE)'`; acceptance (set-based —
+README renders as `index.html`, NEWS as `news/index.html`, so they're positive
+checks on those names while every other top-level `.md` must render nothing):
+
+```r
+mds <- list.files(".", pattern = "\\.md$")
+for (f in setdiff(mds, c("README.md", "NEWS.md"))) {
+  stopifnot(!file.exists(file.path("docs", sub("\\.md$", ".html", f))))
+}
+stopifnot(file.exists("docs/index.html"), file.exists("docs/news/index.html"))
+```
+
+If no exclusion mechanism exists in the installed pkgdown → STOP, report, amend plan
+(no improvisation).
 - [ ] **Step 2: NEWS bullets** (user-facing additions this phase):
 
 ```markdown
