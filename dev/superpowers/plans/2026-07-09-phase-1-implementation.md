@@ -464,7 +464,10 @@ joins:
 good dictionaries: estimates = columns study, design, mean_age, rob_score, notes_temp,
 extra_col with 5 rows incl. one "NR" mean_age, one "rct" design, one out-of-range 340,
 duplicate study values; rob = study_id, rob_direct, 3 rows, one study_id absent from
-estimates).
+estimates). Also: add `tests/testthat/fixtures-local/` to `.gitignore` (real-data
+fixtures live there, NEVER committed — decision Liz 2026-07-09, option 3: local-only
+skip-if-absent now; committed synthetic derivative belongs to Phase 3's designed
+synthetic review).
 
 **Interfaces — Produces:**
 - `rev_read_table(dict, project)` → list(`data` = all-character tibble | NULL,
@@ -482,6 +485,28 @@ estimates).
   file → R001 finding row + NULL data; missing declared column → R005; extra_col →
   R006 with fix_options mentioning name-only listing; erroring user reader → R003
   carrying the error text), watch fail, implement, watch pass, format+lint, commit.
+- [ ] **Step 6: local real-workbook breadth test (skip-if-absent).** In
+  `test-read.R`, guarded by
+  `skip_if_not(file.exists(test_path("fixtures-local", "family-comparison.xlsx")))`:
+  read the workbook's `"Results and characteristics"` sheet through the generic Excel
+  reader (`skip = 2`, so row 3 supplies names) and through a test-local reader
+  function exercising the user-reader contract:
+
+```r
+family_wide_test_reader <- function(path, sheet) {
+  raw <- readxl::read_excel(path, sheet = sheet, skip = 2, col_types = "text")
+  tidyr::pivot_longer(raw, cols = dplyr::matches("^(Unadjusted|Adjusted)"),
+                      names_to = c("adjustment", ".value"), names_sep = "_")
+}
+```
+
+  Assertions: generic read yields > 10 rows and > 40 all-character columns with
+  non-empty names; the test reader returns a data frame with an `adjustment` column
+  and more rows than the sheet. (Exact column patterns to be trued against the real
+  file during TDD — the test is written by first LOOKING at the file, which the
+  executing session has at `/run/sandbox/source/working/refs/`; copy it to
+  `tests/testthat/fixtures-local/family-comparison.xlsx` as part of this step.)
+  Expected in CI / repos without the file: SKIPPED, suite green.
 
 ### Task 7: Covidence importer (`read-covidence.R`)
 

@@ -317,6 +317,15 @@ Findings:
     - Confirmed: the SPEC is the authoritative input to the implementation plan;
       these notes are the rationale/audit trail.
 
+12. **DECIDED (Liz, 2026-07-09, plan review) — D8: real-workbook fixture, option 3.**
+    The family-comparison workbook joins the test suite as a **local-only,
+    skip-if-absent fixture** (`tests/testthat/fixtures-local/`, gitignored — never
+    committed/published; extractor initials + identifiable review content stay
+    private). A committed synthetic derivative of its structure is folded into
+    Phase 3's designed synthetic review. Supersedes D6's blanket "not a test case"
+    with this staged mechanism; spec §7 updated. (Contradiction with D6 was
+    surfaced before amending.)
+
 **DESIGN BLOCK COMPLETE (2026-07-09).** Next: spec §8.2 amendments committed to the
 design spec (this branch), Liz reviews, then superpowers:writing-plans for the Phase 1
 implementation plan.
