@@ -255,6 +255,34 @@ Findings:
    - A thin combination-check stage remains (join validations now; future cross-table
      conditional rules would live there if ever added).
 
+9. **DECIDED (Liz, 2026-07-09, session 3) — D5: consequence model replaces severity;
+   certification is absolute.** (Amends spec §3.4's "error-severity findings block
+   progression" and drops the borrowed error/warning taxonomy — via §8.2 amendment;
+   rationale: severity conflated defect-description with permission; consequence
+   describes, the user decides what to fix when.)
+   - **Always-run, always-write, one honest status.** The pipeline executes
+     everything mechanically possible and writes whatever it could compute; outputs
+     carry certification status in provenance and on the certificate: CERTIFIED /
+     NOT CERTIFIED with findings listed. No blocking gate, no provisional flag —
+     not-certified output is always available and always labelled; downstream
+     consumers inherit and display the status.
+   - **Findings carry `consequence`, not severity** — the mechanical dependency
+     hierarchy (Liz's): key findings → joins skipped; un-coercible → dependent
+     checks on that column not run (and may surface new findings when fixed);
+     everything → "not certifiable". Report sorts by consequence = the fix-flow view.
+   - **Certification = zero standing findings, absolute** (Liz: no issue category
+     passes). Acceptance happens only by explicit declaration, one auditable line
+     each: undeclared column → describe it OR list it name-only (a name-only column
+     later absent from data is itself a finding — acknowledgments can't rot);
+     legitimately-partial joins → `unmatched_ok: true` on the join. Certificate
+     lists invoked acknowledgments.
+   - The three formerly-open severity defaults dissolve: range/values violations →
+     not certifiable; undeclared columns and unmatched rows → findings requiring
+     acknowledgment declarations (above) or fixes.
+   - Check catalogue organised in five code families (Y spec / R read / V per-table
+     validation / J combination / C corrections-application, reserved); full
+     enumeration with codes, message templates, and routing = plan deliverable.
+
 ## SUPERSEDED (recorded for audit) — original D3 proposal (session 2 pause)
 
 Closed, ordered, idempotent set of five ops, generated from the dictionary, counts
