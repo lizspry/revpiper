@@ -302,8 +302,10 @@ Findings:
 11. **DECIDED (Liz, 2026-07-09, spec review round) — D7: review amendments.**
     - `categorical` type REMOVED (inferred storage contradicted prespecify-then-check).
       Five types; `values` is an optional closed-set restriction on `text`, parallel
-      to `range` on numerics. Known limitation, accepted: non-contiguous numeric code
-      sets (e.g. 1, 2, 9) are not closed-checkable (range admits the gaps).
+      to `range` on numerics. [Amended same day: `values` also allowed on
+      integer/decimal as the alternative to `range` (mutually exclusive per column),
+      so non-sequential code sets (1, 2, 9) ARE closed-checkable — consistent with
+      text categories being listed as values.]
     - Per-column `pattern` REMOVED; join near-miss suggestions remain the key-drift
       net. Composition moved out of per-column fields into the top key/role block:
       `study_id: covidence_id` or `study_id: {combine: [author, year], separator: "_"}`
