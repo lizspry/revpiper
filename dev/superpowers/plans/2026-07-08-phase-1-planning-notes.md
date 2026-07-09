@@ -283,6 +283,26 @@ Findings:
      validation / J combination / C corrections-application, reserved); full
      enumeration with codes, message templates, and routing = plan deliverable.
 
+10. **DECIDED (Liz, 2026-07-09, session 3) — D6: closing items.**
+    - **File layout is a provisional starting shape, not a design commitment** (Liz):
+      binding rules are the mirror rule, topic-coherent files, `utils-<domain>` and
+      `import-standalone-*` conventions, and no user-facing "clean" naming before
+      certification. Initial Phase 1 file set as listed in the notes; reshuffling
+      during implementation is free (R file layout has no structural meaning) and
+      reviewed in PRs. Corrections engine = Phase 2 against a designed-in seam
+      (per-table apply hook, no-op without a corrections file).
+    - **pkgdown renders README and NEWS only** (resolves the Phase 0 queued item;
+      currently the default renders CLAUDE.md into the public site).
+    - **Fixture policy (Liz):** the Covidence example export is dummy data → usable
+      as the basis for test fixtures (shape-realistic; content nonsense — caveat
+      noted). The family-comparison Excel file is from a real review — NOT to be
+      used as a test case; a synthetic derivative may be created (nonstandard
+      design caveat). Default remains designed synthetic fixtures.
+
+**DESIGN BLOCK COMPLETE (2026-07-09).** Next: spec §8.2 amendments committed to the
+design spec (this branch), Liz reviews, then superpowers:writing-plans for the Phase 1
+implementation plan.
+
 ## SUPERSEDED (recorded for audit) — original D3 proposal (session 2 pause)
 
 Closed, ordered, idempotent set of five ops, generated from the dictionary, counts
