@@ -4,9 +4,32 @@
 > standing preference: checkpointed mode, check in at every checkpoint) to implement
 > this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-- **Status:** DRAFT — awaiting Liz's sign-off. A signed-off plan triggers the
-  pre-flight check (~/.claude/rules/preflight.md) in the executing sandbox before
-  Task 1; findings fix by plan amendment, never mid-execution improvisation.
+- **Status:** SIGNED OFF (Liz, 2026-07-09) with amendments through commit d038c87,
+  and with this **binding execution protocol**: Liz reviewed the front matter and
+  task sequence but not the in-plan code in depth, so execution is
+  **walkthrough-gated per task** — before starting each task, explain what it will
+  do and broadly (not line-by-line) how the code works and why it was chosen; give
+  Liz a turn to read the explanation alongside the plan step and code; **begin the
+  task only on her explicit confirmation**. Checkpointed in-session execution
+  (superpowers:executing-plans), never autonomous batching.
+- **Pre-flight:** run 2026-07-09 post-sign-off. Verdict: **proceed after one
+  amendment**. Findings:
+  1. **Task 14 / embedded decision 8 — CONFIRMED DEFECT:** pkgdown 2.2.0 has no
+     `.md`-exclusion config; its `package_mds()` uses a hardcoded skip-list only
+     (verified by reading the installed function source). **PROPOSED AMENDMENT
+     (awaiting Liz's sign-off, not yet applied):** replace the `home: exclude`
+     mechanism with a post-build prune — a small helper (`dev/build-site.R`) that
+     runs `pkgdown::build_site()` then deletes html derived from any top-level `.md`
+     outside the wanted set (same set logic as the acceptance check), used both
+     locally and as a step in the pkgdown CI workflow before deploy. The set-based
+     acceptance check is unchanged and verifies the prune.
+  2. Packages already present in the project library: yaml, dplyr, stringi, cli,
+     rlang, tibble (+ toolchain). **To install in Task 1: readr, readxl, writexl,
+     tidyr** — consistent with the plan (renv::install is idempotent for the rest).
+  3. Routes green: PPM reachable (400 at bare root = expected), GitHub reachable
+     (use_standalone source), git identity correct, R 4.6.1 / Air 0.10.0 present,
+     DESCRIPTION floor R >= 4.2 matches spec, no Imports yet (skeleton state),
+     family workbook present in the host mount for the fixtures-local copy.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-09). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
