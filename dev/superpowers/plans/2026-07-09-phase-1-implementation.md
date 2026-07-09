@@ -702,8 +702,17 @@ pointing at `data/raw/*.csv` from Task 6), plus a second all-clean fixture proje
 lists `extra_col` name-only.
 
 **Interfaces — Produces:**
+- `rev_check_specs(project = ".")` → validates ALL spec files with **no data
+  required** (dictionaries via `rev_read_dictionaries()`, joins via
+  `rev_read_joins()`); on problems, the standard `abort_spec()` listing; on success,
+  prints "All specs valid: {n} table{?s}, {n} join{?s}." (snapshot-tested) and
+  returns the loaded specs invisibly. Serves the prespecification workflow
+  (dictionary authored before data collection as the extraction instrument's source
+  of truth) — spec validation deliberately checks that `source.file` is *declared*,
+  never that it exists.
 - `rev_check(project = ".", quiet = FALSE)` → invisibly `rev_findings` with
   attributes `certificate` (`rev_certificate`) and `assembled` (tibble | NULL).
+  Internally begins with the same loading step as `rev_check_specs()`.
   Sequence per D4: read dictionaries + joins spec (spec errors abort) → per table:
   `rev_read_table` → `rev_standardise` → `rev_validate_table` → `rev_join_tables` →
   bind findings → certificate (acknowledgments from name-only columns actually
@@ -712,7 +721,10 @@ lists `extra_col` name-only.
   `findings-<format(Sys.time(), "%Y%m%d-%H%M%S")>.xlsx` (skip xlsx when zero
   findings). Never touches `data/raw/` (test asserts mtimes unchanged).
 
-- [ ] **Step 1: failing tests** — miniproject: returns findings containing codes
+- [ ] **Step 1: failing tests** — `rev_check_specs()`: on the miniproject → success
+  message snapshot + invisible specs list; on a copy whose data/raw/ is DELETED →
+  still succeeds (no data required); on a bad-spec fixture → `revpiper_spec_error`.
+  `rev_check()` on the miniproject: returns findings containing codes
   `{"R006","V003","J004"}` at least; certificate status "NOT CERTIFIED";
   `output/diagnostics/preprocessed-estimates.csv` exists and its row numbering
   matches the `rows` in the V003 finding; raw file mtimes unchanged.
@@ -773,6 +785,8 @@ If no exclusion mechanism exists in the installed pkgdown → STOP, report, amen
 - `rev_check()` diagnoses a review project end to end: per-table dictionaries,
   standardisation, validation with routed findings, declared joins, and an honest
   certification status.
+- `rev_check_specs()` validates every spec file with no data present — dictionaries
+  can be authored and checked before data collection begins.
 - `rev_draft_dictionary()` generates a minimal dictionary skeleton from a data file.
 - Findings report consequences (what a problem prevents), never severities; outputs
   are always written and always labelled CERTIFIED / NOT CERTIFIED.
