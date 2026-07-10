@@ -28,6 +28,19 @@
      (use_standalone source), git identity correct, R 4.6.1 / Air 0.10.0 present,
      DESCRIPTION floor R >= 4.2 matches spec, no Imports yet (skeleton state),
      family workbook present in the host mount for the fixtures-local copy.
+- **Execution amendment (2026-07-10, during Task 1; SIGNED OFF, Liz 2026-07-10):**
+  the r-lib standalone vendoring is DROPPED. Task 1 execution found the standalone's
+  upstream changelog (2026-03-17) moved `check_bool()`, `check_string()`, and
+  `check_data_frame()` out of the standalone file into rlang's own exports (verified
+  present in installed rlang 1.3.0). Per conventions ("depend / vendor / write it" —
+  depend first): no vendored files; the three checkers are called qualified
+  (`rlang::check_string()` etc.); rlang floor raised to >= 1.3.0. `%||%` stays and is
+  imported via `@importFrom rlang "%||%"` — the package's sole namespace import
+  (infix operators cannot be namespace-qualified; ecosystem-standard exception,
+  recorded as a closed rule in dev/conventions.md). Task 1 Step 3's gate restated:
+  0 errors / 0 warnings / exactly one expected NOTE (declared-but-not-yet-used
+  Imports), which shrinks as Tasks 2-13 land code and must be gone at Task 14's
+  error_on = "note" pre-push gate. Also fixed: "nine Imports" miscount (ten).
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-09). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
@@ -44,11 +57,15 @@ carry consequences, never severities; certification = zero standing findings, wi
 explicit acknowledgment declarations the only pass.
 
 **Tech Stack:** R (4.2 floor), yaml, readxl, writexl, dplyr, tidyr, stringi, cli,
-rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
+rlang (>= 1.3.0, supplying the entry-point type checkers); testthat 3e (parallel,
+snapshots).
 
 ## Global Constraints (spec §2; every task implicitly includes these)
 
-- R floor **4.2**; native pipe `|>` and `\(x)` fine; no base `%||%` (use rlang's).
+- R floor **4.2**; native pipe `|>` and `\(x)` fine; no base `%||%` (needs R >= 4.4)
+  — use rlang's, imported via `@importFrom rlang "%||%"` in `R/revpiper-package.R`,
+  the package's sole namespace import; every other external call is qualified
+  `pkg::fun()`.
 - Tidyverse style via **Air** (never hand-format); **zero lints** (`lintr::lint_package()`).
 - **TDD strictly**: failing test first, minimal code, watch pass, commit.
 - **Mirror rule**: every `R/` file gets `tests/testthat/test-<name>.R`.
@@ -83,7 +100,9 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
    zero-dependency, already spec-logged §3.7), `dplyr` + `tidyr` (joins with `relationship` enforcement;
    covidence pivot; Area 7 pre-approves), `stringi` (Unicode NFC + space/format-char
    classes — base R cannot NFC-normalise), `cli` (messages; first-logged dependency),
-   `rlang` (`%||%`, abort classes; cli dependency anyway), `tibble` (comes with dplyr).
+   `rlang` (`%||%`, abort classes, entry-point type checkers `check_string()` /
+   `check_bool()` / `check_data_frame()` exported since 1.3.0 — hence the floor;
+   cli dependency anyway), `tibble` (comes with dplyr).
 3. **All raw ingestion is character.**
    `readr::read_csv(col_types = readr::cols(.default = readr::col_character()))` /
    `readxl::read_excel(col_types = "text")`: types exist only through declared
@@ -122,7 +141,6 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
 | `R/join.R` | join execution + J-checks + near-miss suggestions | `test-join.R` |
 | `R/check.R` | `rev_check()` orchestration + diagnostics output | `test-check.R` |
 | `R/draft.R` | `rev_draft_dictionary()` | `test-draft.R` |
-| `R/import-standalone-types-check.R` | vendored (never hand-edited) | exempt (principled) |
 
 ## Check catalogue, routing, and data-dict coverage (plan deliverable)
 
@@ -220,28 +238,48 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 
 ---
 
-### Task 1: Dependencies, vendored checkers, branch
+### Task 1: Dependencies, namespace, branch
 
 **Files:**
-- Modify: `DESCRIPTION` (Imports)
-- Create: `R/import-standalone-types-check.R` (+ `R/import-standalone-obj-type.R`, pulled in automatically)
+- Modify: `DESCRIPTION` (Imports; rlang floored >= 1.3.0)
+- Modify: `R/revpiper-package.R` (`@importFrom rlang "%||%"`) + regenerated `NAMESPACE`
 - Modify: `renv.lock` (snapshot)
 
-**Interfaces:** Produces the Imports every later task assumes and `check_string()`,
-`check_bool()`, `check_data_frame()` (vendored) for entry-point validation.
+**Interfaces:** Produces the Imports every later task assumes; entry-point
+validation uses rlang's exported checkers, called qualified —
+`rlang::check_string()`, `rlang::check_bool()`, `rlang::check_data_frame()`
+(exported since the 2026-03 standalone migration; floor 1.3.0 verified) — plus
+`%||%`, the sole namespace import.
 
 - [ ] **Step 1: branch.** `git checkout -b phase-1-core main`
-- [ ] **Step 2: add Imports + vendor standalones** (PPM binaries only; belt-and-braces UA line):
+- [ ] **Step 2: add Imports** (PPM binaries only; belt-and-braces UA line):
 
 ```r
 Rscript -e 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); renv::install(c("yaml","readr","readxl","writexl","dplyr","tidyr","stringi","cli","rlang","tibble"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))'
-Rscript -e 'usethis::local_project("."); usethis::use_package("yaml"); usethis::use_package("readr"); usethis::use_package("readxl"); usethis::use_package("writexl"); usethis::use_package("dplyr"); usethis::use_package("tidyr"); usethis::use_package("stringi"); usethis::use_package("cli"); usethis::use_package("rlang"); usethis::use_package("tibble"); usethis::use_standalone("r-lib/rlang", "types-check")'
+Rscript -e 'usethis::local_project("."); usethis::use_package("yaml"); usethis::use_package("readr"); usethis::use_package("readxl"); usethis::use_package("writexl"); usethis::use_package("dplyr"); usethis::use_package("tidyr"); usethis::use_package("stringi"); usethis::use_package("cli"); usethis::use_package("rlang", min_version = "1.3.0"); usethis::use_package("tibble")'
 Rscript -e 'renv::snapshot(prompt = FALSE)'
 ```
 
+Then add the operator import to `R/revpiper-package.R` (between the usethis
+namespace markers) and regenerate NAMESPACE:
+
+```r
+## usethis namespace: start
+#' @importFrom rlang %||%
+## usethis namespace: end
+```
+
+`Rscript -e 'devtools::document()'`
+
 Expected: all binary installs (report any source compile and PAUSE); DESCRIPTION
-gains nine Imports; two `import-standalone-*.R` files appear.
-- [ ] **Step 3: verify check clean.** `Rscript -e 'devtools::check(args = "--no-manual", build_args = "--no-manual", error_on = "note")'` → 0/0/0.
+gains ten Imports with `rlang (>= 1.3.0)`; NAMESPACE gains
+`importFrom(rlang,"%||%")`. No vendored files (amendment 2026-07-10: upstream
+moved the needed checkers into rlang's exports).
+- [ ] **Step 3: verify check.** `Rscript -e 'devtools::check(args = "--no-manual", build_args = "--no-manual", error_on = "warning")'` →
+  0 errors / 0 warnings / exactly one NOTE ("Namespaces in Imports field not
+  imported from" — the declared-but-not-yet-used packages). The note is expected
+  and shrinks as Tasks 2-13 land code; Task 14 Step 4's `error_on = "note"` gate
+  requires it gone.
 - [ ] **Step 4: commit** with the dependency justifications (from "Decisions embedded" #2) in the body.
 
 ### Task 2: Spec-error infrastructure (`utils-messages.R`)
@@ -378,7 +416,7 @@ COLUMN_FIELDS <- c("name", "type", "values", "range", "units", "required",
                    "unique", "missing", "constant_within_level", "description")
 
 rev_read_dictionary <- function(path) {
-  check_string(path)
+  rlang::check_string(path)
   raw <- yaml::read_yaml(path)
   pr <- rbind(
     check_known_fields(raw, DICT_FIELDS, path, "top level"),

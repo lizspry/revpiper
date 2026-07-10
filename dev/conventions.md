@@ -32,6 +32,10 @@ source), not here — this document covers code conventions only.
   surface); log the justification in the PR that adds it.
 - Options in order: depend / vendor r-lib standalone / write it.
 - No library() in R/. Depends: holds only the R floor.
+- External calls are namespace-qualified (`pkg::fun()`). Infix operators,
+  which cannot be qualified, are imported via `@importFrom` — a closed
+  list, kept to the minimum (currently rlang's `%||%` only; additions
+  need a recorded decision).
 - renv pins the dev environment only (Rbuildignored); CI unpinned.
 
 ## Design
