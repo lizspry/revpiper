@@ -41,6 +41,13 @@
   0 errors / 0 warnings / exactly one expected NOTE (declared-but-not-yet-used
   Imports), which shrinks as Tasks 2-13 land code and must be gone at Task 14's
   error_on = "note" pre-push gate. Also fixed: "nine Imports" miscount (ten).
+- **Execution amendment 2 (2026-07-10, before Task 2; SIGNED OFF, Liz 2026-07-10):**
+  `abort_spec()` renamed `stop_spec()` (Liz's preference; `stop_` is the
+  base-R-familiar error-constructor prefix, per rlang/vctrs convention). Zebra
+  assertion strengthened to `expect_identical(..., NA_character_)` (pins the typed
+  NA). Problem-line formatting vectorised (`sprintf` over whole columns) in place
+  of row-wise `vapply` — simpler and idiomatic; performance immaterial on the
+  error path.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-09). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
@@ -289,7 +296,7 @@ moved the needed checkers into rlang's exports).
 **Interfaces — Produces:**
 - `suggest_name(name, known)` → closest of `known` within adist ≤ 2 (case-insensitive) or `NA_character_`
 - `spec_problem(file, entry, code, message, suggestion = NULL)` → one-row problem tibble
-- `abort_spec(problems)` → `cli_abort` (class `revpiper_spec_error`) listing every problem as `code file / entry: message (did you mean ...?)`
+- `stop_spec(problems)` → `cli_abort` (class `revpiper_spec_error`) listing every problem as `code file / entry: message (did you mean ...?)`
 
 - [ ] **Step 1: failing tests**
 
@@ -298,18 +305,18 @@ moved the needed checkers into rlang's exports).
 test_that("suggest_name finds near misses and refuses far ones", {
   expect_equal(suggest_name("descrption", c("description", "type")), "description")
   expect_equal(suggest_name("VALUES", c("values", "range")), "values")
-  expect_true(is.na(suggest_name("zebra", c("description", "type"))))
+  expect_identical(suggest_name("zebra", c("description", "type")), NA_character_)
 })
 
-test_that("abort_spec reports every problem with file, entry, and code", {
+test_that("stop_spec reports every problem with file, entry, and code", {
   p <- rbind(
     spec_problem("specs/tables/estimates.yaml", "column 'mean_age'", "Y001",
                  "unknown field 'rnge'", suggestion = "range"),
     spec_problem("specs/joins.yaml", "join 1", "Y014", "unknown table 'robb'",
                  suggestion = "rob")
   )
-  expect_error(abort_spec(p), class = "revpiper_spec_error")
-  expect_snapshot(error = TRUE, abort_spec(p))
+  expect_error(stop_spec(p), class = "revpiper_spec_error")
+  expect_snapshot(error = TRUE, stop_spec(p))
 })
 ```
 
@@ -330,12 +337,11 @@ spec_problem <- function(file, entry, code, message, suggestion = NULL) {
   )
 }
 
-abort_spec <- function(problems) {
-  lines <- vapply(seq_len(nrow(problems)), \(i) {
-    p <- problems[i, ]
-    hint <- if (!is.na(p$suggestion)) sprintf(" (did you mean '%s'?)", p$suggestion) else ""
-    sprintf("%s %s / %s: %s%s", p$code, p$file, p$entry, p$message, hint)
-  }, character(1))
+stop_spec <- function(problems) {
+  hint <- ifelse(is.na(problems$suggestion), "",
+                 sprintf(" (did you mean '%s'?)", problems$suggestion))
+  lines <- sprintf("%s %s / %s: %s%s",
+                   problems$code, problems$file, problems$entry, problems$message, hint)
   names(lines) <- rep("x", length(lines))
   cli::cli_abort(
     c("Spec validation failed ({nrow(problems)} problem{?s}):", lines),
@@ -359,7 +365,7 @@ fixtures under `tests/testthat/fixtures/specs-good/tables/estimates.yaml` and
   list(combine = chr(), separator = chr)), `levels` named list of chr(),
   `columns` tibble(name, type, values <list>, range <list>, units, required, unique,
   missing <list>, constant_within_level, description, acknowledged <lgl>), `path` chr)
-  — or `abort_spec()` listing ALL problems.
+  — or `stop_spec()` listing ALL problems.
 - Constants: `REV_TYPES <- c("text","integer","decimal","boolean","date")`,
   `DICT_FIELDS`, `COLUMN_FIELDS`, `SOURCE_FIELDS` (closed field sets).
 
@@ -424,7 +430,7 @@ rev_read_dictionary <- function(path) {
     check_source_block(raw$source, path),                                # Y001/Y019
     check_columns_block(raw$columns, path)                               # Y001-Y008, Y012
   )
-  if (nrow(pr) > 0) abort_spec(pr)
+  if (nrow(pr) > 0) stop_spec(pr)
   new_dictionary(raw, path)
 }
 
@@ -766,7 +772,7 @@ lists `extra_col` name-only.
 **Interfaces — Produces:**
 - `rev_check_specs(project = ".")` → validates ALL spec files with **no data
   required** (dictionaries via `rev_read_dictionaries()`, joins via
-  `rev_read_joins()`); on problems, the standard `abort_spec()` listing; on success,
+  `rev_read_joins()`); on problems, the standard `stop_spec()` listing; on success,
   prints "All specs valid: {n} table{?s}, {n} join{?s}." (snapshot-tested) and
   returns the loaded specs invisibly. Serves the prespecification workflow
   (dictionary authored before data collection as the extraction instrument's source
