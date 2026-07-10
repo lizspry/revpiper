@@ -1,0 +1,7 @@
+table: estimates
+descrption: One row per extracted estimate.
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: study
+    type: text

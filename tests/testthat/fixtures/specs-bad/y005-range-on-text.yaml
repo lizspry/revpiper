@@ -1,0 +1,7 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: notes_temp
+    type: text
+    range: [1, 10]

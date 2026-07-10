@@ -1,0 +1,7 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: extraction_date
+    type: date
+    values: ["2026-01-01"]

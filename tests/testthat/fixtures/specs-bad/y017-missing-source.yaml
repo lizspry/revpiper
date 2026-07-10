@@ -1,0 +1,4 @@
+table: estimates
+columns:
+  - name: study
+    type: text

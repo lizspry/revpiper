@@ -390,8 +390,8 @@ fixtures under `tests/testthat/fixtures/specs-good/tables/estimates.yaml` and
   `columns` tibble(name, type, values <list>, range <list>, units, required, unique,
   missing <list>, constant_within_level, description), `path` chr)
   — or `stop_spec()` listing ALL problems.
-- Constants: `REV_TYPES <- c("text","integer","decimal","boolean","date")`,
-  `DICT_FIELDS`, `COLUMN_FIELDS`, `SOURCE_FIELDS` (closed field sets).
+- Constants: `spec_types <- c("text","integer","decimal","boolean","date")`,
+  `dict_fields`, `column_fields`, `source_fields` (closed field sets).
 
 Good fixture (used across later tasks — keep exactly):
 
@@ -443,10 +443,10 @@ columns:
 
 ```r
 # R/spec-dictionary.R
-REV_TYPES <- c("text", "integer", "decimal", "boolean", "date")
-DICT_FIELDS <- c("table", "description", "source", "roles", "levels", "columns")
-SOURCE_FIELDS <- c("file", "sheet", "reader")
-COLUMN_FIELDS <- c("name", "type", "values", "range", "units", "required",
+spec_types <- c("text", "integer", "decimal", "boolean", "date")
+dict_fields <- c("table", "description", "source", "roles", "levels", "columns")
+source_fields <- c("file", "sheet", "reader")
+column_fields <- c("name", "type", "values", "range", "units", "required",
                    "unique", "missing", "constant_within_level", "description")
 
 rev_read_dictionary <- function(path) {
@@ -459,7 +459,7 @@ rev_read_dictionary <- function(path) {
   }
   raw <- yaml::read_yaml(path)
   pr <- rbind(
-    check_known_fields(raw, DICT_FIELDS, path, "top level"),
+    check_known_fields(raw, dict_fields, path, "top level"),
     check_required_fields(raw, c("table", "source", "columns"), path),   # Y017
     check_source_block(raw$source, path),                                # Y001/Y019
     check_columns_block(raw$columns, path)                               # Y001-Y008, Y012
@@ -478,16 +478,16 @@ check_known_fields <- function(x, known, file, entry) {          # -> Y001 rows
 check_column <- function(col, file) {                            # one column's checks
   entry <- sprintf("column '%s'", col$name %||% "<unnamed>")
   pr <- rbind(
-    check_known_fields(col, COLUMN_FIELDS, file, entry),         # Y001
+    check_known_fields(col, column_fields, file, entry),         # Y001
     check_required_fields(col, "type", file, entry),             # Y017 (per column)
     check_empty_fields(col, file, entry)                         # Y020 (description exempt)
   )
   if (!is.null(col$values) && !is.null(col$range))               # Y003: type-independent, so pre-return
     pr <- rbind(pr, spec_problem(file, entry, "Y003", "'values' and 'range' are mutually exclusive"))
   if (is.null(col$type)) return(pr)                              # type-DEPENDENT checks need a type
-  if (!col$type %in% REV_TYPES)
+  if (!col$type %in% spec_types)
     pr <- rbind(pr, spec_problem(file, entry, "Y002",
-      sprintf("unknown type '%s'", col$type), suggest_name(col$type, REV_TYPES)))
+      sprintf("unknown type '%s'", col$type), suggest_name(col$type, spec_types)))
   if (!is.null(col$values) && isTRUE(col$type %in% c("boolean", "date")))
     pr <- rbind(pr, spec_problem(file, entry, "Y004", sprintf("'values' is not allowed on type '%s'", col$type)))
   if (!is.null(col$range) && isTRUE(col$type %in% c("text", "boolean")))
@@ -667,7 +667,7 @@ Column-name grammar (from the real export): `Result data: <outcome> (<timepoint>
   `failures` tibble(column, value, rows <list>) for V001,
   `skipped` chr (columns whose dependent checks must not run))
 - Ops in order (each skippable per column via dictionary `clean:` map — add `clean`
-  to `COLUMN_FIELDS` in Task 3's constant, values validated as named list of booleans
+  to `column_fields` in Task 3's constant, values validated as named list of booleans
   with op names → else Y001): `encoding`, `trim`, `missing`, `coerce`, `canonicalise`.
 
 - [ ] **Step 1: failing tests**

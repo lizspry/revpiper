@@ -1,0 +1,6 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: mean_age
+    type: decmal
