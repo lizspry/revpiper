@@ -48,6 +48,25 @@
   NA). Problem-line formatting vectorised (`sprintf` over whole columns) in place
   of row-wise `vapply` — simpler and idiomatic; performance immaterial on the
   error path.
+- **Execution amendment 3 (2026-07-10, before Task 3; SIGNED OFF, Liz 2026-07-10):**
+  design change from Liz's walkthrough review, replacing the name-only
+  acknowledgment concept entirely. (a) **The dictionary declares exactly the
+  columns the user imports, checks, and uses**: `type` becomes required per
+  column (generalised Y017 — same helper, second call site). (b) **R006 is
+  retired**: source columns absent from the dictionary are never findings — they
+  carry no consequence; `rev_read_table()` returns them as `unspecified`,
+  `rev_check()` reports them informationally, the certificate lists them as an
+  annex, and pipeline artifacts drop them until declared (list-and-drop). R005
+  is unchanged. (c) **Y012 extended** to missing (not just duplicate/empty)
+  column names — `name` is the entry's identity. (d) **Y020 defined**: a field
+  declared with no value (YAML NULL) is an error, not a silent absence;
+  `description` exempt (draft skeletons carry empty descriptions by design).
+  (e) `rev_read_dictionary()` gains a missing-file guard aborting with class
+  `revpiper_spec_error` (raw `yaml::read_yaml()` connection errors violate the
+  error doctrine for an exported function). (f) The `acknowledged` column leaves
+  `rev_dictionary`; the good fixture's `notes_temp` gains `type: text`; Tasks 6,
+  9, and 12 adjusted accordingly. Design-spec §3.1/§3.4 amended in the same
+  commit (rides the phase-1-core PR, like decision 1's §4 amendment).
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-09). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
@@ -115,8 +134,12 @@ snapshots).
    `readxl::read_excel(col_types = "text")`: types exist only through declared
    coercion, so nothing is guessed before the dictionary speaks. Extension dispatch:
    `.csv` → readr; `.xls`/`.xlsx` → readxl (auto-detects format).
-4. **Name-only column = acknowledgment**: a `columns:` entry with `name` and no
-   `type` claims existence only (R005 if absent) and is exempt from R006.
+4. **The dictionary lists exactly the columns of interest** (amendment 3;
+   supersedes the name-only acknowledgment concept): every entry requires
+   `type`; declared columns must exist (R005), are imported, standardised,
+   checked, and used. Source columns not declared are surfaced informationally
+   (`unspecified` list, certificate annex) and dropped from pipeline artifacts —
+   never findings, never silently absorbed.
 5. **Boolean coercion accepts** exactly TRUE/FALSE (case-insensitive); **date** =
    strict ISO `YYYY-MM-DD`. Everything else is V001.
 6. **Shipped reader registry v1** = `covidence` + the generic csv/excel readers;
@@ -169,14 +192,15 @@ mechanical: `join '<left>-<right>' skipped`; `dependent checks on '<column>' not
 | Y009 | role names unknown column, or invalid `combine` (unknown/duplicate/empty parts, missing separator) | roles block |
 | Y010 | `levels` key names unknown column | levels block |
 | Y011 | `constant_within_level` names an undeclared level | column entry |
-| Y012 | duplicate/empty column name within a table | columns block |
+| Y012 | duplicate, empty, or missing column name within a table | columns block |
 | Y013 | duplicate table name across `specs/tables/*.yaml` | the two files named |
 | Y014 | join references unknown table | joins.yaml entry |
 | Y015 | join `keys` reference unknown column (roles-block combined keys count as known) | joins.yaml entry |
 | Y016 | `relationship` not one-to-one/one-to-many; `granularity` not a declared level of the "one" side; `unmatched_ok` not boolean | joins.yaml entry |
-| Y017 | missing required top-level field (`table`, `source`, `columns`) | spec file |
+| Y017 | missing required field (top level: `table`, `source`, `columns`; per column: `type`) | spec file / column entry |
 | Y018 | `reader` neither shipped nor a function in `readers.R` | source block / readers.R |
 | Y019 | `source.file` missing from source block | source block |
+| Y020 | field declared with no value (YAML NULL; `description` exempt — draft skeletons carry empty descriptions) | the named entry |
 
 ### R — reading/structure (findings; consequence: table skipped → its joins skipped; not certifiable)
 
@@ -186,8 +210,8 @@ mechanical: `join '<left>-<right>' skipped`; `dependent checks on '<column>' not
 | R002 | declared `sheet` absent from workbook | source block |
 | R003 | reader errored (error text relayed) | readers.R / source block |
 | R004 | reader returned non-data-frame | readers.R |
-| R005 | declared column absent from data (incl. name-only columns) | dictionary vs re-export |
-| R006 | undeclared column present (exempt: name-only listed) | dictionary: describe or list by name |
+| R005 | declared column absent from data | dictionary vs re-export |
+| R006 | *retired (amendment 3)* — undeclared source columns are informational, never findings: returned as `unspecified`, reported by `rev_check()`, listed on a certificate annex, dropped from pipeline artifacts | add to the dictionary if wanted |
 
 ### V — per-table validation (findings; per column/rows)
 
@@ -223,7 +247,7 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 | S02 unknown table | Y014 | adopted |
 | S03 unknown column | Y015 | adopted |
 | S04 invalid join expr | Y015/Y016 | adapted (structured keys, not expressions) |
-| S05 unresolved conflict col | — | N/A: no `conflicts` field v1; overlapping non-key columns get dplyr suffixes + R006 visibility |
+| S05 unresolved conflict col | — | N/A: no `conflicts` field v1; overlapping non-key columns get dplyr suffixes + unspecified-columns visibility |
 | S06 inconsistent cardinality | Y016 + J002/J003 | adapted (declared vs constraint consistency checked at data level) |
 | S07 wrong representation key | Y003–Y005 | adapted (values/range optionality per type) |
 | S08 units w/o quantity | Y006 | adopted |
@@ -238,7 +262,7 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 | S18 missing $version | — | N/A: schema versioning deferred to first breaking change |
 | M01 type mismatch | V001 | adapted (coercion-based) |
 | M02 missing column | R005 | adopted |
-| M03 undocumented column | R006 | adopted (finding + name-only acknowledgment) |
+| M03 undocumented column | — | adapted (amendment 3): informational unspecified-columns listing, not a finding |
 | M04 missing source | Y017/Y019 | adopted |
 | M05 unreadable source | R001–R004 | adopted + extended (readers) |
 | D01 nulls in required | V004 | adopted |
@@ -364,7 +388,7 @@ fixtures under `tests/testthat/fixtures/specs-good/tables/estimates.yaml` and
   `source` list(file, sheet = NULL, reader = NULL), `roles` named list (chr column or
   list(combine = chr(), separator = chr)), `levels` named list of chr(),
   `columns` tibble(name, type, values <list>, range <list>, units, required, unique,
-  missing <list>, constant_within_level, description, acknowledged <lgl>), `path` chr)
+  missing <list>, constant_within_level, description), `path` chr)
   — or `stop_spec()` listing ALL problems.
 - Constants: `REV_TYPES <- c("text","integer","decimal","boolean","date")`,
   `DICT_FIELDS`, `COLUMN_FIELDS`, `SOURCE_FIELDS` (closed field sets).
@@ -398,16 +422,20 @@ columns:
     type: integer
     values: [1, 2, 9]
   - name: notes_temp
+    type: text
 ```
 
 - [ ] **Step 1: failing tests** — parse the good fixture and assert every slot above
-  (types, values list, name-only `acknowledged`); then one `expect_snapshot(error =
+  (types, values list, defaults); then one `expect_snapshot(error =
   TRUE, rev_read_dictionary(<bad fixture>))` per bad fixture: unknown top-level field
   (Y001 with suggestion), unknown column field (Y001), bad type (Y002), values+range
   together (Y003), values on date (Y004), range on text (Y005), units on text (Y006),
   mixed values `[1, two]` (Y007), descending range (Y008), duplicate column (Y012),
-  missing `source:` (Y017), missing `source.file` (Y019). Write each bad yaml fixture
-  as a minimal copy of the good one with the single defect.
+  column entry with no `name` (Y012), column entry with no `type` (Y017 per column),
+  a valueless field e.g. bare `range:` (Y020), missing `source:` (Y017), missing
+  `source.file` (Y019). Write each bad yaml fixture as a minimal copy of the good
+  one with the single defect. Plus one non-fixture case: a nonexistent path →
+  snapshot of the classed missing-file error (amendment 3).
 - [ ] **Step 2: run, expect FAIL.**
 - [ ] **Step 3: implement.** Structure (complete the per-check helpers following
   these two models — every check appends `spec_problem()` rows, nothing aborts until
@@ -423,6 +451,12 @@ COLUMN_FIELDS <- c("name", "type", "values", "range", "units", "required",
 
 rev_read_dictionary <- function(path) {
   rlang::check_string(path)
+  if (!file.exists(path)) {
+    cli::cli_abort(
+      "Dictionary file {.file {path}} does not exist.",
+      class = "revpiper_spec_error", call = NULL
+    )
+  }
   raw <- yaml::read_yaml(path)
   pr <- rbind(
     check_known_fields(raw, DICT_FIELDS, path, "top level"),
@@ -443,13 +477,17 @@ check_known_fields <- function(x, known, file, entry) {          # -> Y001 rows
 
 check_column <- function(col, file) {                            # one column's checks
   entry <- sprintf("column '%s'", col$name %||% "<unnamed>")
-  pr <- check_known_fields(col, COLUMN_FIELDS, file, entry)
-  if (is.null(col$type)) return(pr)                              # name-only: acknowledged
+  pr <- rbind(
+    check_known_fields(col, COLUMN_FIELDS, file, entry),         # Y001
+    check_required_fields(col, "type", file, entry),             # Y017 (per column)
+    check_empty_fields(col, file, entry)                         # Y020 (description exempt)
+  )
+  if (!is.null(col$values) && !is.null(col$range))               # Y003: type-independent, so pre-return
+    pr <- rbind(pr, spec_problem(file, entry, "Y003", "'values' and 'range' are mutually exclusive"))
+  if (is.null(col$type)) return(pr)                              # type-DEPENDENT checks need a type
   if (!col$type %in% REV_TYPES)
     pr <- rbind(pr, spec_problem(file, entry, "Y002",
       sprintf("unknown type '%s'", col$type), suggest_name(col$type, REV_TYPES)))
-  if (!is.null(col$values) && !is.null(col$range))
-    pr <- rbind(pr, spec_problem(file, entry, "Y003", "'values' and 'range' are mutually exclusive"))
   if (!is.null(col$values) && isTRUE(col$type %in% c("boolean", "date")))
     pr <- rbind(pr, spec_problem(file, entry, "Y004", sprintf("'values' is not allowed on type '%s'", col$type)))
   if (!is.null(col$range) && isTRUE(col$type %in% c("text", "boolean")))
@@ -463,10 +501,11 @@ check_column <- function(col, file) {                            # one column's 
 
 plus `check_values_range_types()` (homogeneous non-empty values matching the declared
 type; range length-2, ascending, type-matching → Y007/Y008), `check_columns_block()`
-(maps `check_column`, adds Y012 for duplicate/empty names), `check_source_block()`
-(Y001 on unknown source fields, Y019), `check_required_fields()` (Y017), and
-`new_dictionary()` (tibble-ise columns; `acknowledged = is.na(type)`; defaults:
-required/unique FALSE, missing = list(character(0))).
+(maps `check_column`, adds Y012 for duplicate/empty/missing names), `check_source_block()`
+(Y001 on unknown source fields, Y019), `check_required_fields()` (Y017; called at the
+top level and per column entry), `check_empty_fields()` (Y020: any field present with
+a NULL value, `description` exempt), and `new_dictionary()` (tibble-ise columns;
+defaults: required/unique FALSE, missing = list(character(0))).
 - [ ] **Step 4: run, expect PASS** (accept snapshots after reading each).
 - [ ] **Step 5:** format, lint, commit.
 
@@ -545,22 +584,25 @@ skip-if-absent now; committed synthetic derivative belongs to Phase 3's designed
 synthetic review).
 
 **Interfaces — Produces:**
-- `rev_read_table(dict, project)` → list(`data` = all-character tibble | NULL,
-  `findings` = rev_findings-shaped tibble (Task 9 constructor not yet available —
-  return `fnd_stub()` rows: plain tibble with the findings columns; Task 9 swaps the
-  constructor in one place))
+- `rev_read_table(dict, project)` → list(`data` = all-character tibble | NULL
+  (declared columns only, amendment 3), `findings` = rev_findings-shaped tibble
+  (Task 9 constructor not yet available — return `fnd_stub()` rows: plain tibble
+  with the findings columns; Task 9 swaps the constructor in one place),
+  `unspecified` = chr of source columns not in the dictionary)
 - Internal: `read_generic(source, project)` (`.csv` via
   `readr::read_csv(col_types = readr::cols(.default = readr::col_character()),
   show_col_types = FALSE)`; `.xls`/`.xlsx` via
   `readxl::read_excel(col_types = "text")`; extension dispatch; R001/R002), `resolve_reader(source,
   project)` (NULL → generic; "covidence" → registry; else function named in
   `readers.R`, sourced via `source(local = new.env())`; unknown → Y018 abort),
-  R003/R004 wrapping, R005/R006 against `dict$columns` (name-only exempt from R006).
+  R003/R004 wrapping, R005 against `dict$columns`; source columns absent from the
+  dictionary go to `unspecified` and are dropped from `data` (amendment 3).
 
-- [ ] **Steps 1–5:** failing tests (good read returns 5×6 character tibble; missing
-  file → R001 finding row + NULL data; missing declared column → R005; extra_col →
-  R006 with fix_options mentioning name-only listing; erroring user reader → R003
-  carrying the error text), watch fail, implement, watch pass, format+lint, commit.
+- [ ] **Steps 1–5:** failing tests (good read returns a 5×5 character tibble of the
+  declared columns, with `extra_col` in `unspecified` and absent from `data`, no
+  finding; missing file → R001 finding row + NULL data; missing declared column →
+  R005; erroring user reader → R003 carrying the error text), watch fail, implement,
+  watch pass, format+lint, commit.
 - [ ] **Step 6: local real-workbook breadth test (skip-if-absent).** In
   `test-read.R`, guarded by
   `skip_if_not(file.exists(test_path("fixtures-local", "family-comparison.xlsx")))`:
@@ -699,9 +741,10 @@ test_that("standardisation is idempotent", {
   (snapshot-tested)
 - `rev_export_findings(findings, path)` → writes xlsx via `writexl::write_xlsx`
   (rows list-column collapsed to `"3, 7, 12"`)
-- `rev_certificate(findings, acknowledgments)` → list(status =
-  `"CERTIFIED"|"NOT CERTIFIED"`, n_findings, acknowledgments chr);
-  `print.rev_certificate` snapshot-tested for both statuses
+- `rev_certificate(findings, acknowledgments, unspecified = character(0))` →
+  list(status = `"CERTIFIED"|"NOT CERTIFIED"`, n_findings, acknowledgments chr,
+  unspecified chr); `print.rev_certificate` snapshot-tested for both statuses,
+  including the informational unspecified-columns annex when non-empty
 - Consequence constants: `csq_not_certifiable()`, `csq_join_skipped(left, right)`,
   `csq_checks_skipped(column)`
 
@@ -766,8 +809,8 @@ test_that("standardisation is idempotent", {
 `tests/testthat/fixtures/miniproject/` completed: `specs/tables/estimates.yaml`,
 `specs/tables/rob.yaml`, `specs/joins.yaml` (copies of the good fixtures with paths
 pointing at `data/raw/*.csv` from Task 6), plus a second all-clean fixture project
-`fixtures/miniproject-clean/` whose data contains no defects and whose dictionary
-lists `extra_col` name-only.
+`fixtures/miniproject-clean/` whose data contains no defects; `extra_col` stays
+undeclared and appears only in the certificate's informational annex.
 
 **Interfaces — Produces:**
 - `rev_check_specs(project = ".")` → validates ALL spec files with **no data
@@ -783,8 +826,9 @@ lists `extra_col` name-only.
   Internally begins with the same loading step as `rev_check_specs()`.
   Sequence per D4: read dictionaries + joins spec (spec errors abort) → per table:
   `rev_read_table` → `rev_standardise` → `rev_validate_table` → `rev_join_tables` →
-  bind findings → certificate (acknowledgments from name-only columns actually
-  present + `unmatched_ok` joins) → unless `quiet`, print certificate then findings →
+  bind findings → certificate (acknowledgments from `unmatched_ok` joins;
+  informational annex = unspecified columns per table) → unless `quiet`, print
+  certificate then findings →
   write `output/diagnostics/preprocessed-<table>.csv` and
   `findings-<format(Sys.time(), "%Y%m%d-%H%M%S")>.xlsx` (skip xlsx when zero
   findings). Never touches `data/raw/` (test asserts mtimes unchanged).
@@ -793,10 +837,11 @@ lists `extra_col` name-only.
   message snapshot + invisible specs list; on a copy whose data/raw/ is DELETED →
   still succeeds (no data required); on a bad-spec fixture → `revpiper_spec_error`.
   `rev_check()` on the miniproject: returns findings containing codes
-  `{"R006","V003","J004"}` at least; certificate status "NOT CERTIFIED";
+  `{"V003","J004"}` at least (`extra_col` sits in the unspecified annex, not in
+  findings); certificate status "NOT CERTIFIED";
   `output/diagnostics/preprocessed-estimates.csv` exists and its row numbering
   matches the `rows` in the V003 finding; raw file mtimes unchanged.
-  miniproject-clean: zero findings, "CERTIFIED", acknowledgments mention
+  miniproject-clean: zero findings, "CERTIFIED", the informational annex mentions
   `extra_col`; full console output snapshot for both projects.
 - [ ] **Steps 2–5:** watch fail, implement, watch pass (read snapshots carefully —
   this is the product's voice), format+lint, commit.
