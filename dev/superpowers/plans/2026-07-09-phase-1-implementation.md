@@ -14,15 +14,13 @@
   (superpowers:executing-plans), never autonomous batching.
 - **Pre-flight:** run 2026-07-09 post-sign-off. Verdict: **proceed after one
   amendment**. Findings:
-  1. **Task 14 / embedded decision 8 — CONFIRMED DEFECT:** pkgdown 2.2.0 has no
-     `.md`-exclusion config; its `package_mds()` uses a hardcoded skip-list only
-     (verified by reading the installed function source). **PROPOSED AMENDMENT
-     (awaiting Liz's sign-off, not yet applied):** replace the `home: exclude`
-     mechanism with a post-build prune — a small helper (`dev/build-site.R`) that
-     runs `pkgdown::build_site()` then deletes html derived from any top-level `.md`
-     outside the wanted set (same set logic as the acceptance check), used both
-     locally and as a step in the pkgdown CI workflow before deploy. The set-based
-     acceptance check is unchanged and verifies the prune.
+  1. **Task 14 / embedded decision 8 — CONFIRMED DEFECT, RESOLVED (Liz,
+     2026-07-10):** pkgdown 2.2.0 has no `.md`-exclusion config; its
+     `package_mds()` uses a hardcoded skip-list only (verified by reading the
+     installed function source). Resolution: relocate `CLAUDE.md` to
+     `.claude/CLAUDE.md` (see embedded decision 8). An interim post-build-prune
+     proposal and a permanent set-based acceptance check were considered and
+     dropped (superseded / YAGNI).
   2. Packages already present in the project library: yaml, dplyr, stringi, cli,
      rlang, tibble (+ toolchain). **To install in Task 1: readr, readxl, writexl,
      tidyr** — consistent with the plan (renv::install is idempotent for the rest).
@@ -99,12 +97,15 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
    user readers resolve from `readers.R` sourced into an isolated environment.
 7. **Draft generator lands here (Task 13)** — schema-coupled, and we need it for the
    Phase 4 dress rehearsal.
-8. **pkgdown README+NEWS-only** (Task 14): primary mechanism `home: exclude` in
-   `_pkgdown.yml` verified against installed pkgdown docs at execution; acceptance is
-   **set-based** (Liz 2026-07-09): every top-level `.md` other than README/NEWS must
-   yield no html in the built site (robust to future .md additions), plus positive
-   checks that the homepage and changelog rendered; if the exclusion mechanism
-   doesn't exist, STOP and flag (plan-vs-reality), do not improvise.
+8. **pkgdown README+NEWS-only** (Task 14, resolved by relocation — Liz 2026-07-10):
+   `CLAUDE.md` moves to `.claude/CLAUDE.md` (documented, equally-supported Claude
+   Code project-instruction location, verified against code.claude.com docs
+   2026-07-10; pkgdown's `package_mds()` scans only the repo root and `.github/`,
+   so `.claude/` never enters the site). No exclusion config, no build wrapper, no
+   permanent custom acceptance check (dropped as YAGNI — post-move, our top-level
+   `.md` set is the ecosystem-standard one). One-time verification at execution
+   only. Supersedes both the `home: exclude` mechanism (doesn't exist in pkgdown
+   2.2.0) and the interim post-build-prune proposal.
 
 ## File map (provisional layout per spec §5)
 
@@ -780,28 +781,30 @@ lists `extra_col` name-only.
 
 **Files:** Modify `_pkgdown.yml`, `NEWS.md`, `README.md`; roxygen for all exports.
 
-- [ ] **Step 1: pkgdown rendered set.** Consult installed docs
-  (`?pkgdown::build_home`) for the exclusion key; expected mechanism:
+- [ ] **Step 1: pkgdown rendered set — relocate CLAUDE.md** (resolution per embedded
+  decision 8, Liz 2026-07-10):
 
-```yaml
-home:
-  exclude: [CLAUDE.md]
+```bash
+mkdir -p .claude
+git mv CLAUDE.md .claude/CLAUDE.md
 ```
 
-Then `Rscript -e 'pkgdown::build_site(preview = FALSE)'`; acceptance (set-based —
-README renders as `index.html`, NEWS as `news/index.html`, so they're positive
-checks on those names while every other top-level `.md` must render nothing):
+Update `.Rbuildignore`: replace the `^CLAUDE\.md$` line with `^\.claude$`. Rebuild:
+`Rscript -e 'pkgdown::build_site(preview = FALSE)'`. One-time verification (not a
+committed test):
 
 ```r
-mds <- list.files(".", pattern = "\\.md$")
-for (f in setdiff(mds, c("README.md", "NEWS.md"))) {
-  stopifnot(!file.exists(file.path("docs", sub("\\.md$", ".html", f))))
-}
-stopifnot(file.exists("docs/index.html"), file.exists("docs/news/index.html"))
+stopifnot(
+  !file.exists("docs/CLAUDE.html"),
+  file.exists("docs/index.html"),        # README rendered (homepage)
+  file.exists("docs/news/index.html")    # NEWS rendered (changelog)
+)
 ```
 
-If no exclusion mechanism exists in the installed pkgdown → STOP, report, amend plan
-(no improvisation).
+Also update the spec's Area 4 pkgdown note in the same commit ("resolved by
+relocating CLAUDE.md to .claude/ — the default rendered set is then README+NEWS")
+and verify a fresh `devtools::check()` stays 0/0/0 (the `.claude/` dir must be
+build-ignored).
 - [ ] **Step 2: NEWS bullets** (user-facing additions this phase):
 
 ```markdown
