@@ -92,10 +92,10 @@ test_that("the check registry is closed and internally consistent", {
 
   # prefixes agree with declared scopes
   prefix_scope <- c(
-    YF = "field",
+    YF = "form",
     YE = "entry",
     YS = "source",
-    YX = "cross_source"
+    YX = "cross-source"
   )
   expect_identical(
     unname(prefix_scope[substr(registry$code, 1, 2)]),

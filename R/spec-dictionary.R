@@ -28,7 +28,78 @@ rev_read_dictionary <- function(path) {
   new_dictionary(raw, path)
 }
 
-# ==== Context recursion and file scope (YS01) ================================
+# Orchestration
+
+# The per-entry battery. Every check is one definition; the schema declares
+# its instances. Gates: later checks assume earlier ones, so a malformed or
+# banned field never has its content inspected (root cause reported once).
+check_entry <- function(x, level, file, entry) {
+  schema <- field_schema(level)
+
+  problems <- rbind(
+    check_vocabulary(x, schema, file, entry),
+    check_required(x, schema, file, entry)
+  )
+
+  present <- intersect(names(x), schema$field)
+  ok <- logical(0)
+  for (f in present) {
+    row <- schema[schema$field == f, ]
+    res <- check_field_form(x[[f]], row, file, entry)
+    problems <- rbind(problems, res$problems)
+    ok[[f]] <- res$ok
+  }
+
+  problems <- rbind(problems, check_excludes(x, schema, file, entry))
+
+  # Type-dependent checks: permission, then content, then order, each gated
+  # on the one before.
+  type <- if (isTRUE(ok["type"])) x[["type"]] else NULL
+  type_valid <- !is.null(type) && type %in% schema_types()
+  for (f in present) {
+    row <- schema[schema$field == f, ]
+    if (
+      identical(row$permitted_types[[1]], "any") ||
+        !isTRUE(ok[[f]]) ||
+        !type_valid
+    ) {
+      next
+    }
+    permission <- check_permitted(type, row, file, entry)
+    problems <- rbind(problems, permission)
+    if (nrow(permission) > 0) {
+      next
+    }
+    entries <- as.list(x[[f]])
+    content <- check_content_typed(entries, type, row, file, entry)
+    problems <- rbind(problems, content)
+    if (nrow(content) > 0) {
+      next
+    }
+    problems <- rbind(problems, check_ordered(entries, type, row, file, entry))
+  }
+  problems
+}
+
+# Run one field's form checks in gate order: empty, then shape, then domain
+# and unique entries. Reports whether the field is sound enough for
+# cross-field checks to read.
+check_field_form <- function(value, row, file, entry) {
+  if (is.null(value)) {
+    return(list(problems = check_empty(row, file, entry), ok = FALSE))
+  }
+  shape <- check_shape(value, row, file, entry)
+  if (nrow(shape) > 0) {
+    return(list(problems = shape, ok = FALSE))
+  }
+  list(
+    problems = rbind(
+      check_domain(value, row, file, entry),
+      check_unique_entries(value, row, file, entry)
+    ),
+    ok = TRUE
+  )
+}
 
 # Recurse into fields whose schema row names a context: their contents are
 # themselves entries to validate (source block, column entries). Fields
@@ -58,6 +129,8 @@ check_contexts <- function(x, level, file) {
   problems
 }
 
+# Validate each mapping in a list as its context, then police identity
+# across the list.
 check_mapping_list <- function(entries, ctx, file) {
   if (
     !is.list(entries) ||
@@ -81,193 +154,32 @@ check_mapping_list <- function(entries, ctx, file) {
     }
     check_entry(entries[[i]], ctx, file, label)
   }))
-
-  # YS01 - identity at file scope: duplicate identities within the list.
   ids <- vapply(entries, id_of, character(1))
-  dupes <- unique(ids[duplicated(ids) & !is.na(ids)])
-  rbind(
-    problems,
-    bind_problems(lapply(dupes, \(d) {
-      problem(file, sprintf("%ss block", ctx), "YS01", context = ctx, id = d)
-    }))
+  rbind(problems, check_identity(ids, ctx, file))
+}
+
+# YF: form checks (within one field)
+
+# YF01: field declared with no value
+check_empty <- function(row, file, entry) {
+  if (row$empty_ok) {
+    return(no_problems())
+  }
+  problem(file, entry, "YF01", field = row$field)
+}
+
+# YF02: wrong shape or cardinality
+check_shape <- function(value, row, file, entry) {
+  if (shape_ok(value, row$shape, row$cardinality)) {
+    return(no_problems())
+  }
+  problem(
+    file,
+    entry,
+    "YF02",
+    field = row$field,
+    expected = shape_phrase(row$shape, row$cardinality)
   )
-}
-
-# ==== The per-entry battery ==================================================
-# Every check is one definition; the schema declares its instances. Gates:
-# later checks assume earlier ones (a malformed or banned field never has
-# its content inspected - the root cause is reported once).
-
-check_entry <- function(x, level, file, entry) {
-  schema <- field_schema(level)
-
-  problems <- rbind(
-    check_vocabulary(x, schema, file, entry), # YE01
-    check_required(x, schema, file, entry) # YE02
-  )
-
-  # Per-field form: empty (YF01), shape/cardinality (YF02), domain (YF03),
-  # unique entries (YF04). Records which fields are well-formed.
-  present <- intersect(names(x), schema$field)
-  ok <- logical(0)
-  for (f in present) {
-    row <- schema[schema$field == f, ]
-    res <- check_field_form(x[[f]], row, file, entry)
-    problems <- rbind(problems, res$problems)
-    ok[[f]] <- res$ok
-  }
-
-  problems <- rbind(problems, check_excludes(x, schema, file, entry)) # YE04
-
-  # Type-dependent: permission (YE03), then content (YE05), then order
-  # (YF05), each gated on the previous.
-  type <- if (isTRUE(ok["type"])) x[["type"]] else NULL
-  type_valid <- !is.null(type) && type %in% schema_types()
-  for (f in present) {
-    row <- schema[schema$field == f, ]
-    permitted <- row$permitted_types[[1]]
-    if (identical(permitted, "any") || !isTRUE(ok[[f]]) || !type_valid) {
-      next
-    }
-    if (!type %in% permitted) {
-      problems <- rbind(
-        problems,
-        problem(file, entry, "YE03", field = f, type = type)
-      )
-      next
-    }
-    entries <- as.list(x[[f]])
-    if (row$content_typed && !values_match_type(entries, type)) {
-      problems <- rbind(
-        problems,
-        problem(file, entry, "YE05", field = f, type = type)
-      )
-      next
-    }
-    if (identical(row$ordered, "ascending") && is_descending(entries, type)) {
-      problems <- rbind(
-        problems,
-        problem(
-          file,
-          entry,
-          "YF05",
-          field = f,
-          high = entries[[1]],
-          low = entries[[2]]
-        )
-      )
-    }
-  }
-  problems
-}
-
-# ==== Entry composition (YE01, YE02) =========================================
-
-check_vocabulary <- function(x, schema, file, entry) {
-  bad <- setdiff(names(x), schema$field)
-  bind_problems(lapply(bad, \(f) {
-    problem(
-      file,
-      entry,
-      "YE01",
-      field = f,
-      suggestion = suggest_name(f, schema$field)
-    )
-  }))
-}
-
-check_required <- function(x, schema, file, entry) {
-  absent <- setdiff(schema$field[schema$required], names(x))
-  bind_problems(lapply(absent, \(f) {
-    problem(file, entry, "YE02", field = f)
-  }))
-}
-
-# ==== Cross-field relations (YE04) ===========================================
-
-check_excludes <- function(x, schema, file, entry) {
-  pairs <- list()
-  for (i in seq_len(nrow(schema))) {
-    f <- schema$field[i]
-    targets <- schema$excludes[[i]]
-    if (is.null(targets) || is.null(x[[f]])) {
-      next
-    }
-    for (target in targets) {
-      if (!is.null(x[[target]])) {
-        pairs[[length(pairs) + 1]] <- sort(c(f, target))
-      }
-    }
-  }
-  pairs <- unique(pairs)
-  bind_problems(lapply(pairs, \(p) {
-    problem(file, entry, "YE04", field1 = p[1], field2 = p[2])
-  }))
-}
-
-# ==== Field form (YF01-YF04) =================================================
-
-# One field's own form: empty (YF01), shape and cardinality (YF02), domain
-# (YF03), duplicate entries (YF04). Returns problems plus whether the field
-# is sound enough for cross-field checks to read.
-check_field_form <- function(value, row, file, entry) {
-  f <- row$field
-  if (is.null(value)) {
-    if (row$empty_ok) {
-      return(list(problems = no_problems(), ok = FALSE))
-    }
-    return(list(
-      problems = problem(file, entry, "YF01", field = f),
-      ok = FALSE
-    ))
-  }
-  if (!shape_ok(value, row$shape, row$cardinality)) {
-    return(list(
-      problems = problem(
-        file,
-        entry,
-        "YF02",
-        field = f,
-        expected = shape_phrase(row$shape, row$cardinality)
-      ),
-      ok = FALSE
-    ))
-  }
-  problems <- no_problems()
-  domain <- row$domain[[1]]
-  if (!is.null(domain) && !value %in% domain) {
-    problems <- rbind(
-      problems,
-      problem(
-        file,
-        entry,
-        "YF03",
-        field = f,
-        value = value,
-        suggestion = suggest_name(value, domain)
-      )
-    )
-  }
-  if (row$unique_entries) {
-    entry_lists <- if (row$shape == "mapping") value else list(value)
-    for (l in entry_lists) {
-      flat <- unlist(l)
-      dupes <- unique(flat[duplicated(flat)])
-      if (length(dupes) > 0) {
-        problems <- rbind(
-          problems,
-          problem(
-            file,
-            entry,
-            "YF04",
-            field = f,
-            dupes = paste0("'", dupes, "'", collapse = ", ")
-          )
-        )
-      }
-    }
-  }
-  list(problems = problems, ok = TRUE)
 }
 
 shape_ok <- function(value, shape, cardinality) {
@@ -322,9 +234,134 @@ shape_phrase <- function(shape, cardinality) {
   )
 }
 
-# ==== Type coherence helpers (YE05, YF05) ====================================
-# Spec-internal only: nothing here reads data.
+# YF03: value outside its closed domain
+check_domain <- function(value, row, file, entry) {
+  domain <- row$domain[[1]]
+  if (is.null(domain) || value %in% domain) {
+    return(no_problems())
+  }
+  problem(
+    file,
+    entry,
+    "YF03",
+    field = row$field,
+    value = value,
+    suggestion = suggest_name(value, domain)
+  )
+}
 
+# YF04: duplicate entries within a list field
+check_unique_entries <- function(value, row, file, entry) {
+  if (!row$unique_entries) {
+    return(no_problems())
+  }
+  entry_lists <- if (row$shape == "mapping") value else list(value)
+  problems <- no_problems()
+  for (l in entry_lists) {
+    flat <- unlist(l)
+    dupes <- unique(flat[duplicated(flat)])
+    if (length(dupes) > 0) {
+      problems <- rbind(
+        problems,
+        problem(
+          file,
+          entry,
+          "YF04",
+          field = row$field,
+          dupes = paste0("'", dupes, "'", collapse = ", ")
+        )
+      )
+    }
+  }
+  problems
+}
+
+# YF05: range descending
+check_ordered <- function(entries, type, row, file, entry) {
+  if (!identical(row$ordered, "ascending") || !is_descending(entries, type)) {
+    return(no_problems())
+  }
+  problem(
+    file,
+    entry,
+    "YF05",
+    field = row$field,
+    high = entries[[1]],
+    low = entries[[2]]
+  )
+}
+
+is_descending <- function(entries, type) {
+  if (type == "date") {
+    as.Date(entries[[1]], format = "%Y-%m-%d") >
+      as.Date(entries[[2]], format = "%Y-%m-%d")
+  } else {
+    entries[[1]] > entries[[2]]
+  }
+}
+
+# YE: entry checks (across fields within one entry)
+
+# YE01: unknown field name
+check_vocabulary <- function(x, schema, file, entry) {
+  bad <- setdiff(names(x), schema$field)
+  bind_problems(lapply(bad, \(f) {
+    problem(
+      file,
+      entry,
+      "YE01",
+      field = f,
+      suggestion = suggest_name(f, schema$field)
+    )
+  }))
+}
+
+# YE02: required field absent
+check_required <- function(x, schema, file, entry) {
+  absent <- setdiff(schema$field[schema$required], names(x))
+  bind_problems(lapply(absent, \(f) {
+    problem(file, entry, "YE02", field = f)
+  }))
+}
+
+# YE03: constraint on a column type outside its permitted set
+check_permitted <- function(type, row, file, entry) {
+  if (type %in% row$permitted_types[[1]]) {
+    return(no_problems())
+  }
+  problem(file, entry, "YE03", field = row$field, type = type)
+}
+
+# YE04: mutually exclusive fields both present
+check_excludes <- function(x, schema, file, entry) {
+  pairs <- list()
+  for (i in seq_len(nrow(schema))) {
+    f <- schema$field[i]
+    targets <- schema$excludes[[i]]
+    if (is.null(targets) || is.null(x[[f]])) {
+      next
+    }
+    for (target in targets) {
+      if (!is.null(x[[target]])) {
+        pairs[[length(pairs) + 1]] <- sort(c(f, target))
+      }
+    }
+  }
+  pairs <- unique(pairs)
+  bind_problems(lapply(pairs, \(p) {
+    problem(file, entry, "YE04", field1 = p[1], field2 = p[2])
+  }))
+}
+
+# YE05: constraint entries do not match the declared type
+check_content_typed <- function(entries, type, row, file, entry) {
+  if (!row$content_typed || values_match_type(entries, type)) {
+    return(no_problems())
+  }
+  problem(file, entry, "YE05", field = row$field, type = type)
+}
+
+# Spec-internal only: nothing here reads data.
 values_match_type <- function(entries, type) {
   ok <- switch(
     type,
@@ -350,16 +387,23 @@ is_iso_date <- function(x) {
   !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
 }
 
-is_descending <- function(entries, type) {
-  if (type == "date") {
-    as.Date(entries[[1]], format = "%Y-%m-%d") >
-      as.Date(entries[[2]], format = "%Y-%m-%d")
-  } else {
-    entries[[1]] > entries[[2]]
-  }
+# YS: source checks (across entries within one file)
+
+# YS01: duplicate identity within one source file
+check_identity <- function(ids, ctx, file) {
+  dupes <- unique(ids[duplicated(ids) & !is.na(ids)])
+  bind_problems(lapply(dupes, \(d) {
+    problem(file, sprintf("%ss block", ctx), "YS01", context = ctx, id = d)
+  }))
 }
 
-# ==== Plumbing ===============================================================
+# YX: cross-source checks (across files)
+
+# YX01 (duplicate table name, via check_identity at set scope) and YX02
+# (cross-source references) arrive with rev_read_dictionaries() and
+# rev_read_joins() in Tasks 4-5.
+
+# Plumbing
 
 # Zero-row problems table: the rbind seed guaranteeing a stable shape.
 no_problems <- function() {
@@ -380,7 +424,7 @@ is_mapping <- function(x) {
   is.list(x) && !is.null(names(x)) && all(nzchar(names(x)))
 }
 
-# ==== Constructor ============================================================
+# Constructor
 
 new_dictionary <- function(raw, path) {
   col_schema <- field_schema("column")

@@ -267,12 +267,13 @@ mechanical: `join '<left>-<right>' skipped`; `dependent checks on '<column>' not
 
 ### Spec validation (parse time; these ABORT with all problems listed, file+entry)
 
-Codes are prefixed by SCOPE — how much context the check reads (amendment 4):
-**YF** within one field · **YE** within one entry · **YS** within one source file ·
-**YX** across sources. Every check is one definition; its instances are declared by
+Codes are prefixed by SCOPE — how much context the check reads (amendment 4;
+one term per scope, used everywhere): **YF** form (within one field) · **YE**
+entry (across fields within one entry) · **YS** source (across entries within
+one file) · **YX** cross-source (across files). Every check is one definition; its instances are declared by
 schema properties in `inst/schema/fields.yaml`.
 
-#### YF — within one field
+#### YF — form checks (within one field)
 
 | Code | Property | Check | Fix routes to |
 |---|---|---|---|
@@ -282,7 +283,7 @@ schema properties in `inst/schema/fields.yaml`.
 | YF04 | `unique_entries` | duplicate entries within a list field (`values`, `combine`, level keys) | the named entry |
 | YF05 | `ordered` | `range` descending (numeric or chronological) | the named entry |
 
-#### YE — within one entry, across its fields
+#### YE — entry checks (across fields within one entry)
 
 | Code | Property | Check | Fix routes to |
 |---|---|---|---|
@@ -293,7 +294,7 @@ schema properties in `inst/schema/fields.yaml`.
 | YE05 | `content_typed` | constraint entries do not match the column's declared type (incl. mixed-type entries) | column entry |
 | YE06 | *custom: union dispatch* | role entry neither a column name nor a combine block | roles block |
 
-#### YS — within one source file, across entries
+#### YS — source checks (across entries within one file)
 
 | Code | Property | Check | Fix routes to |
 |---|---|---|---|
@@ -301,7 +302,7 @@ schema properties in `inst/schema/fields.yaml`.
 | YS02 | `refers_to` (file scope) | unresolved within-file reference: role/level key → declared columns; `constant_within_level` → declared levels; did-you-mean | the named entry |
 | YS03 | *custom: environment* | declared `reader` neither shipped nor a function in readers.R | source block / readers.R |
 
-#### YX — across sources (separate, composable, data-free set-level step)
+#### YX — cross-source checks (across files; separate, composable, data-free set-level step)
 
 | Code | Property | Check | Fix routes to |
 |---|---|---|---|

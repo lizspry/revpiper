@@ -5,8 +5,11 @@
 # params declares them. implemented: false marks codes whose checks land in
 # later tasks (closure-tested once implemented).
 checks:
+
+  # YF: form checks (within one field)
+
   - code: YF01
-    scope: field
+    scope: form
     property: empty_ok
     meaning: a field is written but has no value (YAML null)
     message_template: "field '{field}' is declared but has no value"
@@ -14,7 +17,7 @@ checks:
     fix: the named entry
     implemented: true
   - code: YF02
-    scope: field
+    scope: form
     property: shape + cardinality
     meaning: a field's value has the wrong form (element type or count)
     message_template: "field '{field}' must be {expected}"
@@ -22,7 +25,7 @@ checks:
     fix: the named entry
     implemented: true
   - code: YF03
-    scope: field
+    scope: form
     property: domain
     meaning: a field's value is outside its closed domain
     message_template: "unknown {field} '{value}'"
@@ -30,7 +33,7 @@ checks:
     fix: the named entry
     implemented: true
   - code: YF04
-    scope: field
+    scope: form
     property: unique_entries
     meaning: a list field contains duplicate entries
     message_template: "field '{field}' has duplicate entries: {dupes}"
@@ -38,13 +41,16 @@ checks:
     fix: the named entry
     implemented: true
   - code: YF05
-    scope: field
+    scope: form
     property: ordered
     meaning: a range's two entries descend (numeric or chronological)
     message_template: "'{field}' is descending ({high} > {low})"
     params: [field, high, low]
     fix: the named entry
     implemented: true
+
+  # YE: entry checks (across fields within one entry)
+
   - code: YE01
     scope: entry
     property: field vocabulary
@@ -93,6 +99,9 @@ checks:
     params: [role]
     fix: roles block
     implemented: false
+
+  # YS: source checks (across entries within one file)
+
   - code: YS01
     scope: source
     property: identity
@@ -117,8 +126,11 @@ checks:
     params: [reader]
     fix: source block / readers.R
     implemented: false
+
+  # YX: cross-source checks (across files)
+
   - code: YX01
-    scope: cross_source
+    scope: cross-source
     property: identity
     meaning: two spec files claim the same table name
     message_template: "duplicate table name '{table}'"
@@ -126,7 +138,7 @@ checks:
     fix: the two files named
     implemented: false
   - code: YX02
-    scope: cross_source
+    scope: cross-source
     property: refers_to
     meaning: a cross-source reference does not resolve (join tables, keys, granularity)
     message_template: "'{value}' does not resolve against {collection}"

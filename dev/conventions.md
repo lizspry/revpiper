@@ -18,15 +18,19 @@ source), not here — this document covers code conventions only.
   named list). A mapping either has schema-vocabulary keys and a `context`
   to validate its contents as (source block, column entries), or
   user-chosen keys that are data, not vocabulary (roles, levels).
-- Spec-check codes carry a scope prefix: **YF** within one field, **YE**
-  within one entry, **YS** within one source file, **YX** across sources.
-  Within-source validation is standalone; across-source is a separate,
-  composable, data-free step.
+- Spec-check codes carry a scope prefix, with one term per scope used
+  everywhere: **YF** form (within one field), **YE** entry (across fields
+  within one entry), **YS** source (across entries within one file),
+  **YX** cross-source (across files). Within-source validation is
+  standalone; across-source is a separate, composable, data-free step.
 
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml
   committed, defaults only). Never hand-format; never argue with Air.
 - snake_case; `<-` for assignment; native pipe `|>` in new code.
+- Comment section headers are single `# Text` lines with a blank line
+  above; subheaders name the check code they implement. No decorative
+  `---`/`===` rules in comments or text.
 
 ## Linting
 - lintr with defaults + library_call_linter, namespace_linter,
