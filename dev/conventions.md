@@ -53,6 +53,9 @@ source), not here — this document covers code conventions only.
 
 ## Pre-push suite (run locally before every push; CI is the backstop)
     air format .
-    Rscript -e 'lintr::lint_package()'
+    Rscript -e 'pkgload::load_all(quiet = TRUE); lintr::lint_package()'
+    # (load_all first: object_usage_linter needs the package namespace
+    #  loadable to resolve cross-file calls; CI installs local::. for
+    #  the same reason)
     Rscript -e 'devtools::test()'
     Rscript -e 'devtools::check()'   # before PRs; test() suffices mid-branch
