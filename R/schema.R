@@ -19,12 +19,16 @@ cached <- function(load) {
 }
 
 # The property vocabulary: one row per property of a field-schema row.
+# Registry entries are keyed by name (duplicates fail at parse); the key
+# supplies the row's name column.
 schema_properties <- cached(function() {
+  properties <- schema_yaml("fields.yaml")$properties
   do.call(
     rbind,
-    lapply(schema_yaml("fields.yaml")$properties, \(p) {
+    lapply(names(properties), \(name) {
+      p <- properties[[name]]
       tibble::tibble(
-        property = p$property,
+        property = name,
         meaning = p$meaning,
         type = p$type,
         allowed = list(unlist(p$allowed))
@@ -34,12 +38,15 @@ schema_properties <- cached(function() {
 })
 
 # One field per row, one property per column; every cell read from the yaml
-# and converted per its property's declared loading type.
+# and converted per its property's declared loading type. The entry key is
+# the field property.
 schema_fields <- cached(function() {
   props <- schema_properties()
+  fields <- schema_yaml("fields.yaml")$fields
   do.call(
     rbind,
-    lapply(schema_yaml("fields.yaml")$fields, \(f) {
+    lapply(names(fields), \(name) {
+      f <- c(list(field = name), fields[[name]])
       cells <- lapply(seq_len(nrow(props)), \(i) {
         value <- f[[props$property[i]]]
         switch(
@@ -56,13 +63,15 @@ schema_fields <- cached(function() {
   )
 })
 
-# The check registry: one row per code.
+# The check registry: one row per code, keyed by code.
 check_registry <- cached(function() {
+  checks <- schema_yaml("checks.yaml")$checks
   do.call(
     rbind,
-    lapply(schema_yaml("checks.yaml")$checks, \(ch) {
+    lapply(names(checks), \(code) {
+      ch <- checks[[code]]
       tibble::tibble(
-        code = ch$code,
+        code = code,
         scope = ch$scope,
         property = ch$property,
         meaning = ch$meaning,

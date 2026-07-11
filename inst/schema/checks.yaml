@@ -1,14 +1,15 @@
 # inst/schema/checks.yaml — the check registry: every spec-problem code, its
-# meaning, message template, and fix route. Validators fetch codes and
-# templates from here; the docs reference page is generated from here.
-# Placeholders in message_template are replaced verbatim (no code evaluation);
-# params declares them. implemented: false marks codes whose checks land in
-# later tasks (closure-tested once implemented).
+# meaning, message template, and fix route, keyed by code so a duplicated
+# code fails at parse. Validators fetch codes and templates from here; the
+# docs reference page is generated from here. Placeholders in
+# message_template are replaced verbatim (no code evaluation); params
+# declares them. implemented: false marks codes whose checks land in later
+# tasks (closure-tested once implemented).
 checks:
 
   # YF: form checks (within one field)
 
-  - code: YF01
+  YF01:
     scope: form
     property: empty_ok
     meaning: a field is written but has no value (YAML null)
@@ -16,7 +17,7 @@ checks:
     params: [field]
     fix: the named entry
     implemented: true
-  - code: YF02
+  YF02:
     scope: form
     property: shape + cardinality
     meaning: a field's value has the wrong form (element type or count)
@@ -32,7 +33,7 @@ checks:
       scalar: {one: a single value, one_or_many: one or more values, two: exactly two values}
       mapping: "a group of key: value fields"
       list_of_mappings: a list of entries
-  - code: YF03
+  YF03:
     scope: form
     property: domain
     meaning: a field's value is outside its closed domain
@@ -40,7 +41,7 @@ checks:
     params: [field, value]
     fix: the named entry
     implemented: true
-  - code: YF04
+  YF04:
     scope: form
     property: unique_entries
     meaning: a list field contains duplicate entries
@@ -48,7 +49,7 @@ checks:
     params: [field, dupes]
     fix: the named entry
     implemented: true
-  - code: YF05
+  YF05:
     scope: form
     property: ordered
     meaning: a range's two entries descend (numeric or chronological)
@@ -59,7 +60,7 @@ checks:
 
   # YE: entry checks (across fields within one entry)
 
-  - code: YE01
+  YE01:
     scope: entry
     property: field vocabulary
     meaning: a field name is not in the closed set for its context
@@ -67,7 +68,7 @@ checks:
     params: [field]
     fix: the named entry
     implemented: true
-  - code: YE02
+  YE02:
     scope: entry
     property: required
     meaning: a field the schema marks required is absent from its context
@@ -75,7 +76,7 @@ checks:
     params: [field]
     fix: the named entry
     implemented: true
-  - code: YE03
+  YE03:
     scope: entry
     property: permitted_types
     meaning: a constraint field appears on a column type outside its permitted set
@@ -83,7 +84,7 @@ checks:
     params: [field, type]
     fix: column entry
     implemented: true
-  - code: YE04
+  YE04:
     scope: entry
     property: excludes
     meaning: two mutually exclusive fields are both present on one entry
@@ -91,7 +92,7 @@ checks:
     params: [field1, field2]
     fix: column entry
     implemented: true
-  - code: YE05
+  YE05:
     scope: entry
     property: content_typed
     meaning: a constraint's entries do not match the column's declared type
@@ -99,7 +100,7 @@ checks:
     params: [field, type]
     fix: column entry
     implemented: true
-  - code: YE06
+  YE06:
     scope: entry
     property: "custom: union dispatch"
     meaning: an identifier entry is neither a column name nor a combine block
@@ -110,7 +111,7 @@ checks:
 
   # YS: source checks (across entries within one file)
 
-  - code: YS01
+  YS01:
     scope: source
     property: identity
     meaning: two entries claim the same identity within one source file
@@ -118,7 +119,7 @@ checks:
     params: [context, id]
     fix: columns block
     implemented: true
-  - code: YS02
+  YS02:
     scope: source
     property: refers_to
     meaning: a value must name something declared elsewhere in the file and does not
@@ -126,7 +127,7 @@ checks:
     params: [value, collection]
     fix: the named entry
     implemented: true
-  - code: YS03
+  YS03:
     scope: source
     property: "custom: environment"
     meaning: a declared reader is neither shipped nor defined in readers.R
@@ -137,7 +138,7 @@ checks:
 
   # YX: cross-source checks (across files)
 
-  - code: YX01
+  YX01:
     scope: cross-source
     property: identity
     meaning: two spec files claim the same table name
@@ -145,7 +146,7 @@ checks:
     params: [table]
     fix: the two files named
     implemented: true
-  - code: YX02
+  YX02:
     scope: cross-source
     property: refers_to
     meaning: a cross-source reference does not resolve (join tables, keys, granularity)

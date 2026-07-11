@@ -1,43 +1,44 @@
 # inst/schema/fields.yaml — single source of truth for spec-field validation.
 # `properties:` defines the property vocabulary (meanings, loading types,
-# allowed values); `fields:` instantiates it, one field per line. The loader
+# allowed values); `fields:` instantiates it, one field per line. Entries are
+# keyed by their name, so a duplicated name fails at parse. The loader
 # (R/schema.R) and the conformance test both read `properties:` — property
 # names and handling exist nowhere in code.
 properties:
-  - {property: field, meaning: the key as written in user YAML, type: string, allowed: null}
-  - {property: level, meaning: context(s) where the field is legal, type: list_of_strings, allowed: [top, source, column, combine]}
-  - {property: required, meaning: must be present in its context, type: boolean, allowed: null}
-  - {property: shape, meaning: element type the value must have, type: string, allowed: [string, boolean, scalar, mapping, list_of_mappings]}
-  - {property: cardinality, meaning: how many elements; one_or_many accepts a scalar and normalises it to a one-element list, type: string, allowed: [one, one_or_many, two]}
-  - {property: context, meaning: level to validate a mapping's contents as; null means keys are user data, type: string, allowed: [top, source, column, combine]}
-  - {property: empty_ok, meaning: a bare key with no value is legal, type: boolean, allowed: null}
-  - {property: domain, meaning: closed set of legal values (did-you-mean), always inline, type: list_of_strings, allowed: null}
-  - {property: permitted_types, meaning: column types this field may appear on; the sentinel any means unrestricted, type: list_of_strings, allowed: null}
-  - {property: excludes, meaning: fields that may not co-occur with this one, type: list_of_strings, allowed: null}
-  - {property: content_typed, meaning: entries must match the column's declared type, type: boolean, allowed: null}
-  - {property: ordered, meaning: entries must ascend (numeric or chronological), type: string, allowed: [ascending]}
-  - {property: unique_entries, meaning: entries must be unique within the list, type: boolean, allowed: null}
-  - {property: refers_to, meaning: values must resolve against a declared collection, type: string, allowed: [columns, levels]}
-  - {property: identity, meaning: this field names the entry; duplicates policed at block scope, type: boolean, allowed: null}
-  - {property: default, meaning: value assumed when absent; null means absent stays absent, type: verbatim, allowed: null}
+  field: {meaning: the key as written in user YAML, type: string, allowed: null}
+  level: {meaning: context(s) where the field is legal, type: list_of_strings, allowed: [top, source, column, combine]}
+  required: {meaning: must be present in its context, type: boolean, allowed: null}
+  shape: {meaning: element type the value must have, type: string, allowed: [string, boolean, scalar, mapping, list_of_mappings]}
+  cardinality: {meaning: how many elements; one_or_many accepts a scalar and normalises it to a one-element list, type: string, allowed: [one, one_or_many, two]}
+  context: {meaning: level to validate a mapping's contents as; null means keys are user data, type: string, allowed: [top, source, column, combine]}
+  empty_ok: {meaning: a bare key with no value is legal, type: boolean, allowed: null}
+  domain: {meaning: "closed set of legal values (did-you-mean), always inline", type: list_of_strings, allowed: null}
+  permitted_types: {meaning: column types this field may appear on; the sentinel any means unrestricted, type: list_of_strings, allowed: null}
+  excludes: {meaning: fields that may not co-occur with this one, type: list_of_strings, allowed: null}
+  content_typed: {meaning: entries must match the column's declared type, type: boolean, allowed: null}
+  ordered: {meaning: entries must ascend (numeric or chronological), type: string, allowed: [ascending]}
+  unique_entries: {meaning: entries must be unique within the list, type: boolean, allowed: null}
+  refers_to: {meaning: values must resolve against a declared collection, type: string, allowed: [columns, levels]}
+  identity: {meaning: this field names the entry; duplicates policed at block scope, type: boolean, allowed: null}
+  default: {meaning: value assumed when absent; null means absent stays absent, type: verbatim, allowed: null}
 fields:
-  - {field: table, level: [top], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
-  - {field: description, level: [top, column], required: false, shape: string, cardinality: one, context: null, empty_ok: true, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: source, level: [top], required: true, shape: mapping, cardinality: one, context: source, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: identifiers, level: [top], required: false, shape: mapping, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: columns, identity: false, default: null}
-  - {field: levels, level: [top], required: false, shape: mapping, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
-  - {field: columns, level: [top], required: true, shape: list_of_mappings, cardinality: one_or_many, context: column, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: file, level: [source], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: sheet, level: [source], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: reader, level: [source], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: name, level: [column], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
-  - {field: type, level: [column], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: [text, integer, decimal, boolean, date], permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: values, level: [column], required: false, shape: scalar, cardinality: one_or_many, context: null, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: [range], content_typed: true, ordered: null, unique_entries: true, refers_to: null, identity: false, default: null}
-  - {field: range, level: [column], required: false, shape: scalar, cardinality: two, context: null, empty_ok: false, domain: null, permitted_types: [integer, decimal, date], excludes: [values], content_typed: true, ordered: ascending, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: units, level: [column], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
-  - {field: required, level: [column], required: false, shape: boolean, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
-  - {field: unique, level: [column], required: false, shape: boolean, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
-  - {field: missing, level: [column], required: false, shape: string, cardinality: one_or_many, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: null, identity: false, default: []}
-  - {field: constant_within_level, level: [column], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: levels, identity: false, default: null}
-  - {field: combine, level: [combine], required: true, shape: string, cardinality: one_or_many, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
-  - {field: separator, level: [combine], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  table: {level: [top], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
+  description: {level: [top, column], required: false, shape: string, cardinality: one, context: null, empty_ok: true, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  source: {level: [top], required: true, shape: mapping, cardinality: one, context: source, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  identifiers: {level: [top], required: false, shape: mapping, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: columns, identity: false, default: null}
+  levels: {level: [top], required: false, shape: mapping, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
+  columns: {level: [top], required: true, shape: list_of_mappings, cardinality: one_or_many, context: column, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  file: {level: [source], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  sheet: {level: [source], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  reader: {level: [source], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  name: {level: [column], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
+  type: {level: [column], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: [text, integer, decimal, boolean, date], permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  values: {level: [column], required: false, shape: scalar, cardinality: one_or_many, context: null, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: [range], content_typed: true, ordered: null, unique_entries: true, refers_to: null, identity: false, default: null}
+  range: {level: [column], required: false, shape: scalar, cardinality: two, context: null, empty_ok: false, domain: null, permitted_types: [integer, decimal, date], excludes: [values], content_typed: true, ordered: ascending, unique_entries: false, refers_to: null, identity: false, default: null}
+  units: {level: [column], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  required: {level: [column], required: false, shape: boolean, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
+  unique: {level: [column], required: false, shape: boolean, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
+  missing: {level: [column], required: false, shape: string, cardinality: one_or_many, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: null, identity: false, default: []}
+  constant_within_level: {level: [column], required: false, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: levels, identity: false, default: null}
+  combine: {level: [combine], required: true, shape: string, cardinality: one_or_many, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
+  separator: {level: [combine], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
