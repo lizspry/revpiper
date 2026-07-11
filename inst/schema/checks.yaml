@@ -102,10 +102,10 @@ checks:
   - code: YE06
     scope: entry
     property: "custom: union dispatch"
-    meaning: a role entry is neither a column name nor a combine block
-    message_template: "role '{role}' must be a column name or a combine block"
-    params: [role]
-    fix: roles block
+    meaning: an identifier entry is neither a column name nor a combine block
+    message_template: "identifier '{identifier}' must be a column name or a combine block"
+    params: [identifier]
+    fix: identifiers block
     implemented: true
 
   # YS: source checks (across entries within one file)

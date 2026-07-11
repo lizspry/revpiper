@@ -126,11 +126,11 @@
 ---
 
     Code
-      read_bad("ye06-role-number.yaml")
+      read_bad("ye06-identifier-number.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YE06 fixtures/specs-bad/ye06-role-number.yaml / roles block: role 'study_id' must be a column name or a combine block
+      x YE06 fixtures/specs-bad/ye06-identifier-number.yaml / identifiers block: identifier 'study_id' must be a column name or a combine block
 
 ---
 
@@ -139,7 +139,7 @@
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YS02 fixtures/specs-bad/ys02-combine-part-unknown.yaml / role 'study_id': 'studdy' does not name one of the declared columns (did you mean 'study'?)
+      x YS02 fixtures/specs-bad/ys02-combine-part-unknown.yaml / identifier 'study_id': 'studdy' does not name one of the declared columns (did you mean 'study'?)
 
 ---
 
@@ -157,7 +157,7 @@
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YF04 fixtures/specs-bad/yf04-duplicate-combine-parts.yaml / role 'study_id': field 'combine' has duplicate entries: 'study'
+      x YF04 fixtures/specs-bad/yf04-duplicate-combine-parts.yaml / identifier 'study_id': field 'combine' has duplicate entries: 'study'
 
 # every problem in a broken dictionary is reported at once
 

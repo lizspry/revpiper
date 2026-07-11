@@ -769,6 +769,27 @@ roles/levels/cwl is consumed in Task 4.)
 - [ ] **Step 4: run, expect PASS; read snapshots.**
 - [ ] **Step 5:** format, lint, commit.
 
+> Follow-up (2026-07-11, Liz's Task 4 review, after the task's main commit):
+> (a) `roles:` renamed `identifiers:` — the broad future-roles vision is
+> REJECTED (Liz: for later purposes users reference their own column names
+> directly); schema row, YE06 registry entry (message/params/fix), code,
+> tests, and fixtures renamed; do not reintroduce "role". (b) `identities_of`
+> renamed `entry_names`; plain-language terminology (entry, name, collection,
+> identifier, virtual column) added to dev/conventions.md Terminology.
+> (c) OPEN — decide at the Task 5 walkthrough: drop `levels:` and joins'
+> `granularity`? Liz judges granularity context-bound and per-join (join keys
+> and cardinality vary between joins), so a table-level grouping vocabulary
+> may not be parsimonious; candidate simplification is
+> `constant_within_level` naming key column(s) directly and J002 deriving
+> uniqueness from `keys` + `relationship`. Affects Task 5 (granularity, J002,
+> rob fixture levels), Task 8 V006 (fix route wording), Task 13 skeleton
+> (`levels: {}`), and a contained Task 4 rework (schema rows, walkers,
+> matrix regenerates).
+> (d) Flagged smell, later structural follow-up: early
+> `return(no_problems())` exits rely on the promise "shape problem already
+> reported one level up" — held today by the matrix's exact-code assertions,
+> but deserves an explicit single gate rather than a comment.
+
 ### Task 5: Joins spec (`spec-joins.R`)
 
 **Files:** Create `R/spec-joins.R`, `tests/testthat/test-spec-joins.R`, fixtures

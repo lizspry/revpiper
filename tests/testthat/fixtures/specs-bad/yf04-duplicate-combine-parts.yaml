@@ -1,7 +1,7 @@
 table: estimates
 source:
   file: data/raw/estimates.csv
-roles:
+identifiers:
   study_id:
     combine: [study, study]
     separator: "_"

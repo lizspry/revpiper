@@ -21,7 +21,7 @@ rev_read_dictionary <- function(path) {
   problems <- rbind(
     run_entry_checks(raw, "top", path, "top level"),
     run_context_checks(raw, "top", path),
-    check_role_entries(raw, path),
+    check_identifier_entries(raw, path),
     resolve_references(raw, path)
   )
   if (nrow(problems) > 0) {
@@ -171,7 +171,7 @@ run_list_checks <- function(entries, context, file) {
   if (!is_list_of_mappings(entries)) {
     return(no_problems()) # absence/shape already reported one level up
   }
-  ids <- identities_of(entries, context)
+  ids <- entry_names(entries, context)
   problems <- bind_problems(lapply(seq_along(entries), \(i) {
     run_entry_checks(
       entries[[i]],
@@ -183,9 +183,9 @@ run_list_checks <- function(entries, context, file) {
   rbind(problems, check_identity(ids, context, file))
 }
 
-# The entries' identity-field values where sound, else NA: the context's
-# schema names its identity field once for the whole list.
-identities_of <- function(entries, context) {
+# The entries' names where sound, else NA: an entry's name is the value of
+# the field its schema marks identity, looked up once for the whole list.
+entry_names <- function(entries, context) {
   context_schema <- field_schema(context)
   id_field <- context_schema$field[context_schema$identity]
   vapply(
@@ -207,9 +207,10 @@ entry_label <- function(id, i, context) {
   }
 }
 
-# Label a role entry: the one home for the phrase every role check uses.
-role_label <- function(role) {
-  sprintf("role '%s'", role)
+# Label an identifier entry: the one home for the phrase every
+# identifier check uses.
+identifier_label <- function(identifier) {
+  sprintf("identifier '%s'", identifier)
 }
 
 # YF: form checks (within one field)
@@ -415,22 +416,27 @@ is_iso_date <- function(x) {
   !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
 }
 
-# YE06: role entry neither a column name nor a combine block. A string
+# YE06: identifier entry neither a column name nor a combine block. A string
 # resolves as a reference (YS02); a mapping validates as the combine
-# context and registers a virtual column named by its role.
-check_role_entries <- function(raw, file) {
-  if (!is_mapping(raw$roles)) {
+# context and registers a virtual column named by its identifier.
+check_identifier_entries <- function(raw, file) {
+  if (!is_mapping(raw$identifiers)) {
     return(no_problems()) # absence/shape already reported
   }
-  bind_problems(lapply(names(raw$roles), \(role) {
-    value <- raw$roles[[role]]
+  bind_problems(lapply(names(raw$identifiers), \(identifier) {
+    value <- raw$identifiers[[identifier]]
     if (is_string(value)) {
       return(no_problems())
     }
     if (is_mapping(value)) {
-      return(run_entry_checks(value, "combine", file, role_label(role)))
+      return(run_entry_checks(
+        value,
+        "combine",
+        file,
+        identifier_label(identifier)
+      ))
     }
-    flag_problem(file, "roles block", "YE06", role = role)
+    flag_problem(file, "identifiers block", "YE06", identifier = identifier)
   }))
 }
 
@@ -506,12 +512,12 @@ check_reference <- function(values, collection, collection_name, file, entry) {
 reference_instances <- function(raw, field) {
   switch(
     field,
-    roles = {
-      if (!is_mapping(raw$roles)) {
+    identifiers = {
+      if (!is_mapping(raw$identifiers)) {
         return(list())
       }
-      strings <- Filter(is_string, raw$roles)
-      lapply(strings, \(v) list(values = v, entry = "roles block"))
+      strings <- Filter(is_string, raw$identifiers)
+      lapply(strings, \(v) list(values = v, entry = "identifiers block"))
     },
     levels = {
       if (!is_mapping(raw$levels)) {
@@ -524,7 +530,7 @@ reference_instances <- function(raw, field) {
       if (!is_list_of_mappings(raw$columns)) {
         return(list())
       }
-      ids <- identities_of(raw$columns, "column")
+      ids <- entry_names(raw$columns, "column")
       instances <- lapply(seq_along(raw$columns), \(i) {
         value <- raw$columns[[i]]$constant_within_level
         if (!is_string(value)) {
@@ -535,11 +541,11 @@ reference_instances <- function(raw, field) {
       Filter(Negate(is.null), instances)
     },
     combine = {
-      if (!is_mapping(raw$roles)) {
+      if (!is_mapping(raw$identifiers)) {
         return(list())
       }
-      instances <- lapply(names(raw$roles), \(role) {
-        block <- raw$roles[[role]]
+      instances <- lapply(names(raw$identifiers), \(identifier) {
+        block <- raw$identifiers[[identifier]]
         if (!is_mapping(block)) {
           return(NULL)
         }
@@ -547,7 +553,7 @@ reference_instances <- function(raw, field) {
         if (!is.character(parts)) {
           return(NULL)
         }
-        list(values = parts, entry = role_label(role))
+        list(values = parts, entry = identifier_label(identifier))
       })
       Filter(Negate(is.null), instances)
     },
@@ -576,7 +582,7 @@ declared_columns <- function(raw) {
   if (!is_list_of_mappings(raw$columns)) {
     return(NULL)
   }
-  ids <- identities_of(raw$columns, "column")
+  ids <- entry_names(raw$columns, "column")
   ids[!is.na(ids)]
 }
 
@@ -673,7 +679,7 @@ new_dictionary <- function(raw, path) {
         sheet = raw$source$sheet,
         reader = raw$source$reader
       ),
-      roles = raw$roles %||% list(),
+      identifiers = raw$identifiers %||% list(),
       levels = raw$levels %||% list(),
       columns = columns,
       path = path
@@ -683,8 +689,8 @@ new_dictionary <- function(raw, path) {
 }
 
 # Columns usable as keys: every declared column, plus the virtual column
-# each combine role registers (named by its role).
+# each combine identifier registers (named by its identifier).
 dictionary_key_columns <- function(dict) {
-  virtual <- names(Filter(is_mapping, dict$roles))
+  virtual <- names(Filter(is_mapping, dict$identifiers))
   c(dict$columns$name, virtual)
 }

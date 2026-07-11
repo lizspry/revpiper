@@ -256,8 +256,8 @@ test_that("refers_to: every referring field flags YS02 or resolves silently", {
     d <- minimal_dict()
     switch(
       field,
-      roles = {
-        d$roles <- list(study_id = value)
+      identifiers = {
+        d$identifiers <- list(study_id = value)
         d
       },
       levels = {
@@ -270,20 +270,20 @@ test_that("refers_to: every referring field flags YS02 or resolves silently", {
         d
       },
       combine = {
-        d$roles <- list(study_id = list(combine = value, separator = "_"))
+        d$identifiers <- list(study_id = list(combine = value, separator = "_"))
         d
       },
       stop(sprintf("refers_to matrix has no builder for field '%s'", field))
     )
   }
   resolving <- list(
-    roles = "study",
+    identifiers = "study",
     levels = "study",
     constant_within_level = "study",
     combine = c("study", "mean_age")
   )
   broken <- list(
-    roles = "no_such_column",
+    identifiers = "no_such_column",
     levels = "no_such_column",
     constant_within_level = "no_such_level",
     combine = c("no_such_column", "mean_age")
@@ -311,29 +311,29 @@ test_that("every refers_to vocabulary value has a declared collection", {
   }
 })
 
-test_that("role entries dispatch: column string, combine block, else YE06", {
+test_that("identifier entries dispatch: string, combine block, else YE06", {
   d <- minimal_dict()
-  d$roles <- list(study_id = "study")
+  d$identifiers <- list(study_id = "study")
   expect_identical(codes_of(d), character(0))
-  d$roles <- list(
+  d$identifiers <- list(
     study_id = list(combine = c("study", "mean_age"), separator = "_")
   )
   expect_identical(codes_of(d), character(0))
   for (bad in list(7, TRUE, c("study", "mean_age"))) {
-    d$roles <- list(study_id = bad)
+    d$identifiers <- list(study_id = bad)
     expect_identical(codes_of(d), "YE06", info = class(bad))
   }
 })
 
 test_that("a malformed combine block reports battery codes, not YE06", {
   d <- minimal_dict()
-  d$roles <- list(study_id = list(combine = c("study", "mean_age")))
+  d$identifiers <- list(study_id = list(combine = c("study", "mean_age")))
   expect_identical(codes_of(d), "YE02")
-  d$roles <- list(
+  d$identifiers <- list(
     study_id = list(combyne = c("study", "mean_age"), separator = "_")
   )
   expect_setequal(codes_of(d), c("YE01", "YE02"))
-  d$roles <- list(
+  d$identifiers <- list(
     study_id = list(combine = c("study", "study"), separator = "_")
   )
   expect_identical(codes_of(d), "YF04")
@@ -345,9 +345,9 @@ test_that("dictionary_key_columns returns declared plus virtual columns", {
     dictionary_key_columns(dict),
     c("study", "design", "mean_age", "rob_score", "notes_temp")
   )
-  # good variant: a combine role parses and registers its virtual column
+  # good variant: a combine identifier parses and registers its virtual column
   d <- minimal_dict()
-  d$roles <- list(
+  d$identifiers <- list(
     study_id = list(combine = c("study", "mean_age"), separator = "_")
   )
   expect_identical(
@@ -386,7 +386,7 @@ test_that("rev_read_dictionary parses a valid dictionary into every slot", {
   expect_equal(dict$source$file, "data/raw/estimates.csv")
   expect_null(dict$source$sheet)
   expect_null(dict$source$reader)
-  expect_equal(dict$roles$study_id, "study")
+  expect_equal(dict$identifiers$study_id, "study")
   expect_equal(dict$levels$study, "study")
   expect_equal(dict$path, good_path())
 
@@ -464,7 +464,7 @@ test_that("each single-defect dictionary aborts naming its problem", {
   expect_snapshot(error = TRUE, read_bad("yf04-duplicate-values.yaml"))
   expect_snapshot(error = TRUE, read_bad("yf05-descending-range.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys01-duplicate-column.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye06-role-number.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ye06-identifier-number.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys02-combine-part-unknown.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys02-cwl-unknown-level.yaml"))
   expect_snapshot(error = TRUE, read_bad("yf04-duplicate-combine-parts.yaml"))

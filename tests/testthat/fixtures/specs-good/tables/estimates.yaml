@@ -2,7 +2,7 @@ table: estimates
 description: One row per extracted estimate.
 source:
   file: data/raw/estimates.csv
-roles:
+identifiers:
   study_id: study
 levels:
   study: [study]

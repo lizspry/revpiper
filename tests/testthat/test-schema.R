@@ -19,7 +19,7 @@ test_that("field_schema returns rows for every level, shaped by properties", {
   )
   expect_setequal(
     field_schema("top")$field,
-    c("table", "description", "source", "roles", "levels", "columns")
+    c("table", "description", "source", "identifiers", "levels", "columns")
   )
   expect_setequal(field_schema("source")$field, c("file", "sheet", "reader"))
   expect_setequal(field_schema("combine")$field, c("combine", "separator"))

@@ -17,7 +17,24 @@ source), not here — this document covers code conventions only.
 - A **mapping** is a named group of `key: value` pairs (YAML mapping, R
   named list). A mapping either has schema-vocabulary keys and a `context`
   to validate its contents as (source block, column entries), or
-  user-chosen keys that are data, not vocabulary (roles, levels).
+  user-chosen keys that are data, not vocabulary (identifiers, levels).
+
+Plain-language terms (recorded 2026-07-11, Liz's Task 4 review):
+- An **entry** is one described thing in a spec file — one column, one
+  identifier, one source — written as a group of `key: value` fields.
+- An entry's **name** is the value of the one field that identifies it
+  (`name:` for a column, `table:` for a dictionary file; the schema marks
+  that field `identity: true`). Messages refer to entries by name, and
+  duplicate names among sibling entries are always policed.
+- A **collection** is the set of names declared by one block of a spec
+  file (currently: the declared columns, the declared levels). A field the
+  schema marks `refers_to` a collection is valid only if every one of its
+  values is a member of that collection.
+- An **identifier** (block `identifiers:`, formerly `roles:`) maps a
+  pipeline handle such as `study_id` to one of the user's own columns, or
+  to a `combine` block that builds one — the built column is a **virtual
+  column** named by the identifier. Identifier keys are pipeline
+  vocabulary; identifier values are always the user's words.
 - Spec-check codes carry a scope prefix, with one term per scope used
   everywhere: **YF** form (within one field), **YE** entry (across fields
   within one entry), **YS** source (across entries within one file),
