@@ -67,8 +67,40 @@
   `rev_dictionary`; the good fixture's `notes_temp` gains `type: text`; Tasks 6,
   9, and 12 adjusted accordingly. Design-spec §3.1/§3.4 amended in the same
   commit (rides the phase-1-core PR, like decision 1's §4 amendment).
+- **Execution amendment 4 (2026-07-11, after Task 3; SIGNED OFF, Liz 2026-07-11):**
+  schema-driven validation architecture, from Liz's structural review of the checks.
+  (a) **Single source of truth**: `inst/schema/fields.yaml` declares every spec
+  field with ALL properties explicit (level, required, shape, cardinality,
+  empty_ok, domain [always inline], permitted_types, permission handling, excludes,
+  content_typed, ordered, unique_entries, refers_to, identity, default). Checks are
+  GENERATED from properties — one definition per check kind, instances declared in
+  the schema. Cardinality `one_or_many` accepts scalar-for-list everywhere (users
+  never penalised for `missing: NR`). Permissive permission sets: values/units on
+  everything except boolean; range on integer/decimal/date.
+  (b) **Scope taxonomy + code prefixes** (option b, Liz): checks are classed by how
+  much context they read — YF within one field, YE within one entry, YS within one
+  source file, YX across sources. Y-series renumbered accordingly (mapping in the
+  catalogue); collapses: one permission check (old Y004/Y005/Y006), one reference
+  resolver (old Y009/Y010/Y011/Y014/Y015), one identity check (old Y012/Y013),
+  old Y016 dissolved into domain/shape/reference, old Y019 into required.
+  (c) **Standalone-source rule**: `rev_read_dictionary()` exhausts YF/YE/YS alone —
+  one file fully validates with zero knowledge of other sources; YX runs in a
+  separate, composable, DATA-FREE set-level step (prespecification workflow
+  preserved). Task 3 as executed is superseded by Task 3b; Tasks 4-6 restated.
+  (d) **Two-layer tests**: a property matrix GENERATED from the schema (every
+  property × every field × applies/does-not-apply) proves logic by construction; a
+  small curated fixture set with snapshots guards wording and routing.
+  (e) **Terminology** (recorded in dev/conventions.md): data tables have *columns*
+  (variables); a dictionary describes each column via *fields*; the package schema
+  defines each field's *properties*; properties generate *checks*; failures are
+  *problems* (spec, abort) or *findings* (data, routed). "Attributes" avoided
+  (R-reserved meaning).
+  (f) **Deferred decisions logged in spec §8.2**: possible package split
+  (spec/process/vis); joins declaring expected column overlap; workflow ordering of
+  within-source vs across-source data checking + corrections (join spec may be
+  authored upfront for sheet compatibility).
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
-  (as amended through 2026-07-09). Rationale trail:
+  (as amended through 2026-07-11). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
 
 **Goal:** Implement revpiper's spec machinery and pipeline stages 1–3 — per-table
@@ -171,36 +203,61 @@ snapshots).
 | `R/join.R` | join execution + J-checks + near-miss suggestions | `test-join.R` |
 | `R/check.R` | `rev_check()` orchestration + diagnostics output | `test-check.R` |
 | `R/draft.R` | `rev_draft_dictionary()` | `test-draft.R` |
+| `inst/schema/fields.yaml` | single source of truth: every spec field's properties | schema self-validation in `test-schema.R` |
+| `R/schema.R` | schema loader (cached), accessors | `test-schema.R` |
 
 ## Check catalogue, routing, and data-dict coverage (plan deliverable)
 
 Consequence constants: `not certifiable` (every finding, always) plus, where
 mechanical: `join '<left>-<right>' skipped`; `dependent checks on '<column>' not run`.
 
-### Y — spec validation (parse time; these ABORT with all problems listed, file+entry)
+### Spec validation (parse time; these ABORT with all problems listed, file+entry)
 
-| Code | Check | Fix routes to |
-|---|---|---|
-| Y001 | unknown field name (with did-you-mean, `utils::adist` ≤ 2) | named spec file + entry |
-| Y002 | unknown `type` (not text/integer/decimal/boolean/date) | column entry |
-| Y003 | `values` and `range` both present on one column | column entry |
-| Y004 | `values` on boolean/date | column entry |
-| Y005 | `range` on text/boolean | column entry |
-| Y006 | `units` on non-integer/decimal | column entry |
-| Y007 | mixed-type or empty `values` list; `range` not length-2 of column's type | column entry |
-| Y008 | descending `range` | column entry |
-| Y009 | role names unknown column, or invalid `combine` (unknown/duplicate/empty parts, missing separator) | roles block |
-| Y010 | `levels` key names unknown column | levels block |
-| Y011 | `constant_within_level` names an undeclared level | column entry |
-| Y012 | duplicate, empty, or missing column name within a table | columns block |
-| Y013 | duplicate table name across `specs/tables/*.yaml` | the two files named |
-| Y014 | join references unknown table | joins.yaml entry |
-| Y015 | join `keys` reference unknown column (roles-block combined keys count as known) | joins.yaml entry |
-| Y016 | `relationship` not one-to-one/one-to-many; `granularity` not a declared level of the "one" side; `unmatched_ok` not boolean | joins.yaml entry |
-| Y017 | missing required field (top level: `table`, `source`, `columns`; per column: `type`) | spec file / column entry |
-| Y018 | `reader` neither shipped nor a function in `readers.R` | source block / readers.R |
-| Y019 | `source.file` missing from source block | source block |
-| Y020 | field declared with no value (YAML NULL; `description` exempt — draft skeletons carry empty descriptions) | the named entry |
+Codes are prefixed by SCOPE — how much context the check reads (amendment 4):
+**YF** within one field · **YE** within one entry · **YS** within one source file ·
+**YX** across sources. Every check is one definition; its instances are declared by
+schema properties in `inst/schema/fields.yaml`.
+
+#### YF — within one field
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YF01 | `empty_ok` | field written with no value (YAML null); `description` exempt (draft skeletons) | the named entry |
+| YF02 | `shape` + `cardinality` | value malformed: wrong element type, or wrong count (`range` needs exactly two; empty list where one-or-more required) | the named entry |
+| YF03 | `domain` | value outside its closed domain, did-you-mean (`type`; joins `relationship`) | the named entry |
+| YF04 | `unique_entries` | duplicate entries within a list field (`values`, `combine`, level keys) | the named entry |
+| YF05 | `ordered` | `range` descending (numeric or chronological) | the named entry |
+
+#### YE — within one entry, across its fields
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YE01 | field vocabulary | unknown field name, did-you-mean vs the context's legal set | the named entry |
+| YE02 | `required` | required field absent (top: `table`,`source`,`columns`; source: `file`; column: `name`,`type`; combine: `combine`,`separator`) | the named entry |
+| YE03 | `permitted_types` | constraint on a column type outside its permitted set (`values`/`units`: all but boolean; `range`: integer/decimal/date) | column entry |
+| YE04 | `excludes` | mutually exclusive fields both present (`values`+`range`); type-independent | column entry |
+| YE05 | `content_typed` | constraint entries do not match the column's declared type (incl. mixed-type entries) | column entry |
+| YE06 | *custom: union dispatch* | role entry neither a column name nor a combine block | roles block |
+
+#### YS — within one source file, across entries
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YS01 | `identity` (file scope) | duplicate column name within a table | columns block |
+| YS02 | `refers_to` (file scope) | unresolved within-file reference: role/level key → declared columns; `constant_within_level` → declared levels; did-you-mean | the named entry |
+| YS03 | *custom: environment* | declared `reader` neither shipped nor a function in readers.R | source block / readers.R |
+
+#### YX — across sources (separate, composable, data-free set-level step)
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YX01 | `identity` (set scope) | duplicate table name across `specs/tables/*.yaml` | the two files named |
+| YX02 | `refers_to` (set scope) | unresolved cross-source reference: join `left`/`right` → tables; `keys` → the side's key columns (combined keys count); `granularity` → a declared level of the "one" side; did-you-mean | joins.yaml entry |
+
+Old→new mapping (amendment 4): Y001→YE01 · Y002→YF03 · Y003→YE04 · Y004/Y005/Y006→YE03 ·
+Y007→YF02+YE05 · Y008→YF05 · Y009→YS02+YE06 · Y010/Y011→YS02 · Y012→YS01 (+YE02/YF01
+for missing/empty names) · Y013→YX01 · Y014/Y015→YX02 · Y016→YF03/YF02/YX02 ·
+Y017/Y019→YE02 · Y018→YS03 · Y020→YF01 · Y021(draft)→YF02 · new: YF04.
 
 ### R — reading/structure (findings; consequence: table skipped → its joins skipped; not certifiable)
 
@@ -243,19 +300,19 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 
 | data-dict | Ours | Status |
 |---|---|---|
-| S01 unresolved FK | — | N/A: no `foreign_key` constraint in v1 (joins declare keys; Y014/Y015) |
-| S02 unknown table | Y014 | adopted |
-| S03 unknown column | Y015 | adopted |
-| S04 invalid join expr | Y015/Y016 | adapted (structured keys, not expressions) |
+| S01 unresolved FK | — | N/A: no `foreign_key` constraint in v1 (joins declare keys; YX02) |
+| S02 unknown table | YX02 | adopted |
+| S03 unknown column | YX02 | adopted |
+| S04 invalid join expr | YX02/YF03 | adapted (structured keys, not expressions) |
 | S05 unresolved conflict col | — | N/A: no `conflicts` field v1; overlapping non-key columns get dplyr suffixes + unspecified-columns visibility |
-| S06 inconsistent cardinality | Y016 + J002/J003 | adapted (declared vs constraint consistency checked at data level) |
-| S07 wrong representation key | Y003–Y005 | adapted (values/range optionality per type) |
-| S08 units w/o quantity | Y006 | adopted |
+| S06 inconsistent cardinality | YF03/YX02 + J002/J003 | adapted (declared vs constraint consistency checked at data level) |
+| S07 wrong representation key | YE03/YE04 | adapted (values/range permissions per type) |
+| S08 units w/o quantity | YE03 | adapted (permissive: units allowed except boolean, amendment 4) |
 | S09 missing $learn_more | — | N/A: no counterpart field |
-| S10 duplicate name | Y012/Y013 | adopted |
-| S11 empty name | Y012 | adopted (folded) |
-| S12 wrong value type | Y007 | adopted |
-| S13 descending range | Y008 | adopted |
+| S10 duplicate name | YS01/YX01 | adopted |
+| S11 empty name | YE02/YF01 | adopted (folded into required/empty) |
+| S12 wrong value type | YF02/YE05 | adopted |
+| S13 descending range | YF05 | adopted |
 | S14/S15 time zone | — | N/A: datetime dropped from v1 |
 | S16 misplaced single-table description | — | N/A: per-table files by design |
 | S17 malformed version | — | N/A: data-version field not adopted; provenance stamped by pipeline (§3.8) |
@@ -263,7 +320,7 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 | M01 type mismatch | V001 | adapted (coercion-based) |
 | M02 missing column | R005 | adopted |
 | M03 undocumented column | — | adapted (amendment 3): informational unspecified-columns listing, not a finding |
-| M04 missing source | Y017/Y019 | adopted |
+| M04 missing source | YE02 | adopted (folded) |
 | M05 unreadable source | R001–R004 | adopted + extended (readers) |
 | D01 nulls in required | V004 | adopted |
 
@@ -378,6 +435,11 @@ stop_spec <- function(problems) {
 - [ ] **Step 5:** `air format . && Rscript -e 'lintr::lint_package()'` (0 lints) → commit.
 
 ### Task 3: Dictionary loading + field/type Y-checks (`spec-dictionary.R`, part 1)
+
+> **Executed 2026-07-10 as written (commits 199465a, c3c945e). SUPERSEDED by
+> Task 3b (amendment 4): the hand-written checks below are replaced by
+> schema-driven validators and the Y-codes by the YF/YE/YS/YX catalogue. Kept
+> as the record of what ran; do not execute again.**
 
 **Files:** Create `R/spec-dictionary.R`, `tests/testthat/test-spec-dictionary.R`,
 fixtures under `tests/testthat/fixtures/specs-good/tables/estimates.yaml` and
@@ -509,30 +571,124 @@ defaults: required/unique FALSE, missing = list(character(0))).
 - [ ] **Step 4: run, expect PASS** (accept snapshots after reading each).
 - [ ] **Step 5:** format, lint, commit.
 
-### Task 4: Cross-reference Y-checks (roles/levels/combine; multi-file) (`spec-dictionary.R`, part 2)
+### Task 3b: Schema-driven validation rewrite (amendment 4)
 
-**Files:** Modify `R/spec-dictionary.R`; extend `test-spec-dictionary.R` + bad fixtures.
+**Files:** Create `inst/schema/fields.yaml`, `R/schema.R`,
+`tests/testthat/test-schema.R`; rewrite `R/spec-dictionary.R` internals (public
+interface unchanged); rewrite `tests/testthat/test-spec-dictionary.R` (two-layer);
+rename `fixtures/specs-bad/*` to new codes; update the two example codes in
+`test-utils-messages.R` (Y001→YE01, Y014→YX02) and regenerate snapshots.
 
 **Interfaces — Produces:**
-- `rev_read_dictionaries(dir)` → named list of `rev_dictionary` (reads
-  `<dir>/tables/*.yaml`; adds cross-file Y013)
-- Within-file additions to `rev_read_dictionary()`: Y009 (roles: unknown column /
-  invalid combine — unknown or duplicate parts, missing separator; a valid combine
-  registers a **virtual column** named by the role), Y010 (level keys must be
-  declared or virtual columns), Y011 (`constant_within_level` names a declared level).
-- `dictionary_key_columns(dict)` → chr of all real+virtual columns usable as keys.
+- `field_schema(level)` → tibble of schema rows for `"top"|"source"|"column"|"combine"`
+  (loaded once from `inst/schema/fields.yaml`, cached in a package environment)
+- `schema_types()` → chr(5), read from the `type` row's inline domain
+- Scope-classed validators, each one definition driven by schema rows:
+  within-field `check_empty` (YF01), `check_shape` (YF02: element type + cardinality,
+  `one_or_many` normalises scalar→list), `check_domain` (YF03, did-you-mean),
+  `check_unique_entries` (YF04), `check_ordered` (YF05); within-entry
+  `check_vocabulary` (YE01), `check_required` (YE02), `check_permitted` (YE03),
+  `check_excludes` (YE04), `check_content_typed` (YE05). Per-context battery:
+  `check_entry(x, level, file, entry)` runs all ten with that level's schema slice.
+- `rev_read_dictionary(path)` — same export, same return shape, now YF/YE-complete
+  per entry plus YS01 (duplicate column names); still aborts once via `stop_spec()`.
+- Ordering gates preserved: YE01 first; YF01/YF02 before content checks; YE04
+  type-independent; type-dependent checks suppressed without a valid `type`.
 
-- [ ] **Step 1: failing tests** — good fixture with
-  `study_id: {combine: [author, year], separator: "_"}` parses and
-  `dictionary_key_columns()` includes `study_id`; bad fixtures for Y009 (combine
-  names unknown column; duplicate parts; missing separator), Y010, Y011, and a
-  two-file fixture dir with duplicate `table:` names for Y013 via
-  `rev_read_dictionaries()`. Snapshot each error.
+- [ ] **Step 1: schema file.** One field per line (flow style: field-level diffs);
+  ALL properties explicit; `any`/`null` are stated, never implied:
+
+```yaml
+# inst/schema/fields.yaml — single source of truth for spec-field validation.
+# Properties: field, level, required, shape (string|boolean|scalar|block|
+# named_list|list_of_blocks), cardinality (one|one_or_many|two), empty_ok,
+# domain (inline list or null), permitted_types (any | list of types),
+# excludes, content_typed, ordered (ascending|null), unique_entries,
+# refers_to (columns|levels|null), identity, default.
+fields:
+  - {field: table, level: [top], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
+  - {field: description, level: [top, column], required: false, shape: string, cardinality: one, empty_ok: true, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: source, level: [top], required: true, shape: block, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: roles, level: [top], required: false, shape: named_list, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: columns, identity: false, default: null}
+  - {field: levels, level: [top], required: false, shape: named_list, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
+  - {field: columns, level: [top], required: true, shape: list_of_blocks, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: file, level: [source], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: sheet, level: [source], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: reader, level: [source], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: name, level: [column], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
+  - {field: type, level: [column], required: true, shape: string, cardinality: one, empty_ok: false, domain: [text, integer, decimal, boolean, date], permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: values, level: [column], required: false, shape: scalar, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: [range], content_typed: true, ordered: null, unique_entries: true, refers_to: null, identity: false, default: null}
+  - {field: range, level: [column], required: false, shape: scalar, cardinality: two, empty_ok: false, domain: null, permitted_types: [integer, decimal, date], excludes: [values], content_typed: true, ordered: ascending, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: units, level: [column], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: required, level: [column], required: false, shape: boolean, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
+  - {field: unique, level: [column], required: false, shape: boolean, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
+  - {field: missing, level: [column], required: false, shape: string, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: null, identity: false, default: []}
+  - {field: constant_within_level, level: [column], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: levels, identity: false, default: null}
+  - {field: combine, level: [combine], required: true, shape: string, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
+  - {field: separator, level: [combine], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+```
+
+(Task 5 appends `level: [join]` rows — `left`/`right`/`keys`/`granularity`/
+`relationship`/`unmatched_ok` — to this same file; `refers_to` for
+roles/levels/cwl is consumed in Task 4.)
+- [ ] **Step 2: failing schema tests** (`test-schema.R`): `field_schema("column")`
+  returns one row per column field with all fifteen properties non-missing;
+  `schema_types()` == the five types; SELF-VALIDATION — every property value is in
+  its closed vocabulary, every `permitted_types`/`content_typed` list ⊆
+  `schema_types()`, every `excludes`/`refers_to` target exists, `domain` only on
+  rows where it is a list, exactly one `identity` row per scope. Run: FAIL
+  (loader absent).
+- [ ] **Step 3: loader** (`R/schema.R`): `yaml::read_yaml` +
+  `tibble` conversion, cached via `local()` env; accessors above. Run: PASS.
+- [ ] **Step 4: failing property-matrix tests** (rewritten
+  `test-spec-dictionary.R`, layer 1): a generator builds a minimal valid
+  dictionary as an R list; for every schema row × property the matrix mutates one
+  aspect and asserts the mapped code fires — and asserts silence on the
+  complementary set (required false → deletion silent; each `one_or_many` field
+  accepts scalar AND list; every permitted type × constraint silent; every banned
+  type → YE03; etc.). Codes asserted programmatically via
+  `err$problems` (stop_spec gains a `problems` field on the condition for this).
+  Layer 2: curated fixtures renamed (`ye01-top-level.yaml`, `yf03-bad-type.yaml`,
+  … one per code incl. YF04-new; many-defects kept), snapshot each. Run: FAIL.
+- [ ] **Step 5: rewrite `R/spec-dictionary.R`** — the ten validators + battery per
+  the Interfaces block, consuming `field_schema()`; delete the hand-written
+  check family; keep `rev_read_dictionary()` signature, guard, `new_dictionary()`
+  (defaults now read from schema `default`), `stop_spec()` call. Run: PASS;
+  READ every snapshot (renumbered codes are new product voice).
+- [ ] **Step 6:** `air format .`, zero lints, full `devtools::test()`, commit.
+
+### Task 4: Within-source references + set-level step (`spec-dictionary.R`, part 2)
+
+**Files:** Modify `R/spec-dictionary.R`; extend `test-spec-dictionary.R` + fixtures.
+
+**Interfaces — Produces:**
+- Within-file additions to `rev_read_dictionary()` (completes YS scope; standalone
+  rule holds — one file, zero knowledge of other sources): YE06 (role entry
+  neither string nor combine block — union dispatch; a valid combine block is
+  validated as a `combine`-level context and registers a **virtual column** named
+  by the role), YS02 via the schema's `refers_to` (role strings + level keys +
+  combine parts → declared columns; `constant_within_level` → declared levels;
+  did-you-mean vs the collection), YS01 (duplicate column names — `identity`,
+  file scope).
+- `dictionary_key_columns(dict)` → chr of real + virtual columns usable as keys.
+- `rev_read_dictionaries(dir)` → named list of `rev_dictionary` PLUS the
+  data-free set-level step: YX01 (duplicate `table` across files — `identity`,
+  set scope). Loads each file standalone, then validates the set.
+
+- [ ] **Step 1: failing tests** — good fixture variant with
+  `study_id: {combine: [author, year], separator: "_"}` parses;
+  `dictionary_key_columns()` includes `study_id`; matrix additions for `refers_to`
+  (each referring field × resolves/doesn't); curated fixtures: ye06 (role entry a
+  number), ys02 (combine part unknown; cwl names undeclared level), yf04
+  (duplicate combine parts), ys01 stays, yx01 two-file dir. Snapshot each.
 - [ ] **Step 2: run, expect FAIL.**
-- [ ] **Step 3: implement** (`check_roles_block()`, `check_levels_block()`,
-  `check_cwl()` appended into `rev_read_dictionary`'s problem collection;
-  `rev_read_dictionaries()` = `lapply` + Y013 scan over `vapply(dicts, \(d) d$table, "")`).
-- [ ] **Step 4: run, expect PASS.**  - [ ] **Step 5:** format, lint, commit.
+- [ ] **Step 3: implement** — `resolve_references(dict_raw, file)` (one resolver,
+  schema-driven collections), `check_role_entries()` (dispatch + combine context
+  via the battery), identity check at both scopes,
+  `rev_read_dictionaries()` = per-file `rev_read_dictionary()` + set-level
+  identity scan.
+- [ ] **Step 4: run, expect PASS; read snapshots.**
+- [ ] **Step 5:** format, lint, commit.
 
 ### Task 5: Joins spec (`spec-joins.R`)
 
@@ -559,17 +715,28 @@ joins:
 `rob_direct` (text, values [low, high]); levels `study: [study_id]`.)
 
 **Interfaces — Produces:**
+- Schema extension: `level: [join]` rows appended to `inst/schema/fields.yaml` —
+  `left`/`right` (required strings, `refers_to: tables`), `keys` (required
+  named_list; values `refers_to` the named side's `dictionary_key_columns()` —
+  the one context-parameterised reference, thin custom code), `granularity`
+  (required string, `refers_to` the "one" side's declared levels), `relationship`
+  (required string, `domain: [one-to-one, one-to-many]`), `unmatched_ok` (boolean,
+  `default: false`). The battery + resolver from Tasks 3b/4 do the rest: YE01
+  unknown fields, YE02 required, YF02 shapes, YF03 relationship domain, YX02
+  unresolved tables/keys/granularity.
 - `rev_read_joins(path, dictionaries)` → tibble(left, right, keys_left <list chr>,
-  keys_right <list chr>, granularity, relationship, unmatched_ok) with Y-checks:
-  Y001 (unknown fields), Y014 (unknown table), Y015 (key not in
-  `dictionary_key_columns()` of its side), Y016 (bad relationship / granularity not a
-  declared level of the "one" side / non-boolean unmatched_ok). Missing joins.yaml →
-  zero-row tibble (single-table projects are valid).
+  keys_right <list chr>, granularity, relationship, unmatched_ok). Missing
+  joins.yaml → zero-row tibble (single-table projects are valid). This is the
+  across-source (YX) validation step — data-free, composable, callable on its own.
 
 - [ ] **Steps 1–5:** failing tests (good parse incl. defaults `unmatched_ok = FALSE`;
-  snapshot per bad fixture; absent file → zero rows), watch fail, implement
-  (`check_join_entry()` per join, same problem-collection pattern), watch pass,
-  format+lint, commit.
+  matrix additions for the join schema rows; snapshot per curated bad fixture —
+  unknown table, unknown key, bad relationship, granularity not a level; absent
+  file → zero rows), watch fail, implement, watch pass, format+lint, commit.
+- Open question resolved AT THIS TASK's walkthrough (amendment 4): should joins
+  declare expected column overlap between sides (`shared:`), with overlap beyond
+  keys+shared a finding? (Liz 2026-07-11: overlap semantics differ between
+  same-variables merges and different-information merges.)
 
 ### Task 6: Generic readers + dispatch + R-checks (`read.R`)
 
@@ -594,7 +761,7 @@ synthetic review).
   show_col_types = FALSE)`; `.xls`/`.xlsx` via
   `readxl::read_excel(col_types = "text")`; extension dispatch; R001/R002), `resolve_reader(source,
   project)` (NULL → generic; "covidence" → registry; else function named in
-  `readers.R`, sourced via `source(local = new.env())`; unknown → Y018 abort),
+  `readers.R`, sourced via `source(local = new.env())`; unknown → YS03 abort),
   R003/R004 wrapping, R005 against `dict$columns`; source columns absent from the
   dictionary go to `unspecified` and are dropped from `data` (amendment 3).
 
@@ -666,9 +833,10 @@ Column-name grammar (from the real export): `Result data: <outcome> (<timepoint>
   composed key columns appended), `log` tibble(column, op, count),
   `failures` tibble(column, value, rows <list>) for V001,
   `skipped` chr (columns whose dependent checks must not run))
-- Ops in order (each skippable per column via dictionary `clean:` map — add `clean`
-  to `column_fields` in Task 3's constant, values validated as named list of booleans
-  with op names → else Y001): `encoding`, `trim`, `missing`, `coerce`, `canonicalise`.
+- Ops in order (each skippable per column via dictionary `clean:` map — add a
+  `clean` field row to `inst/schema/fields.yaml` (level column, shape named_list);
+  op-name/boolean validation via the battery → YE01/YF02): `encoding`, `trim`,
+  `missing`, `coerce`, `canonicalise`.
 
 - [ ] **Step 1: failing tests**
 

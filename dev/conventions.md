@@ -7,6 +7,18 @@ operational digest, reusable across projects.
 Environment and sandbox operating rules live in CLAUDE.md (single
 source), not here — this document covers code conventions only.
 
+## Terminology (recorded 2026-07-11, Phase 1 amendment 4)
+- Data tables have **columns** (synonym in prose: variables), which hold values.
+- A dictionary describes each column via **fields** (`type:`, `values:`, ...).
+- The package schema (`inst/schema/fields.yaml`) defines each field's
+  **properties** (shape, cardinality, domain, ...). Properties generate
+  **checks**; check failures are **problems** (spec side, abort) or
+  **findings** (data side, routed). Never say "attributes" (R-reserved).
+- Spec-check codes carry a scope prefix: **YF** within one field, **YE**
+  within one entry, **YS** within one source file, **YX** across sources.
+  Within-source validation is standalone; across-source is a separate,
+  composable, data-free step.
+
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml
   committed, defaults only). Never hand-format; never argue with Air.
