@@ -1,24 +1,7 @@
-schema_properties <- c(
-  "field",
-  "level",
-  "required",
-  "shape",
-  "cardinality",
-  "context",
-  "empty_ok",
-  "domain",
-  "permitted_types",
-  "excludes",
-  "content_typed",
-  "ordered",
-  "unique_entries",
-  "refers_to",
-  "identity",
-  "default"
-)
-
-test_that("field_schema returns complete rows for every level", {
+test_that("field_schema returns rows for every level, shaped by properties", {
+  props <- the_properties()
   col <- field_schema("column")
+  expect_setequal(names(col), props$property)
   expect_setequal(
     col$field,
     c(
@@ -40,7 +23,6 @@ test_that("field_schema returns complete rows for every level", {
   )
   expect_setequal(field_schema("source")$field, c("file", "sheet", "reader"))
   expect_setequal(field_schema("combine")$field, c("combine", "separator"))
-  expect_setequal(names(col), schema_properties)
 })
 
 test_that("schema_types returns the five types from type's inline domain", {
@@ -50,51 +32,95 @@ test_that("schema_types returns the five types from type's inline domain", {
   )
 })
 
-test_that("the schema validates against its own closed vocabulary", {
+test_that("every fields row conforms to the declared properties", {
+  props <- the_properties()
   s <- the_schema()
+  for (i in seq_len(nrow(props))) {
+    p <- props[i, ]
+    column <- s[[p$property]]
+    values <- switch(
+      p$type,
+      string = column[!is.na(column)],
+      boolean = {
+        expect_true(
+          is.logical(column) && !anyNA(column),
+          info = p$property
+        )
+        NULL
+      },
+      list_of_strings = unlist(column),
+      verbatim = NULL
+    )
+    allowed <- p$allowed[[1]]
+    if (!is.null(allowed) && length(values) > 0) {
+      expect_true(all(values %in% allowed), info = p$property)
+    }
+  }
+})
 
-  expect_true(all(
-    unlist(s$level) %in% c("top", "source", "column", "combine")
-  ))
-  expect_true(all(
-    s$shape %in%
-      c("string", "boolean", "scalar", "mapping", "list_of_mappings")
-  ))
-  # context: only on mapping shapes, and always a known level
-  expect_true(all(
-    is.na(s$context) | s$context %in% c("top", "source", "column", "combine")
-  ))
-  expect_true(all(
-    is.na(s$context) | s$shape %in% c("mapping", "list_of_mappings")
-  ))
-  expect_true(all(s$cardinality %in% c("one", "one_or_many", "two")))
-  expect_true(is.logical(s$required) && !anyNA(s$required))
-  expect_true(is.logical(s$empty_ok) && !anyNA(s$empty_ok))
-  expect_true(is.logical(s$content_typed) && !anyNA(s$content_typed))
-  expect_true(is.logical(s$unique_entries) && !anyNA(s$unique_entries))
-  expect_true(is.logical(s$identity) && !anyNA(s$identity))
-  expect_true(all(is.na(s$ordered) | s$ordered == "ascending"))
-  expect_true(all(is.na(s$refers_to) | s$refers_to %in% c("columns", "levels")))
+test_that("relational meta-rules hold across schema rows", {
+  s <- the_schema()
 
   # permitted_types: the sentinel "any", or a subset of the type universe
   expect_true(all(vapply(
     s$permitted_types,
-    \(pt) identical(pt, "any") || all(unlist(pt) %in% schema_types()),
+    \(pt) identical(pt, "any") || all(pt %in% schema_types()),
     logical(1)
   )))
-  # content_typed and ordered only make sense on type-restricted constraints
+  # content_typed and ordered only on type-restricted constraints
   restricted <- !vapply(s$permitted_types, identical, logical(1), "any")
   expect_true(all(restricted[s$content_typed]))
   expect_true(all(restricted[!is.na(s$ordered)]))
-  # excludes targets are fields that exist and share a level
-  for (i in seq_len(nrow(s))) {
-    targets <- s$excludes[[i]]
+  # excludes targets are fields that exist
+  for (targets in s$excludes) {
     if (!is.null(targets)) {
       expect_true(all(targets %in% s$field))
     }
   }
+  # context only on mapping shapes
+  expect_true(all(
+    is.na(s$context) | s$shape %in% c("mapping", "list_of_mappings")
+  ))
   # exactly one identity field per scope: table (set), name (file)
   expect_identical(s$field[s$identity], c("table", "name"))
   # domain is inline and lives only on type
   expect_identical(s$field[!vapply(s$domain, is.null, logical(1))], "type")
+})
+
+test_that("the check registry is closed and internally consistent", {
+  registry <- the_checks()
+
+  # prefixes agree with declared scopes
+  prefix_scope <- c(
+    YF = "field",
+    YE = "entry",
+    YS = "source",
+    YX = "cross_source"
+  )
+  expect_identical(
+    unname(prefix_scope[substr(registry$code, 1, 2)]),
+    registry$scope
+  )
+  # every template placeholder is a declared param, and vice versa
+  for (i in seq_len(nrow(registry))) {
+    found <- regmatches(
+      registry$message_template[i],
+      gregexpr("\\{([a-z0-9_]+)\\}", registry$message_template[i])
+    )[[1]]
+    found <- gsub("[{}]", "", found)
+    expect_setequal(found, registry$params[[i]])
+  }
+  # rendering an unregistered code is an internal error
+  expect_error(render_message("ZZ99"), "unregistered")
+})
+
+test_that("every implemented check code is exercised by a snapshot", {
+  snaps <- readLines(test_path("_snaps", "spec-dictionary.md"))
+  registry <- the_checks()
+  for (code in registry$code[registry$implemented]) {
+    expect_true(any(grepl(code, snaps, fixed = TRUE)), info = code)
+  }
+  # and no snapshot exercises a code the registry does not know
+  emitted <- regmatches(snaps, gregexpr("Y[FESX][0-9]{2}", snaps))
+  expect_true(all(unlist(emitted) %in% registry$code))
 })

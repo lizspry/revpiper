@@ -1,0 +1,135 @@
+# inst/schema/checks.yaml — the check registry: every spec-problem code, its
+# meaning, message template, and fix route. Validators fetch codes and
+# templates from here; the docs reference page is generated from here.
+# Placeholders in message_template are replaced verbatim (no code evaluation);
+# params declares them. implemented: false marks codes whose checks land in
+# later tasks (closure-tested once implemented).
+checks:
+  - code: YF01
+    scope: field
+    property: empty_ok
+    meaning: a field is written but has no value (YAML null)
+    message_template: "field '{field}' is declared but has no value"
+    params: [field]
+    fix: the named entry
+    implemented: true
+  - code: YF02
+    scope: field
+    property: shape + cardinality
+    meaning: a field's value has the wrong form (element type or count)
+    message_template: "field '{field}' must be {expected}"
+    params: [field, expected]
+    fix: the named entry
+    implemented: true
+  - code: YF03
+    scope: field
+    property: domain
+    meaning: a field's value is outside its closed domain
+    message_template: "unknown {field} '{value}'"
+    params: [field, value]
+    fix: the named entry
+    implemented: true
+  - code: YF04
+    scope: field
+    property: unique_entries
+    meaning: a list field contains duplicate entries
+    message_template: "field '{field}' has duplicate entries: {dupes}"
+    params: [field, dupes]
+    fix: the named entry
+    implemented: true
+  - code: YF05
+    scope: field
+    property: ordered
+    meaning: a range's two entries descend (numeric or chronological)
+    message_template: "'{field}' is descending ({high} > {low})"
+    params: [field, high, low]
+    fix: the named entry
+    implemented: true
+  - code: YE01
+    scope: entry
+    property: field vocabulary
+    meaning: a field name is not in the closed set for its context
+    message_template: "unknown field '{field}'"
+    params: [field]
+    fix: the named entry
+    implemented: true
+  - code: YE02
+    scope: entry
+    property: required
+    meaning: a field the schema marks required is absent from its context
+    message_template: "missing required field '{field}'"
+    params: [field]
+    fix: the named entry
+    implemented: true
+  - code: YE03
+    scope: entry
+    property: permitted_types
+    meaning: a constraint field appears on a column type outside its permitted set
+    message_template: "'{field}' is not allowed on type '{type}'"
+    params: [field, type]
+    fix: column entry
+    implemented: true
+  - code: YE04
+    scope: entry
+    property: excludes
+    meaning: two mutually exclusive fields are both present on one entry
+    message_template: "'{field1}' and '{field2}' are mutually exclusive"
+    params: [field1, field2]
+    fix: column entry
+    implemented: true
+  - code: YE05
+    scope: entry
+    property: content_typed
+    meaning: a constraint's entries do not match the column's declared type
+    message_template: "'{field}' entries do not match declared type '{type}'"
+    params: [field, type]
+    fix: column entry
+    implemented: true
+  - code: YE06
+    scope: entry
+    property: "custom: union dispatch"
+    meaning: a role entry is neither a column name nor a combine block
+    message_template: "role '{role}' must be a column name or a combine block"
+    params: [role]
+    fix: roles block
+    implemented: false
+  - code: YS01
+    scope: source
+    property: identity
+    meaning: two entries claim the same identity within one source file
+    message_template: "duplicate {context} name '{id}'"
+    params: [context, id]
+    fix: columns block
+    implemented: true
+  - code: YS02
+    scope: source
+    property: refers_to
+    meaning: a value must name something declared elsewhere in the file and does not
+    message_template: "'{value}' does not name a declared {collection}"
+    params: [value, collection]
+    fix: the named entry
+    implemented: false
+  - code: YS03
+    scope: source
+    property: "custom: environment"
+    meaning: a declared reader is neither shipped nor defined in readers.R
+    message_template: "reader '{reader}' is neither shipped nor defined in readers.R"
+    params: [reader]
+    fix: source block / readers.R
+    implemented: false
+  - code: YX01
+    scope: cross_source
+    property: identity
+    meaning: two spec files claim the same table name
+    message_template: "duplicate table name '{table}'"
+    params: [table]
+    fix: the two files named
+    implemented: false
+  - code: YX02
+    scope: cross_source
+    property: refers_to
+    meaning: a cross-source reference does not resolve (join tables, keys, granularity)
+    message_template: "'{value}' does not resolve against {collection}"
+    params: [value, collection]
+    fix: joins.yaml entry
+    implemented: false

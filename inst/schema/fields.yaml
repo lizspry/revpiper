@@ -1,11 +1,25 @@
 # inst/schema/fields.yaml — single source of truth for spec-field validation.
-# Properties: field, level, required, shape (string|boolean|scalar|mapping|
-# list_of_mappings), cardinality (one|one_or_many|two), empty_ok,
-# context (level to validate a mapping's contents as, or null: keys are
-# user data, not schema vocabulary), domain (inline list or null),
-# permitted_types (any | list of types),
-# excludes, content_typed, ordered (ascending|null), unique_entries,
-# refers_to (columns|levels|null), identity, default.
+# `properties:` defines the property vocabulary (meanings, loading types,
+# allowed values); `fields:` instantiates it, one field per line. The loader
+# (R/schema.R) and the conformance test both read `properties:` — property
+# names and handling exist nowhere in code.
+properties:
+  - {property: field, meaning: the key as written in user YAML, type: string, allowed: null}
+  - {property: level, meaning: context(s) where the field is legal, type: list_of_strings, allowed: [top, source, column, combine]}
+  - {property: required, meaning: must be present in its context, type: boolean, allowed: null}
+  - {property: shape, meaning: element type the value must have, type: string, allowed: [string, boolean, scalar, mapping, list_of_mappings]}
+  - {property: cardinality, meaning: how many elements; one_or_many accepts a scalar and normalises it to a one-element list, type: string, allowed: [one, one_or_many, two]}
+  - {property: context, meaning: level to validate a mapping's contents as; null means keys are user data, type: string, allowed: [top, source, column, combine]}
+  - {property: empty_ok, meaning: a bare key with no value is legal, type: boolean, allowed: null}
+  - {property: domain, meaning: closed set of legal values (did-you-mean), always inline, type: list_of_strings, allowed: null}
+  - {property: permitted_types, meaning: column types this field may appear on; the sentinel any means unrestricted, type: list_of_strings, allowed: null}
+  - {property: excludes, meaning: fields that may not co-occur with this one, type: list_of_strings, allowed: null}
+  - {property: content_typed, meaning: entries must match the column's declared type, type: boolean, allowed: null}
+  - {property: ordered, meaning: entries must ascend (numeric or chronological), type: string, allowed: [ascending]}
+  - {property: unique_entries, meaning: entries must be unique within the list, type: boolean, allowed: null}
+  - {property: refers_to, meaning: values must resolve against a declared collection, type: string, allowed: [columns, levels]}
+  - {property: identity, meaning: this field names the entry; duplicates policed at block scope, type: boolean, allowed: null}
+  - {property: default, meaning: value assumed when absent; null means absent stays absent, type: verbatim, allowed: null}
 fields:
   - {field: table, level: [top], required: true, shape: string, cardinality: one, context: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
   - {field: description, level: [top, column], required: false, shape: string, cardinality: one, context: null, empty_ok: true, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
