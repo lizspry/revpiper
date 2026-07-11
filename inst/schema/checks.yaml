@@ -103,10 +103,10 @@ checks:
   YE06:
     scope: entry
     property: "custom: union dispatch"
-    meaning: an identifier entry is neither a column name nor a combine block
-    message_template: "identifier '{identifier}' must be a column name or a combine block"
+    meaning: an identifier entry is neither a column name nor a combination of columns
+    message_template: "identifier '{identifier}' must be a column name or a combination of columns"
     params: [identifier]
-    fix: identifiers block
+    fix: identifiers section
     implemented: true
 
   # YS: source checks (across entries within one file)
@@ -114,17 +114,17 @@ checks:
   YS01:
     scope: source
     property: identity
-    meaning: two entries claim the same identity within one source file
-    message_template: "duplicate {context} name '{id}'"
-    params: [context, id]
-    fix: columns block
+    meaning: two entries claim the same name within one spec file
+    message_template: "duplicate {kind} name '{name}'"
+    params: [kind, name]
+    fix: columns section
     implemented: true
   YS02:
     scope: source
     property: refers_to
     meaning: a value must name something declared elsewhere in the file and does not
-    message_template: "'{value}' does not name one of the declared {collection}"
-    params: [value, collection]
+    message_template: "'{value}' does not name one of the declared {section}"
+    params: [value, section]
     fix: the named entry
     implemented: true
   YS03:
@@ -133,7 +133,7 @@ checks:
     meaning: a declared reader is neither shipped nor defined in readers.R
     message_template: "reader '{reader}' is neither shipped nor defined in readers.R"
     params: [reader]
-    fix: source block / readers.R
+    fix: source section / readers.R
     implemented: false
 
   # YX: cross-source checks (across files)
@@ -150,7 +150,7 @@ checks:
     scope: cross-source
     property: refers_to
     meaning: a cross-source reference does not resolve (join tables, keys, granularity)
-    message_template: "'{value}' does not resolve against {collection}"
-    params: [value, collection]
+    message_template: "'{value}' does not resolve against {section}"
+    params: [value, section]
     fix: joins.yaml entry
     implemented: false

@@ -60,7 +60,7 @@ test_that("the minimal dictionary is problem-free (matrix baseline)", {
 test_that("required: absence flags YE02 exactly for schema-required fields", {
   base <- minimal_dict()
   for (f in c("table", "source", "columns")) {
-    row <- field_schema("top")[field_schema("top")$field == f, ]
+    row <- field_schema("file")[field_schema("file")$field == f, ]
     d <- base
     d[[f]] <- NULL
     if (row$required) {
@@ -81,7 +81,7 @@ test_that("required: absence flags YE02 exactly for schema-required fields", {
   expect_identical(codes_of(base), character(0))
 })
 
-test_that("vocabulary: unknown fields flag YE01 at every level", {
+test_that("vocabulary: unknown fields flag YE01 for every kind of entry", {
   base <- minimal_dict()
   d <- base
   d$bogus <- "x"
@@ -96,23 +96,23 @@ test_that("vocabulary: unknown fields flag YE01 at every level", {
 
 test_that("empty: a NULL value flags YF01 unless the schema says empty_ok", {
   base <- minimal_dict()
-  for (level in c("top", "source", "column")) {
-    schema <- field_schema(level)
+  for (kind in c("file", "source", "column")) {
+    schema <- field_schema(kind)
     for (i in seq_len(nrow(schema))) {
       row <- schema[i, ]
       d <- base
-      if (level == "top") {
+      if (kind == "file") {
         d <- set_field(d, row$field, NULL)
-      } else if (level == "source") {
+      } else if (kind == "source") {
         d$source <- set_field(d$source, row$field, NULL)
       } else {
         d$columns[[1]] <- set_field(d$columns[[1]], row$field, NULL)
       }
       got <- codes_of(d)
       if (row$empty_ok) {
-        expect_identical(got, character(0), info = paste(level, row$field))
+        expect_identical(got, character(0), info = paste(kind, row$field))
       } else {
-        expect_identical(got, "YF01", info = paste(level, row$field))
+        expect_identical(got, "YF01", info = paste(kind, row$field))
       }
     }
   }
@@ -127,20 +127,20 @@ test_that("shape and cardinality violations flag YF02, without cascade", {
     mapping = "not a mapping",
     list_of_mappings = "not mappings"
   )
-  for (level in c("top", "source", "column")) {
-    schema <- field_schema(level)
+  for (kind in c("file", "source", "column")) {
+    schema <- field_schema(kind)
     for (i in seq_len(nrow(schema))) {
       row <- schema[i, ]
       d <- base
       bad <- bad_for[[row$shape]]
-      if (level == "top") {
+      if (kind == "file") {
         d[[row$field]] <- bad
-      } else if (level == "source") {
+      } else if (kind == "source") {
         d$source[[row$field]] <- bad
       } else {
         d$columns[[1]][[row$field]] <- bad
       }
-      expect_identical(codes_of(d), "YF02", info = paste(level, row$field))
+      expect_identical(codes_of(d), "YF02", info = paste(kind, row$field))
     }
   }
   # cardinality: one rejects many; two rejects one and three; empty list rejects
@@ -302,16 +302,16 @@ test_that("refers_to: every referring field flags YS02 or resolves silently", {
   }
 })
 
-test_that("every refers_to vocabulary value has a declared collection", {
+test_that("every refers_to vocabulary value has declared names", {
   props <- schema_properties()
   allowed <- props$allowed[[which(props$property == "refers_to")]]
   expect_true(length(allowed) > 0)
   for (name in allowed) {
-    expect_no_error(declared_collection(minimal_dict(), name))
+    expect_no_error(declared_names(minimal_dict(), name))
   }
 })
 
-test_that("identifier entries dispatch: string, combine block, else YE06", {
+test_that("identifier entries dispatch: string, combination, else YE06", {
   d <- minimal_dict()
   d$identifiers <- list(study_id = "study")
   expect_identical(codes_of(d), character(0))
@@ -325,7 +325,7 @@ test_that("identifier entries dispatch: string, combine block, else YE06", {
   }
 })
 
-test_that("a malformed combine block reports battery codes, not YE06", {
+test_that("a malformed combination reports battery codes, not YE06", {
   d <- minimal_dict()
   d$identifiers <- list(study_id = list(combine = c("study", "mean_age")))
   expect_identical(codes_of(d), "YE02")
@@ -452,7 +452,7 @@ test_that("the classed abort carries the problems table as data", {
 test_that("each single-defect dictionary aborts naming its problem", {
   read_bad <- function(fixture) rev_read_dictionary(bad_path(fixture))
 
-  expect_snapshot(error = TRUE, read_bad("ye01-top-level.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ye01-file-entry.yaml"))
   expect_snapshot(error = TRUE, read_bad("ye02-missing-type.yaml"))
   expect_snapshot(error = TRUE, read_bad("ye03-range-on-text.yaml"))
   expect_snapshot(error = TRUE, read_bad("ye04-values-and-range.yaml"))

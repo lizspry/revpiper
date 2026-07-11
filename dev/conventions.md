@@ -7,34 +7,41 @@ operational digest, reusable across projects.
 Environment and sandbox operating rules live in CLAUDE.md (single
 source), not here — this document covers code conventions only.
 
-## Terminology (recorded 2026-07-11, Phase 1 amendment 4)
+## Terminology (recorded 2026-07-11, Phase 1 amendment 4; vocabulary
+## settled with Liz at the Task 4 review — five words, researcher-first)
 - Data tables have **columns** (synonym in prose: variables), which hold values.
-- A dictionary describes each column via **fields** (`type:`, `values:`, ...).
+- A spec **file** (dictionary) has **sections** — its named top-level parts:
+  `source:`, `identifiers:`, `levels:`, `columns:`. Sections hold entries.
+- An **entry** is one item described by its **fields** (`key: value`
+  pairs): a column with its fields, the source with its fields, a
+  combination of columns with its fields — and the file itself, whose
+  top-level fields form the file entry.
+- Entries come in four **kinds** — file, source, column, combine. Which
+  fields are legal depends on the kind (schema property `appears_in`);
+  container fields declare the kind of entry inside them (`contains`).
+- An entry's **name** is the value of the one field that identifies it
+  (`name:` for a column, `table:` for the file; the schema marks that
+  field `identity: true`). Messages point at entries by name; duplicate
+  names among sibling entries are always policed.
+- A field the schema marks `refers_to` a section must have values naming
+  something that section declares (a declared column, a declared level);
+  unresolved references get did-you-mean suggestions.
+- An **identifier** (section `identifiers:`, formerly `roles:`) maps a
+  pipeline handle such as `study_id` to one of the user's own columns, or
+  to a combination of columns (`combine` + `separator`) — the built column
+  is a **virtual column** named by the identifier. Identifier keys are
+  pipeline vocabulary; identifier values are always the user's words.
 - The package schema (`inst/schema/fields.yaml`) defines each field's
   **properties** (shape, cardinality, domain, ...). Properties generate
   **checks**; check failures are **problems** (spec side, abort) or
   **findings** (data side, routed). Never say "attributes" (R-reserved).
 - A **mapping** is a named group of `key: value` pairs (YAML mapping, R
-  named list). A mapping either has schema-vocabulary keys and a `context`
-  to validate its contents as (source block, column entries), or
-  user-chosen keys that are data, not vocabulary (identifiers, levels).
-
-Plain-language terms (recorded 2026-07-11, Liz's Task 4 review):
-- An **entry** is one described thing in a spec file — one column, one
-  identifier, one source — written as a group of `key: value` fields.
-- An entry's **name** is the value of the one field that identifies it
-  (`name:` for a column, `table:` for a dictionary file; the schema marks
-  that field `identity: true`). Messages refer to entries by name, and
-  duplicate names among sibling entries are always policed.
-- A **collection** is the set of names declared by one block of a spec
-  file (currently: the declared columns, the declared levels). A field the
-  schema marks `refers_to` a collection is valid only if every one of its
-  values is a member of that collection.
-- An **identifier** (block `identifiers:`, formerly `roles:`) maps a
-  pipeline handle such as `study_id` to one of the user's own columns, or
-  to a `combine` block that builds one — the built column is a **virtual
-  column** named by the identifier. Identifier keys are pipeline
-  vocabulary; identifier values are always the user's words.
+  named list); a mapping with no `contains` kind has user-chosen keys —
+  data, not vocabulary (identifiers, levels).
+- Retired words — never reintroduce: "level"/"context" for entry kinds
+  (and "top" for the file kind), "block" (say section), "collection" (say
+  what a section declares), "role" (say identifier), "walker" (describe
+  the job).
 - Spec-check codes carry a scope prefix, with one term per scope used
   everywhere: **YF** form (within one field), **YE** entry (across fields
   within one entry), **YS** source (across entries within one file),
@@ -125,6 +132,11 @@ Principles (invariants, project-independent):
 - Checks by construction beat checks by review: where an invariant can
   be enforced by a conformance or closure test, add the test; never rely
   on discipline for what a test can hold.
+- A registry must guard the uniqueness of its own keys, preferably by
+  construction (entries keyed in a YAML mapping fail at parse when
+  duplicated); any uniqueness invariant a format cannot hold needs a
+  stated conformance test (lesson recorded 2026-07-11: field-name
+  uniqueness went unguarded in the list-form schema).
 
 Processes (habits that apply the principles):
 - Walkthroughs include a facts-and-sources section: every fact the new

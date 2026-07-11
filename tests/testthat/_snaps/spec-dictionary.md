@@ -18,11 +18,11 @@
 # each single-defect dictionary aborts naming its problem
 
     Code
-      read_bad("ye01-top-level.yaml")
+      read_bad("ye01-file-entry.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YE01 fixtures/specs-bad/ye01-top-level.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
+      x YE01 fixtures/specs-bad/ye01-file-entry.yaml / file entry: unknown field 'descrption' (did you mean 'description'?)
 
 ---
 
@@ -121,7 +121,7 @@
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YS01 fixtures/specs-bad/ys01-duplicate-column.yaml / columns block: duplicate column name 'study'
+      x YS01 fixtures/specs-bad/ys01-duplicate-column.yaml / columns section: duplicate column name 'study'
 
 ---
 
@@ -130,7 +130,7 @@
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YE06 fixtures/specs-bad/ye06-identifier-number.yaml / identifiers block: identifier 'study_id' must be a column name or a combine block
+      x YE06 fixtures/specs-bad/ye06-identifier-number.yaml / identifiers section: identifier 'study_id' must be a column name or a combination of columns
 
 ---
 
@@ -166,7 +166,7 @@
     Condition
       Error:
       ! Spec validation failed (3 problems):
-      x YE01 fixtures/specs-bad/many-defects.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
+      x YE01 fixtures/specs-bad/many-defects.yaml / file entry: unknown field 'descrption' (did you mean 'description'?)
       x YF03 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
       x YF05 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
 

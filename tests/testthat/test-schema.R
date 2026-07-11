@@ -1,4 +1,4 @@
-test_that("field_schema returns rows for every level, shaped by properties", {
+test_that("field_schema returns rows for every kind, shaped by properties", {
   props <- schema_properties()
   col <- field_schema("column")
   expect_setequal(names(col), props$property)
@@ -18,7 +18,7 @@ test_that("field_schema returns rows for every level, shaped by properties", {
     )
   )
   expect_setequal(
-    field_schema("top")$field,
+    field_schema("file")$field,
     c("table", "description", "source", "identifiers", "levels", "columns")
   )
   expect_setequal(field_schema("source")$field, c("file", "sheet", "reader"))
@@ -77,9 +77,9 @@ test_that("relational meta-rules hold across schema rows", {
       expect_true(all(targets %in% s$field))
     }
   }
-  # context only on mapping shapes
+  # contains only on mapping shapes
   expect_true(all(
-    is.na(s$context) | s$shape %in% c("mapping", "list_of_mappings")
+    is.na(s$contains) | s$shape %in% c("mapping", "list_of_mappings")
   ))
   # exactly one identity field per scope: table (set), name (file)
   expect_identical(s$field[s$identity], c("table", "name"))

@@ -19,8 +19,8 @@ rev_read_dictionary <- function(path) {
   }
   raw <- yaml::read_yaml(path)
   problems <- rbind(
-    run_entry_checks(raw, "top", path, "top level"),
-    run_context_checks(raw, "top", path),
+    run_entry_checks(raw, "file", path, "file entry"),
+    run_contents_checks(raw, "file", path),
     check_identifier_entries(raw, path),
     resolve_references(raw, path)
   )
@@ -84,8 +84,8 @@ run_field_checks <- function(value, row, file, entry) {
 # The per-entry battery. Every check is one definition; the schema declares
 # its instances. Gates: later checks assume earlier ones, so a malformed or
 # banned field never has its content inspected (root cause reported once).
-run_entry_checks <- function(x, level, file, entry) {
-  schema <- field_schema(level)
+run_entry_checks <- function(x, kind, file, entry) {
+  schema <- field_schema(kind)
 
   problems <- rbind(
     check_vocabulary(x, schema, file, entry),
@@ -132,15 +132,16 @@ run_entry_checks <- function(x, level, file, entry) {
   problems
 }
 
-# Recurse into fields whose schema row names a context: their contents are
-# themselves entries to validate (source block, column entries). Fields
-# without a context have user-chosen keys - data, not schema vocabulary.
-run_context_checks <- function(x, level, file) {
-  schema <- field_schema(level)
+# Recurse into container fields - those whose schema row says what kind of
+# entry they contain (source holds a source entry; columns holds column
+# entries). Container fields with no contains kind have user-chosen keys -
+# data, not schema vocabulary.
+run_contents_checks <- function(x, kind, file) {
+  schema <- field_schema(kind)
   problems <- no_problems()
   for (i in seq_len(nrow(schema))) {
     row <- schema[i, ]
-    if (is.na(row$context)) {
+    if (is.na(row$contains)) {
       next
     }
     value <- x[[row$field]]
@@ -149,45 +150,45 @@ run_context_checks <- function(x, level, file) {
         problems,
         run_entry_checks(
           value,
-          row$context,
+          row$contains,
           file,
-          sprintf("%s block", row$field)
+          sprintf("%s section", row$field)
         )
       )
     }
     if (row$shape == "list_of_mappings") {
       problems <- rbind(
         problems,
-        run_list_checks(value, row$context, file)
+        run_list_checks(value, row$contains, file)
       )
     }
   }
   problems
 }
 
-# Validate each mapping in a list as its context, then police identity
+# Validate each mapping in a list as its kind, then police identity
 # across the list.
-run_list_checks <- function(entries, context, file) {
+run_list_checks <- function(entries, kind, file) {
   if (!is_list_of_mappings(entries)) {
-    return(no_problems()) # absence/shape already reported one level up
+    return(no_problems()) # absence/shape already reported by the container
   }
-  ids <- entry_names(entries, context)
+  ids <- entry_names(entries, kind)
   problems <- bind_problems(lapply(seq_along(entries), \(i) {
     run_entry_checks(
       entries[[i]],
-      context,
+      kind,
       file,
-      entry_label(ids[[i]], i, context)
+      entry_label(ids[[i]], i, kind)
     )
   }))
-  rbind(problems, check_identity(ids, context, file))
+  rbind(problems, check_identity(ids, kind, file))
 }
 
 # The entries' names where sound, else NA: an entry's name is the value of
 # the field its schema marks identity, looked up once for the whole list.
-entry_names <- function(entries, context) {
-  context_schema <- field_schema(context)
-  id_field <- context_schema$field[context_schema$identity]
+entry_names <- function(entries, kind) {
+  kind_schema <- field_schema(kind)
+  id_field <- kind_schema$field[kind_schema$identity]
   vapply(
     entries,
     \(entry) {
@@ -199,11 +200,11 @@ entry_names <- function(entries, context) {
 }
 
 # Label an entry by its identity when sound, else by position.
-entry_label <- function(id, i, context) {
+entry_label <- function(id, i, kind) {
   if (is.na(id)) {
-    sprintf("%s entry %d", context, i)
+    sprintf("%s entry %d", kind, i)
   } else {
-    sprintf("%s '%s'", context, id)
+    sprintf("%s '%s'", kind, id)
   }
 }
 
@@ -416,9 +417,9 @@ is_iso_date <- function(x) {
   !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
 }
 
-# YE06: identifier entry neither a column name nor a combine block. A string
-# resolves as a reference (YS02); a mapping validates as the combine
-# context and registers a virtual column named by its identifier.
+# YE06: identifier entry neither a column name nor a combination of
+# columns. A string resolves as a reference (YS02); a mapping validates as
+# a combine entry and registers a virtual column named by its identifier.
 check_identifier_entries <- function(raw, file) {
   if (!is_mapping(raw$identifiers)) {
     return(no_problems()) # absence/shape already reported
@@ -436,42 +437,42 @@ check_identifier_entries <- function(raw, file) {
         identifier_label(identifier)
       ))
     }
-    flag_problem(file, "identifiers block", "YE06", identifier = identifier)
+    flag_problem(file, "identifiers section", "YE06", identifier = identifier)
   }))
 }
 
 # YS: source checks (across entries within one file)
 
-# YS01: duplicate identity within one source file
-check_identity <- function(ids, context, file) {
+# YS01: two sibling entries claim the same name
+check_identity <- function(ids, kind, file) {
   dupes <- unique(ids[duplicated(ids) & !is.na(ids)])
   bind_problems(lapply(dupes, \(d) {
     flag_problem(
       file,
-      sprintf("%ss block", context),
+      sprintf("%ss section", kind),
       "YS01",
-      context = context,
-      id = d
+      kind = kind,
+      name = d
     )
   }))
 }
 
 # One resolver for every schema row with a refers_to: gather that field's
-# instances from the raw dictionary and resolve each value against the
-# declared collection. A NULL collection means only that its declaring
-# block is malformed - that root cause is already reported, so resolution
-# skips rather than cascading.
+# instances from the raw dictionary and resolve each value against what the
+# named section declares. NULL declared names mean only that the section is
+# malformed - that root cause is already reported, so resolution skips
+# rather than cascading.
 resolve_references <- function(raw, file) {
   s <- schema_fields()
   referring <- s[!is.na(s$refers_to), ]
-  needed <- unique(referring$refers_to)
-  collections <- lapply(needed, \(name) declared_collection(raw, name))
-  names(collections) <- needed
+  sections <- unique(referring$refers_to)
+  declared <- lapply(sections, \(section) declared_names(raw, section))
+  names(declared) <- sections
   problems <- no_problems()
   for (i in seq_len(nrow(referring))) {
     row <- referring[i, ]
-    collection <- collections[[row$refers_to]]
-    if (is.null(collection)) {
+    known <- declared[[row$refers_to]]
+    if (is.null(known)) {
       next
     }
     for (instance in reference_instances(raw, row$field)) {
@@ -479,7 +480,7 @@ resolve_references <- function(raw, file) {
         problems,
         check_reference(
           instance$values,
-          collection,
+          known,
           row$refers_to,
           file,
           instance$entry
@@ -490,17 +491,17 @@ resolve_references <- function(raw, file) {
   problems
 }
 
-# YS02: a value does not name a declared collection member
-check_reference <- function(values, collection, collection_name, file, entry) {
-  bad <- setdiff(values, collection)
+# YS02: a value does not name something its section declares
+check_reference <- function(values, declared, section, file, entry) {
+  bad <- setdiff(values, declared)
   bind_problems(lapply(bad, \(v) {
     flag_problem(
       file,
       entry,
       "YS02",
       value = v,
-      collection = collection_name,
-      suggestion = suggest_name(v, collection)
+      section = section,
+      suggestion = suggest_name(v, declared)
     )
   }))
 }
@@ -517,14 +518,14 @@ reference_instances <- function(raw, field) {
         return(list())
       }
       strings <- Filter(is_string, raw$identifiers)
-      lapply(strings, \(v) list(values = v, entry = "identifiers block"))
+      lapply(strings, \(v) list(values = v, entry = "identifiers section"))
     },
     levels = {
       if (!is_mapping(raw$levels)) {
         return(list())
       }
       keys <- Filter(is.character, lapply(raw$levels, unlist))
-      lapply(keys, \(v) list(values = v, entry = "levels block"))
+      lapply(keys, \(v) list(values = v, entry = "levels section"))
     },
     constant_within_level = {
       if (!is_list_of_mappings(raw$columns)) {
@@ -545,11 +546,11 @@ reference_instances <- function(raw, field) {
         return(list())
       }
       instances <- lapply(names(raw$identifiers), \(identifier) {
-        block <- raw$identifiers[[identifier]]
-        if (!is_mapping(block)) {
+        combination <- raw$identifiers[[identifier]]
+        if (!is_mapping(combination)) {
           return(NULL)
         }
-        parts <- unlist(block$combine)
+        parts <- unlist(combination$combine)
         if (!is.character(parts)) {
           return(NULL)
         }
@@ -558,26 +559,26 @@ reference_instances <- function(raw, field) {
       Filter(Negate(is.null), instances)
     },
     cli::cli_abort(
-      "Internal error: no reference walker for field {.val {field}}."
+      "Internal error: reference_instances() cannot place field {.val {field}}."
     )
   )
 }
 
-# A declared collection by its refers_to name. The unknown-name abort is
-# the loud gap alarm for future refers_to vocabulary: a new collection must
+# The names a section declares, by section. The unknown-section abort is
+# the loud gap alarm for future refers_to vocabulary: a new section must
 # be wired here deliberately, never skipped silently.
-declared_collection <- function(raw, name) {
+declared_names <- function(raw, section) {
   switch(
-    name,
+    section,
     columns = declared_columns(raw),
     levels = declared_levels(raw),
     cli::cli_abort(
-      "Internal error: no declared collection named {.val {name}}."
+      "Internal error: no section named {.val {section}} declares names."
     )
   )
 }
 
-# Declared column names, or NULL when the columns block is malformed.
+# Declared column names, or NULL when the columns section is malformed.
 declared_columns <- function(raw) {
   if (!is_list_of_mappings(raw$columns)) {
     return(NULL)
@@ -586,8 +587,8 @@ declared_columns <- function(raw) {
   ids[!is.na(ids)]
 }
 
-# Declared level names: absent levels is a legal empty collection, but a
-# malformed block is NULL (skip, root cause already reported).
+# Declared level names: absent levels legally declares nothing, but a
+# malformed section is NULL (skip, root cause already reported).
 declared_levels <- function(raw) {
   if (is.null(raw$levels)) {
     return(character(0))

@@ -2,7 +2,7 @@
 # for spec-field validation; inst/schema/checks.yaml is the check registry
 # (codes, meanings, message templates). Both are loaded once per session and
 # cached. The loaders are generic: property names and their handling come
-# from the schema's own properties block, not from this code.
+# from the schema's own properties section, not from this code.
 
 schema_yaml <- function(file) {
   yaml::read_yaml(system.file("schema", file, package = "revpiper"))
@@ -85,10 +85,10 @@ check_registry <- cached(function() {
   )
 })
 
-# Schema rows legal at one context level ("top", "source", "column", "combine").
-field_schema <- function(level) {
+# Schema rows for one kind of entry ("file", "source", "column", "combine").
+field_schema <- function(kind) {
   s <- schema_fields()
-  s[vapply(s$level, \(l) level %in% l, logical(1)), ]
+  s[vapply(s$appears_in, \(k) kind %in% k, logical(1)), ]
 }
 
 # The type universe, read from the type row's inline domain.

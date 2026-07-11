@@ -789,6 +789,16 @@ roles/levels/cwl is consumed in Task 4.)
 > `return(no_problems())` exits rely on the promise "shape problem already
 > reported one level up" — held today by the matrix's exact-code assertions,
 > but deserves an explicit single gate rather than a comment.
+> (e) Vocabulary settled (Liz, same review; recorded in conventions
+> Terminology with a retired-words list): five researcher-first words —
+> file, section, entry, field, name — plus kind (file/source/column/
+> combine). Schema properties `level:`→`appears_in:`, `context:`→
+> `contains:`, value `top`→`file`; "block"→"section"; "collection" retired
+> (`declared_collection`→`declared_names`); YS01 params {kind,name}; YS02/
+> YX02 param {section}; YE06 says "a combination of columns". Registries
+> are keyed by entry name (duplicates fail at parse; single-source section
+> gained the registry-key-uniqueness rule). Task 5 inherits this vocabulary
+> — its schema rows are `appears_in: [join]` etc.
 
 ### Task 5: Joins spec (`spec-joins.R`)
 
