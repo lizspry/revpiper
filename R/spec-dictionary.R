@@ -19,8 +19,8 @@ rev_read_dictionary <- function(path) {
   }
   raw <- yaml::read_yaml(path)
   problems <- rbind(
-    check_entry(raw, "top", path, "top level"),
-    check_contexts(raw, "top", path)
+    run_entry_checks(raw, "top", path, "top level"),
+    run_context_checks(raw, "top", path)
   )
   if (nrow(problems) > 0) {
     stop_spec(problems)
@@ -30,10 +30,30 @@ rev_read_dictionary <- function(path) {
 
 # Orchestration
 
+# Run one field's form checks in gate order: empty, then shape, then domain
+# and unique entries. Reports whether the field is sound enough for
+# cross-field checks to read.
+run_field_checks <- function(value, row, file, entry) {
+  if (is.null(value)) {
+    return(list(problems = check_empty(row, file, entry), ok = FALSE))
+  }
+  shape <- check_shape(value, row, file, entry)
+  if (nrow(shape) > 0) {
+    return(list(problems = shape, ok = FALSE))
+  }
+  list(
+    problems = rbind(
+      check_domain(value, row, file, entry),
+      check_unique_entries(value, row, file, entry)
+    ),
+    ok = TRUE
+  )
+}
+
 # The per-entry battery. Every check is one definition; the schema declares
 # its instances. Gates: later checks assume earlier ones, so a malformed or
 # banned field never has its content inspected (root cause reported once).
-check_entry <- function(x, level, file, entry) {
+run_entry_checks <- function(x, level, file, entry) {
   schema <- field_schema(level)
 
   problems <- rbind(
@@ -45,7 +65,7 @@ check_entry <- function(x, level, file, entry) {
   ok <- logical(0)
   for (f in present) {
     row <- schema[schema$field == f, ]
-    res <- check_field_form(x[[f]], row, file, entry)
+    res <- run_field_checks(x[[f]], row, file, entry)
     problems <- rbind(problems, res$problems)
     ok[[f]] <- res$ok
   }
@@ -81,30 +101,10 @@ check_entry <- function(x, level, file, entry) {
   problems
 }
 
-# Run one field's form checks in gate order: empty, then shape, then domain
-# and unique entries. Reports whether the field is sound enough for
-# cross-field checks to read.
-check_field_form <- function(value, row, file, entry) {
-  if (is.null(value)) {
-    return(list(problems = check_empty(row, file, entry), ok = FALSE))
-  }
-  shape <- check_shape(value, row, file, entry)
-  if (nrow(shape) > 0) {
-    return(list(problems = shape, ok = FALSE))
-  }
-  list(
-    problems = rbind(
-      check_domain(value, row, file, entry),
-      check_unique_entries(value, row, file, entry)
-    ),
-    ok = TRUE
-  )
-}
-
 # Recurse into fields whose schema row names a context: their contents are
 # themselves entries to validate (source block, column entries). Fields
 # without a context have user-chosen keys - data, not schema vocabulary.
-check_contexts <- function(x, level, file) {
+run_context_checks <- function(x, level, file) {
   schema <- field_schema(level)
   problems <- no_problems()
   for (i in seq_len(nrow(schema))) {
@@ -116,13 +116,18 @@ check_contexts <- function(x, level, file) {
     if (row$shape == "mapping" && is_mapping(value)) {
       problems <- rbind(
         problems,
-        check_entry(value, row$context, file, sprintf("%s block", row$field))
+        run_entry_checks(
+          value,
+          row$context,
+          file,
+          sprintf("%s block", row$field)
+        )
       )
     }
     if (row$shape == "list_of_mappings") {
       problems <- rbind(
         problems,
-        check_mapping_list(value, row$context, file)
+        run_list_checks(value, row$context, file)
       )
     }
   }
@@ -131,7 +136,7 @@ check_contexts <- function(x, level, file) {
 
 # Validate each mapping in a list as its context, then police identity
 # across the list.
-check_mapping_list <- function(entries, context, file) {
+run_list_checks <- function(entries, context, file) {
   if (
     !is.list(entries) ||
       length(entries) == 0 ||
@@ -152,7 +157,7 @@ check_mapping_list <- function(entries, context, file) {
     } else {
       sprintf("%s '%s'", context, id)
     }
-    check_entry(entries[[i]], context, file, label)
+    run_entry_checks(entries[[i]], context, file, label)
   }))
   ids <- vapply(entries, id_of, character(1))
   rbind(problems, check_identity(ids, context, file))

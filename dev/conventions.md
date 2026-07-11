@@ -49,7 +49,10 @@ Principles:
 Closed decisions (this project):
 - Predicates: `is_*` / `has_*`, or `matches_*` for comparisons.
 - Constructors: `new_<class>()`.
-- `check_*` are problem collectors (return problem rows, never throw);
+- `check_<x>` implements exactly one coded check (defined under that
+  code's subheader; returns problem rows, never throws); `run_*_checks`
+  compose them - drivers with no code of their own, in the Orchestration
+  section, ordered narrow to broad (field, entry, context, list).
   rlang's throwing `check_*` are always namespace-qualified.
 - Problem workflow verbs: `new_problem()` constructs the row,
   `flag_problem()` is how a check reports one (registry-rendered),
