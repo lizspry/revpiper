@@ -35,6 +35,7 @@ stop_spec <- function(problems) {
   cli::cli_abort(
     c("Spec validation failed ({nrow(problems)} problem{?s}):", lines),
     class = "revpiper_spec_error",
-    call = NULL
+    call = NULL,
+    problems = problems
   )
 }

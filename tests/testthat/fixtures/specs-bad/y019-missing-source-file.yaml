@@ -1,6 +1,0 @@
-table: estimates
-source:
-  sheet: Sheet1
-columns:
-  - name: study
-    type: text

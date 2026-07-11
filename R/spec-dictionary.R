@@ -1,23 +1,9 @@
-spec_types <- c("text", "integer", "decimal", "boolean", "date")
-dict_fields <- c("table", "description", "source", "roles", "levels", "columns")
-source_fields <- c("file", "sheet", "reader")
-column_fields <- c(
-  "name",
-  "type",
-  "values",
-  "range",
-  "units",
-  "required",
-  "unique",
-  "missing",
-  "constant_within_level",
-  "description"
-)
-
 #' Read and validate one table dictionary
 #'
 #' Parses `specs/tables/<table>.yaml` into a `rev_dictionary`, collecting
 #' every spec problem before aborting so the user sees all of them at once.
+#' Validation is complete for a single source: one file validates with zero
+#' knowledge of any other source.
 #'
 #' @param path Path to a single table's dictionary YAML file.
 #' @return A `rev_dictionary` object.
@@ -33,9 +19,12 @@ rev_read_dictionary <- function(path) {
   }
   raw <- yaml::read_yaml(path)
   problems <- rbind(
-    check_known_fields(raw, dict_fields, path, "top level"),
-    check_required_fields(raw, c("table", "source", "columns"), path),
-    check_source_block(raw$source, path),
+    check_entry(raw, "top", path, "top level"),
+    if (is_block(raw$source)) {
+      check_entry(raw$source, "source", path, "source block")
+    } else {
+      no_problems()
+    },
     check_columns_block(raw$columns, path)
   )
   if (nrow(problems) > 0) {
@@ -59,259 +48,319 @@ bind_problems <- function(problem_list) {
   do.call(rbind, c(list(no_problems()), problem_list))
 }
 
-check_known_fields <- function(x, known, file, entry) {
-  bad <- setdiff(names(x), known)
-  bind_problems(lapply(bad, \(f) {
-    spec_problem(
-      file,
-      entry,
-      "Y001",
-      sprintf("unknown field '%s'", f),
-      suggestion = suggest_name(f, known)
-    )
-  }))
+is_block <- function(x) {
+  is.list(x) && !is.null(names(x)) && all(nzchar(names(x)))
 }
 
-check_required_fields <- function(x, required, file, entry = "top level") {
-  absent <- setdiff(required, names(x))
-  bind_problems(lapply(absent, \(f) {
-    spec_problem(file, entry, "Y017", sprintf("missing required field '%s'", f))
-  }))
-}
+# ---- The per-context battery: every check is one definition; the schema ----
+# ---- declares its instances. Gates: later checks assume earlier ones.  ----
 
-# A field written in the yaml but left without a value parses to NULL;
-# that is an error, not a silent absence (description exempt: draft
-# skeletons carry empty descriptions by design).
-check_empty_fields <- function(x, file, entry, exempt = "description") {
-  present <- names(x)
-  empty <- present[vapply(x, is.null, logical(1))]
-  empty <- setdiff(empty, exempt)
-  bind_problems(lapply(empty, \(f) {
-    spec_problem(
-      file,
-      entry,
-      "Y020",
-      sprintf("field '%s' is declared but has no value", f)
-    )
-  }))
-}
+check_entry <- function(x, level, file, entry) {
+  schema <- field_schema(level)
 
-check_source_block <- function(source, file) {
-  if (is.null(source)) {
-    return(no_problems()) # absence is already Y017 at the top level
+  problems <- rbind(
+    check_vocabulary(x, schema, file, entry), # YE01
+    check_required(x, schema, file, entry) # YE02
+  )
+
+  # Per-field form: empty (YF01), shape/cardinality (YF02), domain (YF03),
+  # unique entries (YF04). Records which fields are well-formed.
+  present <- intersect(names(x), schema$field)
+  ok <- logical(0)
+  for (f in present) {
+    row <- schema[schema$field == f, ]
+    res <- check_field_form(x[[f]], row, file, entry)
+    problems <- rbind(problems, res$problems)
+    ok[[f]] <- res$ok
   }
-  problems <- check_known_fields(source, source_fields, file, "source block")
-  if (is.null(source$file)) {
-    problems <- rbind(
-      problems,
-      spec_problem(
-        file,
-        "source block",
-        "Y019",
-        "missing required field 'file'"
+
+  problems <- rbind(problems, check_excludes(x, schema, file, entry)) # YE04
+
+  # Type-dependent checks: permission (YE03), then content (YE05) and order
+  # (YF05), each gated on the previous — a banned or malformed constraint
+  # never has its content inspected (root cause reported once).
+  type <- if (isTRUE(ok["type"])) x[["type"]] else NULL
+  type_valid <- !is.null(type) && type %in% schema_types()
+  for (f in present) {
+    row <- schema[schema$field == f, ]
+    permitted <- row$permitted_types[[1]]
+    if (identical(permitted, "any") || !isTRUE(ok[[f]]) || !type_valid) {
+      next
+    }
+    if (!type %in% permitted) {
+      problems <- rbind(
+        problems,
+        spec_problem(
+          file,
+          entry,
+          "YE03",
+          sprintf("'%s' is not allowed on type '%s'", f, type)
+        )
       )
-    )
+      next
+    }
+    entries <- as.list(x[[f]])
+    if (row$content_typed && !values_match_type(entries, type)) {
+      problems <- rbind(
+        problems,
+        spec_problem(
+          file,
+          entry,
+          "YE05",
+          sprintf("'%s' entries do not match declared type '%s'", f, type)
+        )
+      )
+      next
+    }
+    if (identical(row$ordered, "ascending") && is_descending(entries, type)) {
+      problems <- rbind(
+        problems,
+        spec_problem(
+          file,
+          entry,
+          "YF05",
+          sprintf(
+            "'%s' is descending (%s > %s)",
+            f,
+            entries[[1]],
+            entries[[2]]
+          )
+        )
+      )
+    }
   }
   problems
 }
 
-check_columns_block <- function(columns, file) {
-  if (is.null(columns)) {
-    return(no_problems()) # absence is already Y017 at the top level
-  }
-  problems <- bind_problems(lapply(columns, check_column, file = file))
+check_vocabulary <- function(x, schema, file, entry) {
+  bad <- setdiff(names(x), schema$field)
+  bind_problems(lapply(bad, \(f) {
+    spec_problem(
+      file,
+      entry,
+      "YE01",
+      sprintf("unknown field '%s'", f),
+      suggestion = suggest_name(f, schema$field)
+    )
+  }))
+}
 
+check_required <- function(x, schema, file, entry) {
+  absent <- setdiff(schema$field[schema$required], names(x))
+  bind_problems(lapply(absent, \(f) {
+    spec_problem(file, entry, "YE02", sprintf("missing required field '%s'", f))
+  }))
+}
+
+check_excludes <- function(x, schema, file, entry) {
+  pairs <- list()
+  for (i in seq_len(nrow(schema))) {
+    f <- schema$field[i]
+    targets <- schema$excludes[[i]]
+    if (is.null(targets) || is.null(x[[f]])) {
+      next
+    }
+    for (target in targets) {
+      if (!is.null(x[[target]])) {
+        pairs[[length(pairs) + 1]] <- sort(c(f, target))
+      }
+    }
+  }
+  pairs <- unique(pairs)
+  bind_problems(lapply(pairs, \(p) {
+    spec_problem(
+      file,
+      entry,
+      "YE04",
+      sprintf("'%s' and '%s' are mutually exclusive", p[1], p[2])
+    )
+  }))
+}
+
+# One field's own form: empty (YF01), shape and cardinality (YF02), domain
+# (YF03), duplicate entries (YF04). Returns problems plus whether the field
+# is sound enough for cross-field checks to read.
+check_field_form <- function(value, row, file, entry) {
+  f <- row$field
+  if (is.null(value)) {
+    if (row$empty_ok) {
+      return(list(problems = no_problems(), ok = FALSE))
+    }
+    return(list(
+      problems = spec_problem(
+        file,
+        entry,
+        "YF01",
+        sprintf("field '%s' is declared but has no value", f)
+      ),
+      ok = FALSE
+    ))
+  }
+  if (!shape_ok(value, row$shape, row$cardinality)) {
+    return(list(
+      problems = spec_problem(
+        file,
+        entry,
+        "YF02",
+        sprintf(
+          "field '%s' must be %s",
+          f,
+          shape_phrase(row$shape, row$cardinality)
+        )
+      ),
+      ok = FALSE
+    ))
+  }
+  problems <- no_problems()
+  domain <- row$domain[[1]]
+  if (!is.null(domain) && !value %in% domain) {
+    problems <- rbind(
+      problems,
+      spec_problem(
+        file,
+        entry,
+        "YF03",
+        sprintf("unknown %s '%s'", f, value),
+        suggestion = suggest_name(value, domain)
+      )
+    )
+  }
+  if (row$unique_entries) {
+    entry_lists <- if (row$shape == "named_list") value else list(value)
+    for (l in entry_lists) {
+      flat <- unlist(l)
+      dupes <- unique(flat[duplicated(flat)])
+      if (length(dupes) > 0) {
+        problems <- rbind(
+          problems,
+          spec_problem(
+            file,
+            entry,
+            "YF04",
+            sprintf(
+              "field '%s' has duplicate entries: %s",
+              f,
+              paste0("'", dupes, "'", collapse = ", ")
+            )
+          )
+        )
+      }
+    }
+  }
+  list(problems = problems, ok = TRUE)
+}
+
+shape_ok <- function(value, shape, cardinality) {
+  if (shape == "block" || shape == "named_list") {
+    return(is_block(value))
+  }
+  if (shape == "list_of_blocks") {
+    return(
+      is.list(value) &&
+        length(value) >= 1 &&
+        all(vapply(value, is_block, logical(1)))
+    )
+  }
+  entries <- if (is.list(value)) value else as.list(value)
+  n_ok <- switch(
+    cardinality,
+    one = length(entries) == 1,
+    one_or_many = length(entries) >= 1,
+    two = length(entries) == 2
+  )
+  if (!n_ok) {
+    return(FALSE)
+  }
+  element_ok <- switch(
+    shape,
+    string = \(e) is.character(e) && length(e) == 1 && !is.na(e),
+    boolean = \(e) is.logical(e) && length(e) == 1 && !is.na(e),
+    scalar = \(e) is.atomic(e) && length(e) == 1 && !is.na(e)
+  )
+  all(vapply(entries, element_ok, logical(1)))
+}
+
+shape_phrase <- function(shape, cardinality) {
+  if (shape %in% c("block", "named_list", "list_of_blocks")) {
+    return(switch(
+      shape,
+      block = "a block of fields",
+      named_list = "a named block",
+      list_of_blocks = "a list of entries"
+    ))
+  }
+  kind <- switch(
+    shape,
+    string = "text value",
+    boolean = "true/false value",
+    scalar = "value"
+  )
+  switch(
+    cardinality,
+    one = paste("a single", kind),
+    one_or_many = paste0("one or more ", kind, "s"),
+    two = paste0("exactly two ", kind, "s")
+  )
+}
+
+check_columns_block <- function(columns, file) {
+  if (
+    !is.list(columns) ||
+      length(columns) == 0 ||
+      !all(vapply(columns, is_block, logical(1)))
+  ) {
+    return(no_problems()) # absence/shape already reported at top level
+  }
+  problems <- bind_problems(lapply(seq_along(columns), \(i) {
+    col <- columns[[i]]
+    label <- if (is.character(col$name) && length(col$name) == 1) {
+      sprintf("column '%s'", col$name)
+    } else {
+      sprintf("column entry %d", i)
+    }
+    check_entry(col, "column", file, label)
+  }))
+
+  # YS01 — identity at file scope: duplicate column names.
   names_vec <- vapply(
     columns,
     \(col) {
-      if (is.null(col$name)) NA_character_ else as.character(col$name)
+      if (is.character(col$name) && length(col$name) == 1) {
+        col$name
+      } else {
+        NA_character_
+      }
     },
     character(1)
   )
-  unnamed <- which(is.na(names_vec) | !nzchar(names_vec))
-  problems <- rbind(
-    problems,
-    bind_problems(lapply(unnamed, \(i) {
-      spec_problem(
-        file,
-        "columns block",
-        "Y012",
-        sprintf("column entry %d has no name", i)
-      )
-    }))
-  )
-  duplicates <- unique(names_vec[duplicated(names_vec) & !is.na(names_vec)])
+  dupes <- unique(names_vec[duplicated(names_vec) & !is.na(names_vec)])
   rbind(
     problems,
-    bind_problems(lapply(duplicates, \(d) {
+    bind_problems(lapply(dupes, \(d) {
       spec_problem(
         file,
         "columns block",
-        "Y012",
+        "YS01",
         sprintf("duplicate column name '%s'", d)
       )
     }))
   )
 }
 
-check_column <- function(col, file) {
-  entry <- sprintf("column '%s'", col$name %||% "<unnamed>")
-  problems <- rbind(
-    check_known_fields(col, column_fields, file, entry),
-    check_required_fields(col, "type", file, entry),
-    check_empty_fields(col, file, entry)
-  )
-  # Y003 is type-independent, so it reports even when the type is missing.
-  if (!is.null(col$values) && !is.null(col$range)) {
-    problems <- rbind(
-      problems,
-      spec_problem(
-        file,
-        entry,
-        "Y003",
-        "'values' and 'range' are mutually exclusive"
-      )
-    )
-  }
-  if (is.null(col$type)) {
-    return(problems) # type-dependent checks need a type
-  }
-  if (!col$type %in% spec_types) {
-    problems <- rbind(
-      problems,
-      spec_problem(
-        file,
-        entry,
-        "Y002",
-        sprintf("unknown type '%s'", col$type),
-        suggestion = suggest_name(col$type, spec_types)
-      )
-    )
-  }
-  if (!is.null(col$values) && isTRUE(col$type %in% c("boolean", "date"))) {
-    problems <- rbind(
-      problems,
-      spec_problem(
-        file,
-        entry,
-        "Y004",
-        sprintf("'values' is not allowed on type '%s'", col$type)
-      )
-    )
-  }
-  if (!is.null(col$range) && isTRUE(col$type %in% c("text", "boolean"))) {
-    problems <- rbind(
-      problems,
-      spec_problem(
-        file,
-        entry,
-        "Y005",
-        sprintf("'range' is not allowed on type '%s'", col$type)
-      )
-    )
-  }
-  if (!is.null(col$units) && !isTRUE(col$type %in% c("integer", "decimal"))) {
-    problems <- rbind(
-      problems,
-      spec_problem(
-        file,
-        entry,
-        "Y006",
-        "'units' is only allowed on integer/decimal"
-      )
-    )
-  }
-  rbind(problems, check_values_range_types(col, file, entry))
-}
-
-# Do the values/range declarations cohere with the declared type?
+# Do a constraint's entries cohere with the declared column type?
 # Spec-internal only: nothing here reads data.
-check_values_range_types <- function(col, file, entry) {
-  problems <- no_problems()
-  if (!is.null(col$values)) {
-    vals <- as.list(col$values)
-    classes <- unique(vapply(vals, \(v) class(v)[1], character(1)))
-    if (length(vals) == 0) {
-      problems <- rbind(
-        problems,
-        spec_problem(file, entry, "Y007", "'values' must not be empty")
-      )
-    } else if (length(classes) > 1) {
-      problems <- rbind(
-        problems,
-        spec_problem(
-          file,
-          entry,
-          "Y007",
-          "'values' entries must all be of one type"
-        )
-      )
-    } else if (
-      isTRUE(col$type %in% c("text", "integer", "decimal")) &&
-        !values_match_type(vals, col$type)
-    ) {
-      problems <- rbind(
-        problems,
-        spec_problem(
-          file,
-          entry,
-          "Y007",
-          sprintf("'values' entries do not match declared type '%s'", col$type)
-        )
-      )
-    }
-  }
-  if (!is.null(col$range)) {
-    rng <- as.list(col$range)
-    if (length(rng) != 2) {
-      problems <- rbind(
-        problems,
-        spec_problem(
-          file,
-          entry,
-          "Y007",
-          "'range' must have exactly two entries"
-        )
-      )
-    } else if (isTRUE(col$type %in% c("integer", "decimal", "date"))) {
-      if (!values_match_type(rng, col$type)) {
-        problems <- rbind(
-          problems,
-          spec_problem(
-            file,
-            entry,
-            "Y007",
-            sprintf("'range' entries do not match declared type '%s'", col$type)
-          )
-        )
-      } else if (range_descending(rng, col$type)) {
-        problems <- rbind(
-          problems,
-          spec_problem(
-            file,
-            entry,
-            "Y008",
-            sprintf("'range' is descending (%s > %s)", rng[[1]], rng[[2]])
-          )
-        )
-      }
-    }
-  }
-  problems
-}
-
-values_match_type <- function(vals, type) {
+values_match_type <- function(entries, type) {
   ok <- switch(
     type,
-    text = vapply(vals, is.character, logical(1)),
+    text = vapply(entries, is.character, logical(1)),
     integer = vapply(
-      vals,
+      entries,
       \(v) is.numeric(v) && isTRUE(v %% 1 == 0),
       logical(1)
     ),
-    decimal = vapply(vals, is.numeric, logical(1)),
+    decimal = vapply(entries, is.numeric, logical(1)),
     date = vapply(
-      vals,
+      entries,
       \(v) is.character(v) && is_iso_date(v),
       logical(1)
     )
@@ -325,28 +374,32 @@ is_iso_date <- function(x) {
   !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
 }
 
-range_descending <- function(rng, type) {
+is_descending <- function(entries, type) {
   if (type == "date") {
-    as.Date(rng[[1]], format = "%Y-%m-%d") >
-      as.Date(rng[[2]], format = "%Y-%m-%d")
+    as.Date(entries[[1]], format = "%Y-%m-%d") >
+      as.Date(entries[[2]], format = "%Y-%m-%d")
   } else {
-    rng[[1]] > rng[[2]]
+    entries[[1]] > entries[[2]]
   }
 }
 
 new_dictionary <- function(raw, path) {
+  col_schema <- field_schema("column")
+  default_of <- function(f) col_schema$default[[which(col_schema$field == f)]]
   columns <- do.call(
     rbind,
     lapply(raw$columns, \(col) {
       tibble::tibble(
         name = col$name,
         type = col$type,
-        values = list(col$values),
-        range = list(col$range),
+        values = list(if (is.null(col$values)) NULL else unlist(col$values)),
+        range = list(if (is.null(col$range)) NULL else unlist(col$range)),
         units = col$units %||% NA_character_,
-        required = col$required %||% FALSE,
-        unique = col$unique %||% FALSE,
-        missing = list(col$missing %||% character(0)),
+        required = col$required %||% default_of("required"),
+        unique = col$unique %||% default_of("unique"),
+        missing = list(as.character(unlist(
+          col$missing %||% default_of("missing")
+        ))),
         constant_within_level = col$constant_within_level %||% NA_character_,
         description = col$description %||% NA_character_
       )

@@ -9,155 +9,110 @@
 # each single-defect dictionary aborts naming its problem
 
     Code
-      read_bad("y001-top-level.yaml")
+      read_bad("ye01-top-level.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y001 fixtures/specs-bad/y001-top-level.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
+      x YE01 fixtures/specs-bad/ye01-top-level.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
 
 ---
 
     Code
-      read_bad("y001-column-field.yaml")
+      read_bad("ye02-missing-type.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y001 fixtures/specs-bad/y001-column-field.yaml / column 'mean_age': unknown field 'rnge' (did you mean 'range'?)
+      x YE02 fixtures/specs-bad/ye02-missing-type.yaml / column 'extra_notes': missing required field 'type'
 
 ---
 
     Code
-      read_bad("y002-bad-type.yaml")
+      read_bad("ye03-range-on-text.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y002 fixtures/specs-bad/y002-bad-type.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
+      x YE03 fixtures/specs-bad/ye03-range-on-text.yaml / column 'notes_temp': 'range' is not allowed on type 'text'
 
 ---
 
     Code
-      read_bad("y003-values-and-range.yaml")
+      read_bad("ye04-values-and-range.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y003 fixtures/specs-bad/y003-values-and-range.yaml / column 'mean_age': 'values' and 'range' are mutually exclusive
+      x YE04 fixtures/specs-bad/ye04-values-and-range.yaml / column 'mean_age': 'range' and 'values' are mutually exclusive
 
 ---
 
     Code
-      read_bad("y004-values-on-date.yaml")
+      read_bad("ye05-mixed-values.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y004 fixtures/specs-bad/y004-values-on-date.yaml / column 'extraction_date': 'values' is not allowed on type 'date'
+      x YE05 fixtures/specs-bad/ye05-mixed-values.yaml / column 'rob_score': 'values' entries do not match declared type 'integer'
 
 ---
 
     Code
-      read_bad("y005-range-on-text.yaml")
+      read_bad("ye05-date-range-not-iso.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y005 fixtures/specs-bad/y005-range-on-text.yaml / column 'notes_temp': 'range' is not allowed on type 'text'
+      x YE05 fixtures/specs-bad/ye05-date-range-not-iso.yaml / column 'extraction_date': 'range' entries do not match declared type 'date'
 
 ---
 
     Code
-      read_bad("y006-units-on-text.yaml")
+      read_bad("yf01-empty-field.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y006 fixtures/specs-bad/y006-units-on-text.yaml / column 'notes_temp': 'units' is only allowed on integer/decimal
+      x YF01 fixtures/specs-bad/yf01-empty-field.yaml / column 'mean_age': field 'range' is declared but has no value
 
 ---
 
     Code
-      read_bad("y007-mixed-values.yaml")
+      read_bad("yf02-name-list.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y007 fixtures/specs-bad/y007-mixed-values.yaml / column 'rob_score': 'values' entries must all be of one type
+      x YF02 fixtures/specs-bad/yf02-name-list.yaml / column entry 1: field 'name' must be a single text value
 
 ---
 
     Code
-      read_bad("y007-date-range-not-iso.yaml")
+      read_bad("yf03-bad-type.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y007 fixtures/specs-bad/y007-date-range-not-iso.yaml / column 'extraction_date': 'range' entries do not match declared type 'date'
+      x YF03 fixtures/specs-bad/yf03-bad-type.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
 
 ---
 
     Code
-      read_bad("y008-descending-range.yaml")
+      read_bad("yf04-duplicate-values.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y008 fixtures/specs-bad/y008-descending-range.yaml / column 'mean_age': 'range' is descending (60 > 10)
+      x YF04 fixtures/specs-bad/yf04-duplicate-values.yaml / column 'design': field 'values' has duplicate entries: 'RCT'
 
 ---
 
     Code
-      read_bad("y008-descending-date-range.yaml")
+      read_bad("yf05-descending-range.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y008 fixtures/specs-bad/y008-descending-date-range.yaml / column 'extraction_date': 'range' is descending (2026-06-30 > 2026-01-15)
+      x YF05 fixtures/specs-bad/yf05-descending-range.yaml / column 'mean_age': 'range' is descending (60 > 10)
 
 ---
 
     Code
-      read_bad("y012-duplicate-column.yaml")
+      read_bad("ys01-duplicate-column.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x Y012 fixtures/specs-bad/y012-duplicate-column.yaml / columns block: duplicate column name 'study'
-
----
-
-    Code
-      read_bad("y012-missing-name.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x Y012 fixtures/specs-bad/y012-missing-name.yaml / columns block: column entry 1 has no name
-
----
-
-    Code
-      read_bad("y017-missing-type.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x Y017 fixtures/specs-bad/y017-missing-type.yaml / column 'extra_notes': missing required field 'type'
-
----
-
-    Code
-      read_bad("y017-missing-source.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x Y017 fixtures/specs-bad/y017-missing-source.yaml / top level: missing required field 'source'
-
----
-
-    Code
-      read_bad("y019-missing-source-file.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x Y019 fixtures/specs-bad/y019-missing-source-file.yaml / source block: missing required field 'file'
-
----
-
-    Code
-      read_bad("y020-empty-field.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x Y020 fixtures/specs-bad/y020-empty-field.yaml / column 'mean_age': field 'range' is declared but has no value
+      x YS01 fixtures/specs-bad/ys01-duplicate-column.yaml / columns block: duplicate column name 'study'
 
 # every problem in a broken dictionary is reported at once
 
@@ -166,7 +121,7 @@
     Condition
       Error:
       ! Spec validation failed (3 problems):
-      x Y001 fixtures/specs-bad/many-defects.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
-      x Y002 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
-      x Y008 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
+      x YE01 fixtures/specs-bad/many-defects.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
+      x YF03 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
+      x YF05 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
 

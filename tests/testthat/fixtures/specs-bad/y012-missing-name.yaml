@@ -1,5 +1,0 @@
-table: estimates
-source:
-  file: data/raw/estimates.csv
-columns:
-  - type: text

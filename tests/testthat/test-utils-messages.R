@@ -15,14 +15,14 @@ test_that("stop_spec reports every problem with file, entry, and code", {
     spec_problem(
       "specs/tables/estimates.yaml",
       "column 'mean_age'",
-      "Y001",
+      "YE01",
       "unknown field 'rnge'",
       suggestion = "range"
     ),
     spec_problem(
       "specs/joins.yaml",
       "join 1",
-      "Y014",
+      "YX02",
       "unknown table 'robb'",
       suggestion = "rob"
     )

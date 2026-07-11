@@ -2,6 +2,6 @@ table: estimates
 source:
   file: data/raw/estimates.csv
 columns:
-  - name: mean_age
-    type: decimal
-    rnge: [10, 60]
+  - name: design
+    type: text
+    values: [RCT, RCT, Cohort]
