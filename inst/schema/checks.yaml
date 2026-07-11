@@ -24,6 +24,14 @@ checks:
     params: [field, expected]
     fix: the named entry
     implemented: true
+    # Phrases rendered into {expected}: enumerated per shape and cardinality,
+    # never composed from fragments.
+    phrases:
+      string: {one: a single text value, one_or_many: one or more text values, two: exactly two text values}
+      boolean: {one: a single true/false value, one_or_many: one or more true/false values, two: exactly two true/false values}
+      scalar: {one: a single value, one_or_many: one or more values, two: exactly two values}
+      mapping: "a group of key: value fields"
+      list_of_mappings: a list of entries
   - code: YF03
     scope: form
     property: domain
@@ -98,7 +106,7 @@ checks:
     message_template: "role '{role}' must be a column name or a combine block"
     params: [role]
     fix: roles block
-    implemented: false
+    implemented: true
 
   # YS: source checks (across entries within one file)
 
@@ -114,10 +122,10 @@ checks:
     scope: source
     property: refers_to
     meaning: a value must name something declared elsewhere in the file and does not
-    message_template: "'{value}' does not name a declared {collection}"
+    message_template: "'{value}' does not name one of the declared {collection}"
     params: [value, collection]
     fix: the named entry
-    implemented: false
+    implemented: true
   - code: YS03
     scope: source
     property: "custom: environment"
@@ -136,7 +144,7 @@ checks:
     message_template: "duplicate table name '{table}'"
     params: [table]
     fix: the two files named
-    implemented: false
+    implemented: true
   - code: YX02
     scope: cross-source
     property: refers_to
@@ -145,12 +153,3 @@ checks:
     params: [value, collection]
     fix: joins.yaml entry
     implemented: false
-
-# Phrases rendered into YF02's {expected}: enumerated per shape and
-# cardinality, never composed from fragments.
-shape_phrases:
-  string: {one: a single text value, one_or_many: one or more text values, two: exactly two text values}
-  boolean: {one: a single true/false value, one_or_many: one or more true/false values, two: exactly two true/false values}
-  scalar: {one: a single value, one_or_many: one or more values, two: exactly two values}
-  mapping: "a group of key: value fields"
-  list_of_mappings: a list of entries

@@ -1,0 +1,10 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+roles:
+  study_id:
+    combine: [study, study]
+    separator: "_"
+columns:
+  - name: study
+    type: text

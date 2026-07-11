@@ -20,12 +20,43 @@ rev_read_dictionary <- function(path) {
   raw <- yaml::read_yaml(path)
   problems <- rbind(
     run_entry_checks(raw, "top", path, "top level"),
-    run_context_checks(raw, "top", path)
+    run_context_checks(raw, "top", path),
+    check_role_entries(raw, path),
+    resolve_references(raw, path)
   )
   if (nrow(problems) > 0) {
     stop_spec(problems)
   }
   new_dictionary(raw, path)
+}
+
+#' Read and validate a directory of table dictionaries
+#'
+#' Loads every dictionary in `dir` standalone via [rev_read_dictionary()]
+#' (each file validates with zero knowledge of the others), then runs the
+#' data-free set-level check: no two files may claim the same table name.
+#'
+#' @param dir Directory containing table dictionary YAML files.
+#' @return A named list of `rev_dictionary` objects, named by table.
+#' @export
+rev_read_dictionaries <- function(dir) {
+  rlang::check_string(dir)
+  if (!dir.exists(dir)) {
+    cli::cli_abort(
+      "Dictionary directory {.file {dir}} does not exist.",
+      class = "revpiper_spec_error",
+      call = NULL
+    )
+  }
+  files <- sort(list.files(dir, pattern = "\\.ya?ml$", full.names = TRUE))
+  dicts <- lapply(files, rev_read_dictionary)
+  tables <- vapply(dicts, \(d) d$table, character(1))
+  problems <- check_table_identity(tables, files)
+  if (nrow(problems) > 0) {
+    stop_spec(problems)
+  }
+  names(dicts) <- tables
+  dicts
 }
 
 # Orchestration
@@ -137,30 +168,48 @@ run_context_checks <- function(x, level, file) {
 # Validate each mapping in a list as its context, then police identity
 # across the list.
 run_list_checks <- function(entries, context, file) {
-  if (
-    !is.list(entries) ||
-      length(entries) == 0 ||
-      !all(vapply(entries, is_mapping, logical(1)))
-  ) {
+  if (!is_list_of_mappings(entries)) {
     return(no_problems()) # absence/shape already reported one level up
   }
+  ids <- identities_of(entries, context)
+  problems <- bind_problems(lapply(seq_along(entries), \(i) {
+    run_entry_checks(
+      entries[[i]],
+      context,
+      file,
+      entry_label(ids[[i]], i, context)
+    )
+  }))
+  rbind(problems, check_identity(ids, context, file))
+}
+
+# The entries' identity-field values where sound, else NA: the context's
+# schema names its identity field once for the whole list.
+identities_of <- function(entries, context) {
   context_schema <- field_schema(context)
   id_field <- context_schema$field[context_schema$identity]
-  id_of <- function(e) {
-    id <- if (length(id_field) == 1) e[[id_field]] else NULL
-    if (is.character(id) && length(id) == 1) id else NA_character_
+  vapply(
+    entries,
+    \(entry) {
+      id <- if (length(id_field) == 1) entry[[id_field]] else NULL
+      if (is_string(id)) id else NA_character_
+    },
+    character(1)
+  )
+}
+
+# Label an entry by its identity when sound, else by position.
+entry_label <- function(id, i, context) {
+  if (is.na(id)) {
+    sprintf("%s entry %d", context, i)
+  } else {
+    sprintf("%s '%s'", context, id)
   }
-  problems <- bind_problems(lapply(seq_along(entries), \(i) {
-    id <- id_of(entries[[i]])
-    label <- if (is.na(id)) {
-      sprintf("%s entry %d", context, i)
-    } else {
-      sprintf("%s '%s'", context, id)
-    }
-    run_entry_checks(entries[[i]], context, file, label)
-  }))
-  ids <- vapply(entries, id_of, character(1))
-  rbind(problems, check_identity(ids, context, file))
+}
+
+# Label a role entry: the one home for the phrase every role check uses.
+role_label <- function(role) {
+  sprintf("role '%s'", role)
 }
 
 # YF: form checks (within one field)
@@ -192,11 +241,7 @@ matches_shape <- function(value, shape, cardinality) {
     return(is_mapping(value))
   }
   if (shape == "list_of_mappings") {
-    return(
-      is.list(value) &&
-        length(value) >= 1 &&
-        all(vapply(value, is_mapping, logical(1)))
-    )
+    return(is_list_of_mappings(value))
   }
   entries <- if (is.list(value)) value else as.list(value)
   n_ok <- switch(
@@ -370,6 +415,25 @@ is_iso_date <- function(x) {
   !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
 }
 
+# YE06: role entry neither a column name nor a combine block. A string
+# resolves as a reference (YS02); a mapping validates as the combine
+# context and registers a virtual column named by its role.
+check_role_entries <- function(raw, file) {
+  if (!is_mapping(raw$roles)) {
+    return(no_problems()) # absence/shape already reported
+  }
+  bind_problems(lapply(names(raw$roles), \(role) {
+    value <- raw$roles[[role]]
+    if (is_string(value)) {
+      return(no_problems())
+    }
+    if (is_mapping(value)) {
+      return(run_entry_checks(value, "combine", file, role_label(role)))
+    }
+    flag_problem(file, "roles block", "YE06", role = role)
+  }))
+}
+
 # YS: source checks (across entries within one file)
 
 # YS01: duplicate identity within one source file
@@ -386,11 +450,166 @@ check_identity <- function(ids, context, file) {
   }))
 }
 
+# One resolver for every schema row with a refers_to: gather that field's
+# instances from the raw dictionary and resolve each value against the
+# declared collection. A NULL collection means only that its declaring
+# block is malformed - that root cause is already reported, so resolution
+# skips rather than cascading.
+resolve_references <- function(raw, file) {
+  s <- schema_fields()
+  referring <- s[!is.na(s$refers_to), ]
+  needed <- unique(referring$refers_to)
+  collections <- lapply(needed, \(name) declared_collection(raw, name))
+  names(collections) <- needed
+  problems <- no_problems()
+  for (i in seq_len(nrow(referring))) {
+    row <- referring[i, ]
+    collection <- collections[[row$refers_to]]
+    if (is.null(collection)) {
+      next
+    }
+    for (instance in reference_instances(raw, row$field)) {
+      problems <- rbind(
+        problems,
+        check_reference(
+          instance$values,
+          collection,
+          row$refers_to,
+          file,
+          instance$entry
+        )
+      )
+    }
+  }
+  problems
+}
+
+# YS02: a value does not name a declared collection member
+check_reference <- function(values, collection, collection_name, file, entry) {
+  bad <- setdiff(values, collection)
+  bind_problems(lapply(bad, \(v) {
+    flag_problem(
+      file,
+      entry,
+      "YS02",
+      value = v,
+      collection = collection_name,
+      suggestion = suggest_name(v, collection)
+    )
+  }))
+}
+
+# Where each referring field's values live in a raw dictionary. Instances
+# are gathered only from well-shaped containers: a malformed container's
+# own problem is already reported. An unlisted field is the loud gap alarm
+# for future refers_to schema rows.
+reference_instances <- function(raw, field) {
+  switch(
+    field,
+    roles = {
+      if (!is_mapping(raw$roles)) {
+        return(list())
+      }
+      strings <- Filter(is_string, raw$roles)
+      lapply(strings, \(v) list(values = v, entry = "roles block"))
+    },
+    levels = {
+      if (!is_mapping(raw$levels)) {
+        return(list())
+      }
+      keys <- Filter(is.character, lapply(raw$levels, unlist))
+      lapply(keys, \(v) list(values = v, entry = "levels block"))
+    },
+    constant_within_level = {
+      if (!is_list_of_mappings(raw$columns)) {
+        return(list())
+      }
+      ids <- identities_of(raw$columns, "column")
+      instances <- lapply(seq_along(raw$columns), \(i) {
+        value <- raw$columns[[i]]$constant_within_level
+        if (!is_string(value)) {
+          return(NULL)
+        }
+        list(values = value, entry = entry_label(ids[[i]], i, "column"))
+      })
+      Filter(Negate(is.null), instances)
+    },
+    combine = {
+      if (!is_mapping(raw$roles)) {
+        return(list())
+      }
+      instances <- lapply(names(raw$roles), \(role) {
+        block <- raw$roles[[role]]
+        if (!is_mapping(block)) {
+          return(NULL)
+        }
+        parts <- unlist(block$combine)
+        if (!is.character(parts)) {
+          return(NULL)
+        }
+        list(values = parts, entry = role_label(role))
+      })
+      Filter(Negate(is.null), instances)
+    },
+    cli::cli_abort(
+      "Internal error: no reference walker for field {.val {field}}."
+    )
+  )
+}
+
+# A declared collection by its refers_to name. The unknown-name abort is
+# the loud gap alarm for future refers_to vocabulary: a new collection must
+# be wired here deliberately, never skipped silently.
+declared_collection <- function(raw, name) {
+  switch(
+    name,
+    columns = declared_columns(raw),
+    levels = declared_levels(raw),
+    cli::cli_abort(
+      "Internal error: no declared collection named {.val {name}}."
+    )
+  )
+}
+
+# Declared column names, or NULL when the columns block is malformed.
+declared_columns <- function(raw) {
+  if (!is_list_of_mappings(raw$columns)) {
+    return(NULL)
+  }
+  ids <- identities_of(raw$columns, "column")
+  ids[!is.na(ids)]
+}
+
+# Declared level names: absent levels is a legal empty collection, but a
+# malformed block is NULL (skip, root cause already reported).
+declared_levels <- function(raw) {
+  if (is.null(raw$levels)) {
+    return(character(0))
+  }
+  if (!is_mapping(raw$levels)) {
+    return(NULL)
+  }
+  names(raw$levels)
+}
+
 # YX: cross-source checks (across files)
 
-# YX01 (duplicate table name, via check_identity at set scope) and YX02
-# (cross-source references) arrive with rev_read_dictionaries() and
-# rev_read_joins() in Tasks 4-5.
+# YX01: two spec files claim the same table name. Deliberately not
+# check_identity: code, params, entry label, and file semantics all differ,
+# and set-level tables are never NA (table is required per file).
+check_table_identity <- function(tables, files) {
+  dupes <- unique(tables[duplicated(tables)])
+  bind_problems(lapply(dupes, \(d) {
+    flag_problem(
+      paste(basename(files[tables == d]), collapse = ", "),
+      "dictionary set",
+      "YX01",
+      table = d
+    )
+  }))
+}
+
+# YX02 (cross-source references) arrives with rev_read_joins() in Task 5.
 
 # Plumbing
 
@@ -411,6 +630,14 @@ bind_problems <- function(problem_list) {
 
 is_mapping <- function(x) {
   is.list(x) && !is.null(names(x)) && all(nzchar(names(x)))
+}
+
+is_list_of_mappings <- function(x) {
+  is.list(x) && length(x) >= 1 && all(vapply(x, is_mapping, logical(1)))
+}
+
+is_string <- function(x) {
+  is.character(x) && length(x) == 1
 }
 
 # Constructor
@@ -453,4 +680,11 @@ new_dictionary <- function(raw, path) {
     ),
     class = "rev_dictionary"
   )
+}
+
+# Columns usable as keys: every declared column, plus the virtual column
+# each combine role registers (named by its role).
+dictionary_key_columns <- function(dict) {
+  virtual <- names(Filter(is_mapping, dict$roles))
+  c(dict$columns$name, virtual)
 }

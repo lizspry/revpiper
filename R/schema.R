@@ -69,7 +69,8 @@ check_registry <- cached(function() {
         message_template = ch$message_template,
         params = list(unlist(ch$params)),
         fix = ch$fix,
-        implemented = ch$implemented
+        implemented = ch$implemented,
+        phrases = list(ch$phrases)
       )
     })
   )
@@ -119,10 +120,12 @@ flag_problem <- function(file, entry, code, ..., suggestion = NULL) {
   )
 }
 
-# Phrases for YF02's {expected}: enumerated in checks.yaml, never composed.
-shape_phrases <- cached(function() {
-  schema_yaml("checks.yaml")$shape_phrases
-})
+# Phrases for YF02's {expected}: enumerated in YF02's own registry entry,
+# never composed.
+shape_phrases <- function() {
+  registry <- check_registry()
+  registry$phrases[[which(registry$code == "YF02")]]
+}
 
 shape_phrase <- function(shape, cardinality) {
   entry <- shape_phrases()[[shape]]

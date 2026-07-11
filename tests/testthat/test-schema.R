@@ -125,6 +125,10 @@ test_that("every implemented check code is exercised by a snapshot", {
   expect_true(all(unlist(emitted) %in% registry$code))
 })
 
+test_that("checks.yaml holds only the check registry", {
+  expect_identical(names(schema_yaml("checks.yaml")), "checks")
+})
+
 test_that("every shape x cardinality combination has an enumerated phrase", {
   props <- schema_properties()
   shapes <- props$allowed[[which(props$property == "shape")]]

@@ -1,3 +1,12 @@
+# duplicate table names across files flag YX01
+
+    Code
+      rev_read_dictionaries(bad_path("yx01-duplicate-table"))
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YX01 estimates-a.yaml, estimates-b.yaml / dictionary set: duplicate table name 'estimates'
+
 # a nonexistent dictionary path aborts with the classed error
 
     Code
@@ -113,6 +122,42 @@
       Error:
       ! Spec validation failed (1 problem):
       x YS01 fixtures/specs-bad/ys01-duplicate-column.yaml / columns block: duplicate column name 'study'
+
+---
+
+    Code
+      read_bad("ye06-role-number.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YE06 fixtures/specs-bad/ye06-role-number.yaml / roles block: role 'study_id' must be a column name or a combine block
+
+---
+
+    Code
+      read_bad("ys02-combine-part-unknown.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS02 fixtures/specs-bad/ys02-combine-part-unknown.yaml / role 'study_id': 'studdy' does not name one of the declared columns (did you mean 'study'?)
+
+---
+
+    Code
+      read_bad("ys02-cwl-unknown-level.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS02 fixtures/specs-bad/ys02-cwl-unknown-level.yaml / column 'mean_age': 'wave' does not name one of the declared levels
+
+---
+
+    Code
+      read_bad("yf04-duplicate-combine-parts.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YF04 fixtures/specs-bad/yf04-duplicate-combine-parts.yaml / role 'study_id': field 'combine' has duplicate entries: 'study'
 
 # every problem in a broken dictionary is reported at once
 

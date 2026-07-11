@@ -1,5 +1,8 @@
 # Closest of `known` within edit distance 2 (case-insensitive), or NA.
 suggest_name <- function(name, known) {
+  if (length(known) == 0) {
+    return(NA_character_)
+  }
   d <- utils::adist(tolower(name), tolower(known))[1, ]
   if (min(d) <= 2) known[which.min(d)] else NA_character_
 }

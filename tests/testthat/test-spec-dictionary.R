@@ -28,13 +28,18 @@ set_field <- function(x, field, value) {
   x
 }
 
-problems_of <- function(dict) {
+# Round-trip a dictionary list through a temp yaml file.
+read_dict <- function(dict) {
   tmp <- tempfile(fileext = ".yaml")
   on.exit(unlink(tmp))
   yaml::write_yaml(dict, tmp)
+  rev_read_dictionary(tmp)
+}
+
+problems_of <- function(dict) {
   tryCatch(
     {
-      rev_read_dictionary(tmp)
+      read_dict(dict)
       NULL
     },
     revpiper_spec_error = \(e) e$problems
@@ -243,6 +248,133 @@ test_that("unique_entries: duplicates flag YF04; scalars normalise silently", {
   expect_identical(codes_of(d), character(0))
 })
 
+test_that("refers_to: every referring field flags YS02 or resolves silently", {
+  # Place a value for one referring field inside a minimal dictionary. The
+  # switch is the matrix's gap alarm: a schema row this builder cannot place
+  # fails loudly instead of passing silently.
+  with_reference <- function(field, value) {
+    d <- minimal_dict()
+    switch(
+      field,
+      roles = {
+        d$roles <- list(study_id = value)
+        d
+      },
+      levels = {
+        d$levels <- list(study = value)
+        d
+      },
+      constant_within_level = {
+        d$levels <- list(study = "study")
+        d$columns[[2]]$constant_within_level <- value
+        d
+      },
+      combine = {
+        d$roles <- list(study_id = list(combine = value, separator = "_"))
+        d
+      },
+      stop(sprintf("refers_to matrix has no builder for field '%s'", field))
+    )
+  }
+  resolving <- list(
+    roles = "study",
+    levels = "study",
+    constant_within_level = "study",
+    combine = c("study", "mean_age")
+  )
+  broken <- list(
+    roles = "no_such_column",
+    levels = "no_such_column",
+    constant_within_level = "no_such_level",
+    combine = c("no_such_column", "mean_age")
+  )
+  s <- schema_fields()
+  referring <- s$field[!is.na(s$refers_to)]
+  expect_true(length(referring) > 0)
+  for (f in referring) {
+    expect_true(f %in% names(resolving), info = f)
+    expect_identical(
+      codes_of(with_reference(f, resolving[[f]])),
+      character(0),
+      info = f
+    )
+    expect_identical(codes_of(with_reference(f, broken[[f]])), "YS02", info = f)
+  }
+})
+
+test_that("every refers_to vocabulary value has a declared collection", {
+  props <- schema_properties()
+  allowed <- props$allowed[[which(props$property == "refers_to")]]
+  expect_true(length(allowed) > 0)
+  for (name in allowed) {
+    expect_no_error(declared_collection(minimal_dict(), name))
+  }
+})
+
+test_that("role entries dispatch: column string, combine block, else YE06", {
+  d <- minimal_dict()
+  d$roles <- list(study_id = "study")
+  expect_identical(codes_of(d), character(0))
+  d$roles <- list(
+    study_id = list(combine = c("study", "mean_age"), separator = "_")
+  )
+  expect_identical(codes_of(d), character(0))
+  for (bad in list(7, TRUE, c("study", "mean_age"))) {
+    d$roles <- list(study_id = bad)
+    expect_identical(codes_of(d), "YE06", info = class(bad))
+  }
+})
+
+test_that("a malformed combine block reports battery codes, not YE06", {
+  d <- minimal_dict()
+  d$roles <- list(study_id = list(combine = c("study", "mean_age")))
+  expect_identical(codes_of(d), "YE02")
+  d$roles <- list(
+    study_id = list(combyne = c("study", "mean_age"), separator = "_")
+  )
+  expect_setequal(codes_of(d), c("YE01", "YE02"))
+  d$roles <- list(
+    study_id = list(combine = c("study", "study"), separator = "_")
+  )
+  expect_identical(codes_of(d), "YF04")
+})
+
+test_that("dictionary_key_columns returns declared plus virtual columns", {
+  dict <- rev_read_dictionary(good_path())
+  expect_identical(
+    dictionary_key_columns(dict),
+    c("study", "design", "mean_age", "rob_score", "notes_temp")
+  )
+  # good variant: a combine role parses and registers its virtual column
+  d <- minimal_dict()
+  d$roles <- list(
+    study_id = list(combine = c("study", "mean_age"), separator = "_")
+  )
+  expect_identical(
+    dictionary_key_columns(read_dict(d)),
+    c("study", "mean_age", "study_id")
+  )
+})
+
+test_that("rev_read_dictionaries returns a table-named list of dictionaries", {
+  dicts <- rev_read_dictionaries(
+    test_path("fixtures", "specs-good", "tables")
+  )
+  expect_named(dicts, "estimates")
+  expect_s3_class(dicts$estimates, "rev_dictionary")
+})
+
+test_that("duplicate table names across files flag YX01", {
+  expect_error(
+    rev_read_dictionaries(bad_path("yx01-duplicate-table")),
+    class = "revpiper_spec_error"
+  )
+  expect_snapshot(
+    error = TRUE,
+    rev_read_dictionaries(bad_path("yx01-duplicate-table"))
+  )
+})
+
 # ---- Layer 2: curated fixtures — wording and routing ----
 
 test_that("rev_read_dictionary parses a valid dictionary into every slot", {
@@ -293,10 +425,7 @@ test_that("boundary-legal declarations parse cleanly (permissive rule)", {
     missing = "NR"
   )
   expect_identical(codes_of(d), character(0))
-  tmp <- tempfile(fileext = ".yaml")
-  on.exit(unlink(tmp))
-  yaml::write_yaml(d, tmp)
-  dict <- rev_read_dictionary(tmp)
+  dict <- read_dict(d)
   expect_equal(dict$columns$values[[1]], c("2019-03-01", "2021-03-01"))
   expect_true(dict$columns$unique[2])
   expect_equal(dict$columns$missing[[2]], "NR")
@@ -335,6 +464,10 @@ test_that("each single-defect dictionary aborts naming its problem", {
   expect_snapshot(error = TRUE, read_bad("yf04-duplicate-values.yaml"))
   expect_snapshot(error = TRUE, read_bad("yf05-descending-range.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys01-duplicate-column.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ye06-role-number.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ys02-combine-part-unknown.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ys02-cwl-unknown-level.yaml"))
+  expect_snapshot(error = TRUE, read_bad("yf04-duplicate-combine-parts.yaml"))
 })
 
 test_that("every problem in a broken dictionary is reported at once", {
