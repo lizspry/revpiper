@@ -12,14 +12,14 @@ test_that("suggest_name finds near misses and refuses far ones", {
 
 test_that("stop_spec reports every problem with file, entry, and code", {
   p <- rbind(
-    spec_problem(
+    new_problem(
       "specs/tables/estimates.yaml",
       "column 'mean_age'",
       "YE01",
       "unknown field 'rnge'",
       suggestion = "range"
     ),
-    spec_problem(
+    new_problem(
       "specs/joins.yaml",
       "join 1",
       "YX02",

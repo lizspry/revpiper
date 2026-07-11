@@ -1,5 +1,5 @@
 test_that("field_schema returns rows for every level, shaped by properties", {
-  props <- the_properties()
+  props <- schema_properties()
   col <- field_schema("column")
   expect_setequal(names(col), props$property)
   expect_setequal(
@@ -33,8 +33,8 @@ test_that("schema_types returns the five types from type's inline domain", {
 })
 
 test_that("every fields row conforms to the declared properties", {
-  props <- the_properties()
-  s <- the_schema()
+  props <- schema_properties()
+  s <- schema_fields()
   for (i in seq_len(nrow(props))) {
     p <- props[i, ]
     column <- s[[p$property]]
@@ -59,7 +59,7 @@ test_that("every fields row conforms to the declared properties", {
 })
 
 test_that("relational meta-rules hold across schema rows", {
-  s <- the_schema()
+  s <- schema_fields()
 
   # permitted_types: the sentinel "any", or a subset of the type universe
   expect_true(all(vapply(
@@ -88,7 +88,7 @@ test_that("relational meta-rules hold across schema rows", {
 })
 
 test_that("the check registry is closed and internally consistent", {
-  registry <- the_checks()
+  registry <- check_registry()
 
   # prefixes agree with declared scopes
   prefix_scope <- c(
@@ -116,11 +116,24 @@ test_that("the check registry is closed and internally consistent", {
 
 test_that("every implemented check code is exercised by a snapshot", {
   snaps <- readLines(test_path("_snaps", "spec-dictionary.md"))
-  registry <- the_checks()
+  registry <- check_registry()
   for (code in registry$code[registry$implemented]) {
     expect_true(any(grepl(code, snaps, fixed = TRUE)), info = code)
   }
   # and no snapshot exercises a code the registry does not know
   emitted <- regmatches(snaps, gregexpr("Y[FESX][0-9]{2}", snaps))
   expect_true(all(unlist(emitted) %in% registry$code))
+})
+
+test_that("every shape x cardinality combination has an enumerated phrase", {
+  props <- schema_properties()
+  shapes <- props$allowed[[which(props$property == "shape")]]
+  cardinalities <- props$allowed[[which(props$property == "cardinality")]]
+  for (shape in shapes) {
+    entry <- shape_phrases()[[shape]]
+    expect_false(is.null(entry), info = shape)
+    if (!is.character(entry)) {
+      expect_setequal(names(entry), cardinalities)
+    }
+  }
 })

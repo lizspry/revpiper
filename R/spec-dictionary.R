@@ -131,7 +131,7 @@ check_contexts <- function(x, level, file) {
 
 # Validate each mapping in a list as its context, then police identity
 # across the list.
-check_mapping_list <- function(entries, ctx, file) {
+check_mapping_list <- function(entries, context, file) {
   if (
     !is.list(entries) ||
       length(entries) == 0 ||
@@ -139,8 +139,8 @@ check_mapping_list <- function(entries, ctx, file) {
   ) {
     return(no_problems()) # absence/shape already reported one level up
   }
-  ctx_schema <- field_schema(ctx)
-  id_field <- ctx_schema$field[ctx_schema$identity]
+  context_schema <- field_schema(context)
+  id_field <- context_schema$field[context_schema$identity]
   id_of <- function(e) {
     id <- if (length(id_field) == 1) e[[id_field]] else NULL
     if (is.character(id) && length(id) == 1) id else NA_character_
@@ -148,14 +148,14 @@ check_mapping_list <- function(entries, ctx, file) {
   problems <- bind_problems(lapply(seq_along(entries), \(i) {
     id <- id_of(entries[[i]])
     label <- if (is.na(id)) {
-      sprintf("%s entry %d", ctx, i)
+      sprintf("%s entry %d", context, i)
     } else {
-      sprintf("%s '%s'", ctx, id)
+      sprintf("%s '%s'", context, id)
     }
-    check_entry(entries[[i]], ctx, file, label)
+    check_entry(entries[[i]], context, file, label)
   }))
   ids <- vapply(entries, id_of, character(1))
-  rbind(problems, check_identity(ids, ctx, file))
+  rbind(problems, check_identity(ids, context, file))
 }
 
 # YF: form checks (within one field)
@@ -165,15 +165,15 @@ check_empty <- function(row, file, entry) {
   if (row$empty_ok) {
     return(no_problems())
   }
-  problem(file, entry, "YF01", field = row$field)
+  flag_problem(file, entry, "YF01", field = row$field)
 }
 
 # YF02: wrong shape or cardinality
 check_shape <- function(value, row, file, entry) {
-  if (shape_ok(value, row$shape, row$cardinality)) {
+  if (matches_shape(value, row$shape, row$cardinality)) {
     return(no_problems())
   }
-  problem(
+  flag_problem(
     file,
     entry,
     "YF02",
@@ -182,7 +182,7 @@ check_shape <- function(value, row, file, entry) {
   )
 }
 
-shape_ok <- function(value, shape, cardinality) {
+matches_shape <- function(value, shape, cardinality) {
   if (shape == "mapping") {
     return(is_mapping(value))
   }
@@ -212,35 +212,13 @@ shape_ok <- function(value, shape, cardinality) {
   all(vapply(entries, element_ok, logical(1)))
 }
 
-shape_phrase <- function(shape, cardinality) {
-  if (shape %in% c("mapping", "list_of_mappings")) {
-    return(switch(
-      shape,
-      mapping = "a group of key: value fields",
-      list_of_mappings = "a list of entries"
-    ))
-  }
-  kind <- switch(
-    shape,
-    string = "text value",
-    boolean = "true/false value",
-    scalar = "value"
-  )
-  switch(
-    cardinality,
-    one = paste("a single", kind),
-    one_or_many = paste0("one or more ", kind, "s"),
-    two = paste0("exactly two ", kind, "s")
-  )
-}
-
 # YF03: value outside its closed domain
 check_domain <- function(value, row, file, entry) {
   domain <- row$domain[[1]]
   if (is.null(domain) || value %in% domain) {
     return(no_problems())
   }
-  problem(
+  flag_problem(
     file,
     entry,
     "YF03",
@@ -263,7 +241,7 @@ check_unique_entries <- function(value, row, file, entry) {
     if (length(dupes) > 0) {
       problems <- rbind(
         problems,
-        problem(
+        flag_problem(
           file,
           entry,
           "YF04",
@@ -281,7 +259,7 @@ check_ordered <- function(entries, type, row, file, entry) {
   if (!identical(row$ordered, "ascending") || !is_descending(entries, type)) {
     return(no_problems())
   }
-  problem(
+  flag_problem(
     file,
     entry,
     "YF05",
@@ -306,7 +284,7 @@ is_descending <- function(entries, type) {
 check_vocabulary <- function(x, schema, file, entry) {
   bad <- setdiff(names(x), schema$field)
   bind_problems(lapply(bad, \(f) {
-    problem(
+    flag_problem(
       file,
       entry,
       "YE01",
@@ -320,7 +298,7 @@ check_vocabulary <- function(x, schema, file, entry) {
 check_required <- function(x, schema, file, entry) {
   absent <- setdiff(schema$field[schema$required], names(x))
   bind_problems(lapply(absent, \(f) {
-    problem(file, entry, "YE02", field = f)
+    flag_problem(file, entry, "YE02", field = f)
   }))
 }
 
@@ -329,7 +307,7 @@ check_permitted <- function(type, row, file, entry) {
   if (type %in% row$permitted_types[[1]]) {
     return(no_problems())
   }
-  problem(file, entry, "YE03", field = row$field, type = type)
+  flag_problem(file, entry, "YE03", field = row$field, type = type)
 }
 
 # YE04: mutually exclusive fields both present
@@ -349,20 +327,20 @@ check_excludes <- function(x, schema, file, entry) {
   }
   pairs <- unique(pairs)
   bind_problems(lapply(pairs, \(p) {
-    problem(file, entry, "YE04", field1 = p[1], field2 = p[2])
+    flag_problem(file, entry, "YE04", field1 = p[1], field2 = p[2])
   }))
 }
 
 # YE05: constraint entries do not match the declared type
 check_content_typed <- function(entries, type, row, file, entry) {
-  if (!row$content_typed || values_match_type(entries, type)) {
+  if (!row$content_typed || matches_type(entries, type)) {
     return(no_problems())
   }
-  problem(file, entry, "YE05", field = row$field, type = type)
+  flag_problem(file, entry, "YE05", field = row$field, type = type)
 }
 
 # Spec-internal only: nothing here reads data.
-values_match_type <- function(entries, type) {
+matches_type <- function(entries, type) {
   ok <- switch(
     type,
     text = vapply(entries, is.character, logical(1)),
@@ -390,10 +368,16 @@ is_iso_date <- function(x) {
 # YS: source checks (across entries within one file)
 
 # YS01: duplicate identity within one source file
-check_identity <- function(ids, ctx, file) {
+check_identity <- function(ids, context, file) {
   dupes <- unique(ids[duplicated(ids) & !is.na(ids)])
   bind_problems(lapply(dupes, \(d) {
-    problem(file, sprintf("%ss block", ctx), "YS01", context = ctx, id = d)
+    flag_problem(
+      file,
+      sprintf("%ss block", context),
+      "YS01",
+      context = context,
+      id = d
+    )
   }))
 }
 
@@ -407,7 +391,7 @@ check_identity <- function(ids, ctx, file) {
 
 # Zero-row problems table: the rbind seed guaranteeing a stable shape.
 no_problems <- function() {
-  spec_problem(
+  new_problem(
     character(0),
     character(0),
     character(0),

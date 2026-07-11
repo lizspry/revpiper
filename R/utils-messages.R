@@ -4,9 +4,8 @@ suggest_name <- function(name, known) {
   if (min(d) <= 2) known[which.min(d)] else NA_character_
 }
 
-# One spec problem, one row: the fixed schema every Y-check emits and
-# stop_spec() consumes.
-spec_problem <- function(file, entry, code, message, suggestion = NULL) {
+# One problem, one row: the raw constructor for the fixed problem schema.
+new_problem <- function(file, entry, code, message, suggestion = NULL) {
   tibble::tibble(
     file = file,
     entry = entry,

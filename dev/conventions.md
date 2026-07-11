@@ -31,6 +31,31 @@ source), not here — this document covers code conventions only.
 - Comment section headers are single `# Text` lines with a blank line
   above; subheaders name the check code they implement. No decorative
   `---`/`===` rules in comments or text.
+- `paste0()`/`sprintf()` assemble tokens only (patterns, keys, paths).
+  User-facing prose is never composed from fragments: every full phrase
+  lives whole in data (message_template, shape_phrases) or a single cli
+  call. No testing exception — snapshots pin phrases; they do not
+  license composing them.
+
+## Naming
+
+Principles:
+- Functions are verbs; objects and arguments are nouns. snake_case; no
+  dots in function names (S3 ambiguity).
+- Exported functions share the `rev_` prefix (family autocomplete).
+- Name length proportional to scope; no abbreviations (`context`, never
+  `ctx`); one word per concept, everywhere (see Terminology).
+
+Closed decisions (this project):
+- Predicates: `is_*` / `has_*`, or `matches_*` for comparisons.
+- Constructors: `new_<class>()`.
+- `check_*` are problem collectors (return problem rows, never throw);
+  rlang's throwing `check_*` are always namespace-qualified.
+- Problem workflow verbs: `new_problem()` constructs the row,
+  `flag_problem()` is how a check reports one (registry-rendered),
+  `stop_spec()` throws the collected set.
+- Cached data getters are plain nouns naming what they return
+  (`schema_fields`, `schema_properties`, `check_registry`).
 
 ## Linting
 - lintr with defaults + library_call_linter, namespace_linter,

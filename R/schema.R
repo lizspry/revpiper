@@ -19,7 +19,7 @@ cached <- function(load) {
 }
 
 # The property vocabulary: one row per property of a field-schema row.
-the_properties <- cached(function() {
+schema_properties <- cached(function() {
   do.call(
     rbind,
     lapply(schema_yaml("fields.yaml")$properties, \(p) {
@@ -35,8 +35,8 @@ the_properties <- cached(function() {
 
 # One field per row, one property per column; every cell read from the yaml
 # and converted per its property's declared loading type.
-the_schema <- cached(function() {
-  props <- the_properties()
+schema_fields <- cached(function() {
+  props <- schema_properties()
   do.call(
     rbind,
     lapply(schema_yaml("fields.yaml")$fields, \(f) {
@@ -57,7 +57,7 @@ the_schema <- cached(function() {
 })
 
 # The check registry: one row per code.
-the_checks <- cached(function() {
+check_registry <- cached(function() {
   do.call(
     rbind,
     lapply(schema_yaml("checks.yaml")$checks, \(ch) {
@@ -77,20 +77,20 @@ the_checks <- cached(function() {
 
 # Schema rows legal at one context level ("top", "source", "column", "combine").
 field_schema <- function(level) {
-  s <- the_schema()
+  s <- schema_fields()
   s[vapply(s$level, \(l) level %in% l, logical(1)), ]
 }
 
 # The type universe, read from the type row's inline domain.
 schema_types <- function() {
-  s <- the_schema()
+  s <- schema_fields()
   s$domain[[which(s$field == "type")]]
 }
 
 # Render a registered check's message: placeholders replaced verbatim,
 # never evaluated.
 render_message <- function(code, ...) {
-  registry <- the_checks()
+  registry <- check_registry()
   i <- which(registry$code == code)
   if (length(i) != 1) {
     cli::cli_abort("Internal error: unregistered check code {.val {code}}.")
@@ -108,13 +108,23 @@ render_message <- function(code, ...) {
   message
 }
 
-# One registered problem: the code's template renders the message.
-problem <- function(file, entry, code, ..., suggestion = NULL) {
-  spec_problem(
+# A check flags a problem: the code's registry template renders the message.
+flag_problem <- function(file, entry, code, ..., suggestion = NULL) {
+  new_problem(
     file,
     entry,
     code,
     render_message(code, ...),
     suggestion = suggestion
   )
+}
+
+# Phrases for YF02's {expected}: enumerated in checks.yaml, never composed.
+shape_phrases <- cached(function() {
+  schema_yaml("checks.yaml")$shape_phrases
+})
+
+shape_phrase <- function(shape, cardinality) {
+  entry <- shape_phrases()[[shape]]
+  if (is.character(entry)) entry else entry[[cardinality]]
 }
