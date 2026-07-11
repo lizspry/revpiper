@@ -130,6 +130,19 @@
   source before others are join-ready — folded into the spec §8.2 workflow
   question. Task 9 generalised (R/report.R core + findings as first item
   schema); Task 12 restated.
+- **Execution amendment 6 (2026-07-11; SIGNED OFF, Liz 2026-07-11):**
+  single-source invariant adopted, from Liz's review of recurring duplication /
+  hard-coding / missed abstraction across Tasks 1-3b (each caught reactively;
+  this makes prevention structural). PRINCIPLES and PROCESSES recorded in
+  dev/conventions.md ("Single source of truth"): one authoritative home per
+  fact, preferably data; registry-first for new fact-families; checks by
+  construction over review; walkthrough facts-and-sources section; pre-commit
+  duplication pass; plan-authoring single-source scan. IN THIS PLAN: the
+  invariant joins Global Constraints (binding on Tasks 4-14); walkthroughs
+  from Task 4 onward carry facts-and-sources; Task 14's pre-push suite gains a
+  whole-package duplication/abstraction audit as the phase backstop. Specific
+  homes remain plan/spec decisions (currently inst/schema/fields.yaml and
+  checks.yaml).
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-11). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
@@ -171,6 +184,12 @@ snapshots).
   network-policy block, STOP and report the domain.
 - Pre-push suite before declaring the branch ready: `air format .`,
   `lintr::lint_package()`, `devtools::test()`, `devtools::check()` (all clean).
+- **Single source of truth (amendment 6)**: every fact has one authoritative
+  home, preferably data (`inst/schema/`); code is generic over declared facts;
+  a literal appearing twice is a defect. New fact-family -> registry + loader +
+  closure test FIRST. Walkthroughs name each new fact's home
+  (facts-and-sources); every commit is preceded by a duplication pass, findings
+  reported at the check-in.
 
 ## Decisions embedded in this plan (for sign-off with the plan)
 
@@ -1140,9 +1159,13 @@ build-ignored).
   the miniproject fixture; `devtools::document()`; reference complete-but-terse
   (vignettes are Phase 3).
 - [ ] **Step 4: full pre-push suite** — `air format .` (no diff),
-  `lintr::lint_package()` (0), `devtools::test()` (all pass),
-  `devtools::check(args = "--no-manual", build_args = "--no-manual", error_on =
-  "note")` (0/0/0). Fix anything found; commit.
+  `pkgload::load_all(); lintr::lint_package()` (0), `devtools::test()` (all
+  pass), `devtools::check(args = "--no-manual", build_args = "--no-manual",
+  error_on = "note")` (0/0/0), plus the phase's duplication/abstraction audit
+  (amendment 6): sweep the whole package for facts with two homes, literals in
+  code that belong in a registry, and parallel code that failed to generalise;
+  findings fixed or explicitly justified before handoff. Fix anything found;
+  commit.
 - [ ] **Step 5: handoff.** Report to Liz: branch `phase-1-core` ready; she fetches,
   pushes, opens the PR (squash-merge; CI green gate). Spec §4 one-line amendment
   (rev_check diagnostics, Decision 1) rides the same PR.

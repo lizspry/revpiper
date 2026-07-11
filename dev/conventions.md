@@ -62,6 +62,37 @@ source), not here — this document covers code conventions only.
   extract, or leave a one-line written justification.
 - usethis-first for all scaffolding/config.
 
+## Single source of truth (recorded 2026-07-11, Phase 1 amendment 6)
+
+Principles (invariants, project-independent):
+- Every fact — a vocabulary, a rule, a mapping, a message, a default —
+  has exactly one authoritative home. A literal appearing in two places
+  is a defect, not a style choice.
+- Prefer data over code as the home: facts declared in data files, with
+  generic code over them. Code holds logic; data holds knowledge.
+- Registry-first (the data analogue of test-first): a new fact-family
+  gets its registry, loader, and closure test BEFORE the code that
+  consumes it.
+- Checks by construction beat checks by review: where an invariant can
+  be enforced by a conformance or closure test, add the test; never rely
+  on discipline for what a test can hold.
+
+Processes (habits that apply the principles):
+- Walkthroughs include a facts-and-sources section: every fact the new
+  code needs, each with its single authoritative home named. A fact with
+  two homes, or a literal home in code, is flagged before implementation
+  begins.
+- Pre-commit duplication pass (alongside reading new snapshots): what
+  did I hard-code, what now exists twice, what failed to generalise?
+  Findings are reported at the check-in, never silently absorbed.
+- Plan self-review includes a single-source scan beside the placeholder
+  scan: which facts does in-plan code hard-code that belong in a
+  registry?
+
+(Specific homes — which registries exist and what lives in each — are
+project decisions and live in the project's plan/spec, not here. In
+revpiper: inst/schema/fields.yaml and checks.yaml.)
+
 ## Git
 - PR-only main (protected). Short-lived branches, one per task, deleted
   on merge. Squash-merge. Plain imperative commit messages.
