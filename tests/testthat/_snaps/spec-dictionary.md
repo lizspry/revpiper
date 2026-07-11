@@ -125,3 +125,31 @@
       x YF03 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
       x YF05 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
 
+# shape_phrase wording is grammatical for every shape x cardinality
+
+    Code
+      for (shape in c("string", "boolean", "scalar")) {
+        for (cardinality in c("one", "one_or_many", "two")) {
+          cat(sprintf("%-8s %-12s -> %s\n", shape, cardinality, shape_phrase(shape,
+            cardinality)))
+        }
+      }
+    Output
+      string   one          -> a single text value
+      string   one_or_many  -> one or more text values
+      string   two          -> exactly two text values
+      boolean  one          -> a single true/false value
+      boolean  one_or_many  -> one or more true/false values
+      boolean  two          -> exactly two true/false values
+      scalar   one          -> a single value
+      scalar   one_or_many  -> one or more values
+      scalar   two          -> exactly two values
+    Code
+      for (shape in c("block", "named_list", "list_of_blocks")) {
+        cat(sprintf("%-21s -> %s\n", shape, shape_phrase(shape, "one")))
+      }
+    Output
+      block                 -> a block of fields
+      named_list            -> a named block
+      list_of_blocks        -> a list of entries
+

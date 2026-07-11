@@ -344,3 +344,21 @@ test_that("every problem in a broken dictionary is reported at once", {
     rev_read_dictionary(bad_path("many-defects.yaml"))
   )
 })
+
+test_that("shape_phrase wording is grammatical for every shape x cardinality", {
+  expect_snapshot({
+    for (shape in c("string", "boolean", "scalar")) {
+      for (cardinality in c("one", "one_or_many", "two")) {
+        cat(sprintf(
+          "%-8s %-12s -> %s\n",
+          shape,
+          cardinality,
+          shape_phrase(shape, cardinality)
+        ))
+      }
+    }
+    for (shape in c("block", "named_list", "list_of_blocks")) {
+      cat(sprintf("%-21s -> %s\n", shape, shape_phrase(shape, "one")))
+    }
+  })
+})
