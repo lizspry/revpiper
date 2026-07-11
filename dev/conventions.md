@@ -14,6 +14,10 @@ source), not here — this document covers code conventions only.
   **properties** (shape, cardinality, domain, ...). Properties generate
   **checks**; check failures are **problems** (spec side, abort) or
   **findings** (data side, routed). Never say "attributes" (R-reserved).
+- A **mapping** is a named group of `key: value` pairs (YAML mapping, R
+  named list). A mapping either has schema-vocabulary keys and a `context`
+  to validate its contents as (source block, column entries), or
+  user-chosen keys that are data, not vocabulary (roles, levels).
 - Spec-check codes carry a scope prefix: **YF** within one field, **YE**
   within one entry, **YS** within one source file, **YX** across sources.
   Within-source validation is standalone; across-source is a separate,

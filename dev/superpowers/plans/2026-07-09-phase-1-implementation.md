@@ -663,6 +663,15 @@ fields:
   - {field: separator, level: [combine], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
 ```
 
+> Follow-up (2026-07-11, Liz's 3b review): shape vocabulary consolidated —
+> `block`/`named_list`/`list_of_blocks` become `mapping`/`list_of_mappings`
+> plus an explicit `context` property (the level to validate a mapping's
+> contents as; null = user-chosen keys are data). Recursion into
+> source/columns is now schema-driven (`check_contexts()`), and the
+> file-scope identity check generalised (`check_mapping_list()`). NEW Task 4
+> agenda item: role KEYS are pipeline vocabulary (`study_id`), not free
+> names — should unknown roles be checked? (Liz's "who owns the keys" lens.)
+
 (Task 5 appends `level: [join]` rows — `left`/`right`/`keys`/`granularity`/
 `relationship`/`unmatched_ok` — to this same file; `refers_to` for
 roles/levels/cwl is consumed in Task 4.)

@@ -145,11 +145,10 @@
       scalar   one_or_many  -> one or more values
       scalar   two          -> exactly two values
     Code
-      for (shape in c("block", "named_list", "list_of_blocks")) {
+      for (shape in c("mapping", "list_of_mappings")) {
         cat(sprintf("%-21s -> %s\n", shape, shape_phrase(shape, "one")))
       }
     Output
-      block                 -> a block of fields
-      named_list            -> a named block
-      list_of_blocks        -> a list of entries
+      mapping               -> a group of key: value fields
+      list_of_mappings      -> a list of entries
 

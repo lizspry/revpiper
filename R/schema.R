@@ -15,6 +15,7 @@ the_schema <- local({
             required = f$required,
             shape = f$shape,
             cardinality = f$cardinality,
+            context = f$context %||% NA_character_,
             empty_ok = f$empty_ok,
             domain = list(unlist(f$domain)),
             permitted_types = list(unlist(f$permitted_types)),

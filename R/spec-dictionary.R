@@ -20,17 +20,40 @@ rev_read_dictionary <- function(path) {
   raw <- yaml::read_yaml(path)
   problems <- rbind(
     check_entry(raw, "top", path, "top level"),
-    if (is_block(raw$source)) {
-      check_entry(raw$source, "source", path, "source block")
-    } else {
-      no_problems()
-    },
-    check_columns_block(raw$columns, path)
+    check_contexts(raw, "top", path)
   )
   if (nrow(problems) > 0) {
     stop_spec(problems)
   }
   new_dictionary(raw, path)
+}
+
+# Recurse into fields whose schema row names a context: their contents are
+# themselves entries to validate (source block, column entries). Fields
+# without a context have user-chosen keys - data, not schema vocabulary.
+check_contexts <- function(x, level, file) {
+  schema <- field_schema(level)
+  problems <- no_problems()
+  for (i in seq_len(nrow(schema))) {
+    row <- schema[i, ]
+    if (is.na(row$context)) {
+      next
+    }
+    value <- x[[row$field]]
+    if (row$shape == "mapping" && is_mapping(value)) {
+      problems <- rbind(
+        problems,
+        check_entry(value, row$context, file, sprintf("%s block", row$field))
+      )
+    }
+    if (row$shape == "list_of_mappings") {
+      problems <- rbind(
+        problems,
+        check_mapping_list(value, row$context, file)
+      )
+    }
+  }
+  problems
 }
 
 # Zero-row problems table: the rbind seed guaranteeing a stable shape.
@@ -48,7 +71,7 @@ bind_problems <- function(problem_list) {
   do.call(rbind, c(list(no_problems()), problem_list))
 }
 
-is_block <- function(x) {
+is_mapping <- function(x) {
   is.list(x) && !is.null(names(x)) && all(nzchar(names(x)))
 }
 
@@ -226,7 +249,7 @@ check_field_form <- function(value, row, file, entry) {
     )
   }
   if (row$unique_entries) {
-    entry_lists <- if (row$shape == "named_list") value else list(value)
+    entry_lists <- if (row$shape == "mapping") value else list(value)
     for (l in entry_lists) {
       flat <- unlist(l)
       dupes <- unique(flat[duplicated(flat)])
@@ -251,14 +274,14 @@ check_field_form <- function(value, row, file, entry) {
 }
 
 shape_ok <- function(value, shape, cardinality) {
-  if (shape == "block" || shape == "named_list") {
-    return(is_block(value))
+  if (shape == "mapping") {
+    return(is_mapping(value))
   }
-  if (shape == "list_of_blocks") {
+  if (shape == "list_of_mappings") {
     return(
       is.list(value) &&
         length(value) >= 1 &&
-        all(vapply(value, is_block, logical(1)))
+        all(vapply(value, is_mapping, logical(1)))
     )
   }
   entries <- if (is.list(value)) value else as.list(value)
@@ -281,12 +304,11 @@ shape_ok <- function(value, shape, cardinality) {
 }
 
 shape_phrase <- function(shape, cardinality) {
-  if (shape %in% c("block", "named_list", "list_of_blocks")) {
+  if (shape %in% c("mapping", "list_of_mappings")) {
     return(switch(
       shape,
-      block = "a block of fields",
-      named_list = "a named block",
-      list_of_blocks = "a list of entries"
+      mapping = "a group of key: value fields",
+      list_of_mappings = "a list of entries"
     ))
   }
   kind <- switch(
@@ -303,45 +325,41 @@ shape_phrase <- function(shape, cardinality) {
   )
 }
 
-check_columns_block <- function(columns, file) {
+check_mapping_list <- function(entries, ctx, file) {
   if (
-    !is.list(columns) ||
-      length(columns) == 0 ||
-      !all(vapply(columns, is_block, logical(1)))
+    !is.list(entries) ||
+      length(entries) == 0 ||
+      !all(vapply(entries, is_mapping, logical(1)))
   ) {
-    return(no_problems()) # absence/shape already reported at top level
+    return(no_problems()) # absence/shape already reported one level up
   }
-  problems <- bind_problems(lapply(seq_along(columns), \(i) {
-    col <- columns[[i]]
-    label <- if (is.character(col$name) && length(col$name) == 1) {
-      sprintf("column '%s'", col$name)
+  ctx_schema <- field_schema(ctx)
+  id_field <- ctx_schema$field[ctx_schema$identity]
+  id_of <- function(e) {
+    id <- if (length(id_field) == 1) e[[id_field]] else NULL
+    if (is.character(id) && length(id) == 1) id else NA_character_
+  }
+  problems <- bind_problems(lapply(seq_along(entries), \(i) {
+    id <- id_of(entries[[i]])
+    label <- if (is.na(id)) {
+      sprintf("%s entry %d", ctx, i)
     } else {
-      sprintf("column entry %d", i)
+      sprintf("%s '%s'", ctx, id)
     }
-    check_entry(col, "column", file, label)
+    check_entry(entries[[i]], ctx, file, label)
   }))
 
-  # YS01 — identity at file scope: duplicate column names.
-  names_vec <- vapply(
-    columns,
-    \(col) {
-      if (is.character(col$name) && length(col$name) == 1) {
-        col$name
-      } else {
-        NA_character_
-      }
-    },
-    character(1)
-  )
-  dupes <- unique(names_vec[duplicated(names_vec) & !is.na(names_vec)])
+  # YS01 - identity at file scope: duplicate identities within the list.
+  ids <- vapply(entries, id_of, character(1))
+  dupes <- unique(ids[duplicated(ids) & !is.na(ids)])
   rbind(
     problems,
     bind_problems(lapply(dupes, \(d) {
       spec_problem(
         file,
-        "columns block",
+        sprintf("%ss block", ctx),
         "YS01",
-        sprintf("duplicate column name '%s'", d)
+        sprintf("duplicate %s name '%s'", ctx, d)
       )
     }))
   )

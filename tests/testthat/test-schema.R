@@ -4,6 +4,7 @@ schema_properties <- c(
   "required",
   "shape",
   "cardinality",
+  "context",
   "empty_ok",
   "domain",
   "permitted_types",
@@ -57,7 +58,14 @@ test_that("the schema validates against its own closed vocabulary", {
   ))
   expect_true(all(
     s$shape %in%
-      c("string", "boolean", "scalar", "block", "named_list", "list_of_blocks")
+      c("string", "boolean", "scalar", "mapping", "list_of_mappings")
+  ))
+  # context: only on mapping shapes, and always a known level
+  expect_true(all(
+    is.na(s$context) | s$context %in% c("top", "source", "column", "combine")
+  ))
+  expect_true(all(
+    is.na(s$context) | s$shape %in% c("mapping", "list_of_mappings")
   ))
   expect_true(all(s$cardinality %in% c("one", "one_or_many", "two")))
   expect_true(is.logical(s$required) && !anyNA(s$required))

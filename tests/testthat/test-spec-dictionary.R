@@ -119,9 +119,8 @@ test_that("shape and cardinality violations flag YF02, without cascade", {
     string = 5L,
     boolean = "banana",
     scalar = list(list("nested", "pair")),
-    block = "not a block",
-    named_list = "not a list",
-    list_of_blocks = "not blocks"
+    mapping = "not a mapping",
+    list_of_mappings = "not mappings"
   )
   for (level in c("top", "source", "column")) {
     schema <- field_schema(level)
@@ -357,7 +356,7 @@ test_that("shape_phrase wording is grammatical for every shape x cardinality", {
         ))
       }
     }
-    for (shape in c("block", "named_list", "list_of_blocks")) {
+    for (shape in c("mapping", "list_of_mappings")) {
       cat(sprintf("%-21s -> %s\n", shape, shape_phrase(shape, "one")))
     }
   })
