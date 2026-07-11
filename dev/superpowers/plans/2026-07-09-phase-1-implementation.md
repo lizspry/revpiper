@@ -723,6 +723,21 @@ roles/levels/cwl is consumed in Task 4.)
 
 ### Task 4: Within-source references + set-level step (`spec-dictionary.R`, part 2)
 
+> **Gate status (2026-07-11):** a walkthrough was approved, then superseded -
+> Liz wants a FRESH walkthrough from the next session before execution.
+> Execution NOT started. Decisions resolved at the 2026-07-11 walkthrough:
+> (a) **Role keys are user-chosen, never policed** (no key_domain property, no
+> YF06): a role's VALUE is still YS02-checked, joins catch key mismatches via
+> YX02, and pipeline consumers that look up a known role (`study_id`, Task 10)
+> report its absence informationally - never as a finding. (b) **The
+> "complete-example"/kitchen-sink fixture is DROPPED** (considered and
+> rejected: the matrix + good fixture + boundary-legal test carry positive
+> coverage; docs completeness comes from the generated reference, realism
+> from the miniproject; do not resurrect). (c) **/simplify trial**: run on
+> the task diff after tests are green and before the final commit; its edits
+> are reviewed jointly with Liz before keeping; treat as review feedback
+> (verify against conventions, re-run suite, report at check-in).
+
 **Files:** Modify `R/spec-dictionary.R`; extend `test-spec-dictionary.R` + fixtures.
 
 **Interfaces — Produces:**

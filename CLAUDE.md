@@ -43,13 +43,21 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   never write into docs/ (gitignored pkgdown output). This overrides
   the superpowers skills' default docs/superpowers/ location.
 - Design spec: dev/superpowers/specs/2026-07-07-revpiper-design.md
-  (amended through 2026-07-10 by Phase 1 planning).
+  (amended through 2026-07-11 by Phase 1 execution amendments).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
-  SIGNED OFF, pre-flight complete, execution NOT yet begun. Binding protocol
-  in its Status block: walkthrough-gated per task (explain → Liz reads plan
-  step + code → she confirms → execute), via superpowers:executing-plans.
-  Work on branch phase-1-planning until execution starts its own
-  phase-1-core branch (Task 1 Step 1). Planning rationale:
+  SIGNED OFF with execution amendments 1-6 (all signed; see its Status
+  block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b plus
+  structural follow-ups (schema-driven validation: inst/schema/fields.yaml
+  + checks.yaml are single sources of truth; scope-prefixed codes YF/YE/YS/
+  YX). NEXT: Task 4 — its plan section carries a Gate status note with
+  resolved decisions; Liz requires a FRESH walkthrough before execution.
+  Binding protocol: walkthrough-gated per task (explain, incl. a
+  facts-and-sources section, → Liz reads plan step + code → she confirms →
+  execute), pre-commit duplication pass, via superpowers:executing-plans.
+  READ dev/conventions.md FIRST — it gained Terminology, Naming, and
+  Single-source-of-truth sections that bind all code. Liz edits/commits on
+  the host too: fetch /run/sandbox/source and fast-forward before working.
+  Planning rationale:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
 - Completed: Phase 0 (merged to main 2026-07-08; its plan's Status section
   is the record; do not resume phase-0 branches).
