@@ -99,6 +99,37 @@
   (spec/process/vis); joins declaring expected column overlap; workflow ordering of
   within-source vs across-source data checking + corrections (join spec may be
   authored upfront for sheet compatibility).
+- **Execution amendment 5 (2026-07-11; SIGNED OFF, Liz 2026-07-11):** uniform
+  stage reporting, from Liz's requirement that spec development work standalone
+  and leave a durable record. (a) **Every user-facing stage command emits a
+  report + certification through ONE reusable machinery** (stage name, timestamp,
+  items, status, acknowledgments/annex; shared print, export, certificate
+  rendering — new stages bring only an item schema and a gate rule; the stage
+  name is a parameter, so the machinery is independent of the stage taxonomy).
+  Phase 1 implements the core plus two instantiations: `spec` (items = problems)
+  and the consolidated data-check report per D4 (items = findings). **The
+  user-facing stage VOCABULARY is provisional** (Liz 2026-07-11): the working
+  model is spec -> load (import) -> correct (manual, non-algorithmic) ->
+  transform (derive), each followed by a package check that flags issues;
+  whether correct stands alone and where joins/gating sit are open — resolved at
+  Task 9's walkthrough (report naming) and Phase 2 planning (full model), logged
+  in spec §8.2. (b) **Storage**: everything under
+  `output/reports/`, named `<stage>-<runstamp>.xlsx` (items) +
+  `<stage>-<runstamp>-certificate.txt`; certificates share one format with a
+  stage line ("Stage: specification — CERTIFIED"). A CERTIFIED spec report is a
+  timestamped prespecification artifact (registerable before data collection).
+  `output/diagnostics/` keeps the preprocessed-<table>.csv data artifacts
+  (decision 1 restated). (c) **Doctrine refined**: every stage always completes
+  and always reports; consequently the STAGE RUNNERS (`rev_check_specs()`,
+  `rev_check()`) no longer abort on spec problems — they return a NOT CERTIFIED
+  report (matching `rev_check()`'s no-abort behaviour on findings); classed
+  aborts remain for the constructors (`rev_read_dictionary()` etc.) called
+  directly. `rev_check()` with an uncertified spec writes the spec report and
+  skips data stages (they are impossible, not merely gated). (d) **Pipeline
+  gating deferred** (Liz): rules for partial processing — loading/processing one
+  source before others are join-ready — folded into the spec §8.2 workflow
+  question. Task 9 generalised (R/report.R core + findings as first item
+  schema); Task 12 restated.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-11). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
@@ -109,7 +140,7 @@ J-checks, the consequence-based findings object with certification, `rev_check()
 and the minimal dictionary draft generator — fully TDD'd, CI green.
 
 **Architecture:** Functional core; one file per topic (provisional layout, spec §5);
-S3 for `rev_dictionary`, `rev_findings`, `rev_certificate`. All input read as
+S3 for `rev_dictionary`, `rev_findings`, `rev_report`. All input read as
 character; types exist only via declared coercion (prespecify-then-check). Findings
 carry consequences, never severities; certification = zero standing findings, with
 explicit acknowledgment declarations the only pass.
@@ -143,12 +174,15 @@ snapshots).
 
 ## Decisions embedded in this plan (for sign-off with the plan)
 
-1. **`rev_check()` writes diagnostics.** Spec §4 says rev_check "writes nothing";
-   D4's findings row numbers reference `preprocessed-<table>` artifacts. Resolved:
-   rev_check writes ONLY under `output/diagnostics/` (`preprocessed-<table>.csv`,
-   `findings-<runstamp>.xlsx`) — never pipeline artifacts, never `data/raw/`. "Always
-   safe" is preserved; the row numbers users see are inspectable. Spec §4 gets a
-   one-line amendment when this plan is signed off.
+1. **`rev_check()` writes diagnostics and reports.** Spec §4 says rev_check
+   "writes nothing"; D4's findings row numbers reference `preprocessed-<table>`
+   artifacts. Resolved (restated by amendment 5): stage reports + certificates go
+   under `output/reports/` (`<stage>-<runstamp>.xlsx`,
+   `<stage>-<runstamp>-certificate.txt`); data artifacts
+   (`preprocessed-<table>.csv`) under `output/diagnostics/` — never pipeline
+   artifacts, never `data/raw/`. "Always safe" is preserved; the row numbers users
+   see are inspectable. Spec §4 gets a one-line amendment when this plan is signed
+   off.
 2. **New Imports** (each justified per Area 7, logged here + in the commit):
    `yaml` (spec files; the maintained R YAML parser), `readr` (CSV ingestion:
    platform-independent UTF-8/BOM handling — a core behaviour, since encoding
@@ -198,7 +232,8 @@ snapshots).
 | `R/read.R` | generic csv/xlsx readers, reader dispatch, R-checks | `test-read.R` |
 | `R/read-covidence.R` | Covidence all-data CSV importer | `test-read-covidence.R` |
 | `R/standardise.R` | five ops + composed keys + counts log | `test-standardise.R` |
-| `R/findings.R` | `rev_findings`, consequences, print, xlsx export, certificate | `test-findings.R` |
+| `R/report.R` | generic stage report + certification machinery (all stages) | `test-report.R` |
+| `R/findings.R` | `rev_findings`, consequences, check-stage item schema | `test-findings.R` |
 | `R/validate.R` | V-checks per table | `test-validate.R` |
 | `R/join.R` | join execution + J-checks + near-miss suggestions | `test-join.R` |
 | `R/check.R` | `rev_check()` orchestration + diagnostics output | `test-check.R` |
@@ -895,32 +930,40 @@ test_that("standardisation is idempotent", {
   into `log`.
 - [ ] **Step 4: run, expect PASS.**  - [ ] **Step 5:** format, lint, commit.
 
-### Task 9: Findings object + certificate (`findings.R`)
+### Task 9: Stage-report machinery + findings (`report.R`, `findings.R`)
 
-**Files:** Create `R/findings.R`, `tests/testthat/test-findings.R`; modify `R/read.R`
-(swap `fnd_stub()` for the real constructor — one call site).
+**Files:** Create `R/report.R`, `tests/testthat/test-report.R`, `R/findings.R`,
+`tests/testthat/test-findings.R`; modify `R/read.R` (swap `fnd_stub()` for the
+real constructor — one call site).
 
-**Interfaces — Produces:**
-- `new_finding(code, consequence, table, variable = NA, study_id = NA,
-  rows = integer(), message, fix_options)` → one-row `rev_findings`
-- `bind_findings(...)` → `rev_findings` (tibble subclass, class
-  `c("rev_findings","tbl_df","tbl","data.frame")`); `no_findings()` → zero-row
-- `print.rev_findings` — grouped by consequence, counts + instances, user vocabulary
-  (snapshot-tested)
-- `rev_export_findings(findings, path)` → writes xlsx via `writexl::write_xlsx`
-  (rows list-column collapsed to `"3, 7, 12"`)
-- `rev_certificate(findings, acknowledgments, unspecified = character(0))` →
-  list(status = `"CERTIFIED"|"NOT CERTIFIED"`, n_findings, acknowledgments chr,
-  unspecified chr); `print.rev_certificate` snapshot-tested for both statuses,
-  including the informational unspecified-columns annex when non-empty
-- Consequence constants: `csq_not_certifiable()`, `csq_join_skipped(left, right)`,
-  `csq_checks_skipped(column)`
+**Interfaces — Produces (amendment 5: one machinery, all stages):**
+- `new_stage_report(stage, items, acknowledgments = character(0),
+  unspecified = character(0))` → `rev_report`: list(stage chr
+  ("spec"|"check"|later "correct"|"derive"), timestamp, items (stage's item
+  tibble: problems for spec, findings for check), status = "CERTIFIED" iff zero
+  standing items, acknowledgments chr, unspecified chr)
+- `print.rev_report` — certificate header (one format, stage line: "Stage:
+  specification — CERTIFIED") then items grouped per stage's conventions;
+  snapshot-tested per stage × both statuses, incl. the unspecified annex
+- `rev_export_report(report, dir = "output/reports")` → writes
+  `<stage>-<runstamp>.xlsx` (items; list-columns collapsed, e.g. rows →
+  `"3, 7, 12"`) + `<stage>-<runstamp>-certificate.txt` (rendered certificate);
+  returns paths invisibly; creates dir
+- Check-stage item schema (`R/findings.R`): `new_finding(code, consequence,
+  table, variable = NA, study_id = NA, rows = integer(), message, fix_options)`
+  → one-row `rev_findings`; `bind_findings(...)`; `no_findings()`;
+  `print.rev_findings` grouped by consequence (snapshot-tested); consequence
+  constants `csq_not_certifiable()`, `csq_join_skipped(left, right)`,
+  `csq_checks_skipped(column)`. Spec-stage items are the Task 2 problems tibble
+  — no new schema needed.
 
-- [ ] **Steps 1–5:** failing tests (constructor field types; print snapshot with 2
-  findings across 2 consequences; certificate snapshots for certified-with-
-  acknowledgments and not-certified; xlsx export → `readxl::read_excel` round-trip
-  has the collapsed rows string), watch fail, implement, watch pass (accept
-  snapshots), format+lint, commit.
+- [ ] **Steps 1–5:** failing tests (report constructor: status derivation both
+  stages; print snapshots spec/check × certified/not; export → files exist,
+  `readxl::read_excel` round-trip has collapsed rows string, certificate txt
+  contains stage line + status; findings constructor field types; findings print
+  snapshot with 2 findings across 2 consequences), watch fail, implement, watch
+  pass (READ snapshots — certificate wording is the product's public record),
+  format+lint, commit.
 
 ### Task 10: Per-table validation (`validate.R`)
 
@@ -983,30 +1026,39 @@ undeclared and appears only in the certificate's informational annex.
 **Interfaces — Produces:**
 - `rev_check_specs(project = ".")` → validates ALL spec files with **no data
   required** (dictionaries via `rev_read_dictionaries()`, joins via
-  `rev_read_joins()`); on problems, the standard `stop_spec()` listing; on success,
-  prints "All specs valid: {n} table{?s}, {n} join{?s}." (snapshot-tested) and
-  returns the loaded specs invisibly. Serves the prespecification workflow
-  (dictionary authored before data collection as the extraction instrument's source
-  of truth) — spec validation deliberately checks that `source.file` is *declared*,
-  never that it exists.
-- `rev_check(project = ".", quiet = FALSE)` → invisibly `rev_findings` with
-  attributes `certificate` (`rev_certificate`) and `assembled` (tibble | NULL).
+  `rev_read_joins()`, catching the constructors' classed aborts via their
+  `problems` condition field). ALWAYS completes: prints the spec report, writes
+  `output/reports/spec-<runstamp>.xlsx` + certificate (amendment 5), returns the
+  `rev_report` invisibly (loaded specs as attribute when certified). NO abort on
+  problems — status "NOT CERTIFIED" (consistent with `rev_check()` on findings);
+  snapshot-tested both statuses. Serves the prespecification workflow
+  (dictionary authored before data collection as the extraction instrument's
+  source of truth; the CERTIFIED report is the registerable artifact) — spec
+  validation deliberately checks that `source.file` is *declared*, never that it
+  exists.
+- `rev_check(project = ".", quiet = FALSE)` → invisibly the check-stage
+  `rev_report` (items = findings) with attribute `assembled` (tibble | NULL).
   Internally begins with the same loading step as `rev_check_specs()`.
   Sequence per D4: read dictionaries + joins spec (spec errors abort) → per table:
   `rev_read_table` → `rev_standardise` → `rev_validate_table` → `rev_join_tables` →
-  bind findings → certificate (acknowledgments from `unmatched_ok` joins;
-  informational annex = unspecified columns per table) → unless `quiet`, print
-  certificate then findings →
-  write `output/diagnostics/preprocessed-<table>.csv` and
-  `findings-<format(Sys.time(), "%Y%m%d-%H%M%S")>.xlsx` (skip xlsx when zero
-  findings). Never touches `data/raw/` (test asserts mtimes unchanged).
+  bind findings → `new_stage_report("check", ...)` (acknowledgments from
+  `unmatched_ok` joins; informational annex = unspecified columns per table) →
+  unless `quiet`, print the report →
+  write `output/diagnostics/preprocessed-<table>.csv` and the check-stage
+  report via `rev_export_report()` (`output/reports/check-<runstamp>.xlsx` +
+  certificate; runstamp `format(Sys.time(), "%Y%m%d-%H%M%S")`; always written,
+  even certified). If the spec stage is NOT CERTIFIED, write the spec report and
+  return it — data stages are impossible without valid specs. Never touches
+  `data/raw/` (test asserts mtimes unchanged).
 
-- [ ] **Step 1: failing tests** — `rev_check_specs()`: on the miniproject → success
-  message snapshot + invisible specs list; on a copy whose data/raw/ is DELETED →
-  still succeeds (no data required); on a bad-spec fixture → `revpiper_spec_error`.
+- [ ] **Step 1: failing tests** — `rev_check_specs()`: on the miniproject →
+  CERTIFIED report snapshot + spec report files exist under `output/reports/`;
+  on a copy whose data/raw/ is DELETED → still CERTIFIED (no data required); on
+  a bad-spec fixture → completes with status "NOT CERTIFIED", problems as items,
+  report files written, no error thrown.
   `rev_check()` on the miniproject: returns findings containing codes
   `{"V003","J004"}` at least (`extra_col` sits in the unspecified annex, not in
-  findings); certificate status "NOT CERTIFIED";
+  findings); report status "NOT CERTIFIED";
   `output/diagnostics/preprocessed-estimates.csv` exists and its row numbering
   matches the `rows` in the V003 finding; raw file mtimes unchanged.
   miniproject-clean: zero findings, "CERTIFIED", the informational annex mentions
