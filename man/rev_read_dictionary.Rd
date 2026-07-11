@@ -15,4 +15,6 @@ A \code{rev_dictionary} object.
 \description{
 Parses \verb{specs/tables/<table>.yaml} into a \code{rev_dictionary}, collecting
 every spec problem before aborting so the user sees all of them at once.
+Validation is complete for a single source: one file validates with zero
+knowledge of any other source.
 }
