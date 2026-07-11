@@ -81,11 +81,29 @@
 ---
 
     Code
+      read_bad("y007-date-range-not-iso.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x Y007 fixtures/specs-bad/y007-date-range-not-iso.yaml / column 'extraction_date': 'range' entries do not match declared type 'date'
+
+---
+
+    Code
       read_bad("y008-descending-range.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
       x Y008 fixtures/specs-bad/y008-descending-range.yaml / column 'mean_age': 'range' is descending (60 > 10)
+
+---
+
+    Code
+      read_bad("y008-descending-date-range.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x Y008 fixtures/specs-bad/y008-descending-date-range.yaml / column 'extraction_date': 'range' is descending (2026-06-30 > 2026-01-15)
 
 ---
 
@@ -140,4 +158,15 @@
       Error:
       ! Spec validation failed (1 problem):
       x Y020 fixtures/specs-bad/y020-empty-field.yaml / column 'mean_age': field 'range' is declared but has no value
+
+# every problem in a broken dictionary is reported at once
+
+    Code
+      rev_read_dictionary(bad_path("many-defects.yaml"))
+    Condition
+      Error:
+      ! Spec validation failed (3 problems):
+      x Y001 fixtures/specs-bad/many-defects.yaml / top level: unknown field 'descrption' (did you mean 'description'?)
+      x Y002 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
+      x Y008 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
 

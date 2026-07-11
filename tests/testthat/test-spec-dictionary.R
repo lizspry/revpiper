@@ -57,7 +57,9 @@ test_that("each single-defect dictionary aborts naming its problem", {
   expect_snapshot(error = TRUE, read_bad("y005-range-on-text.yaml"))
   expect_snapshot(error = TRUE, read_bad("y006-units-on-text.yaml"))
   expect_snapshot(error = TRUE, read_bad("y007-mixed-values.yaml"))
+  expect_snapshot(error = TRUE, read_bad("y007-date-range-not-iso.yaml"))
   expect_snapshot(error = TRUE, read_bad("y008-descending-range.yaml"))
+  expect_snapshot(error = TRUE, read_bad("y008-descending-date-range.yaml"))
   expect_snapshot(error = TRUE, read_bad("y012-duplicate-column.yaml"))
   expect_snapshot(error = TRUE, read_bad("y012-missing-name.yaml"))
   expect_snapshot(error = TRUE, read_bad("y017-missing-type.yaml"))
@@ -68,8 +70,12 @@ test_that("each single-defect dictionary aborts naming its problem", {
 
 test_that("every problem in a broken dictionary is reported at once", {
   err <- tryCatch(
-    rev_read_dictionary(bad_path("y003-values-and-range.yaml")),
+    rev_read_dictionary(bad_path("many-defects.yaml")),
     error = \(e) e
   )
   expect_s3_class(err, "revpiper_spec_error")
+  expect_snapshot(
+    error = TRUE,
+    rev_read_dictionary(bad_path("many-defects.yaml"))
+  )
 })

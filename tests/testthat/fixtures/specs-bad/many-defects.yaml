@@ -1,0 +1,10 @@
+table: estimates
+descrption: One row per extracted estimate.
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: mean_age
+    type: decmal
+  - name: rob_score
+    type: integer
+    range: [9, 1]

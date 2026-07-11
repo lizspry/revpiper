@@ -273,7 +273,7 @@ check_values_range_types <- function(col, file, entry) {
           "'range' must have exactly two entries"
         )
       )
-    } else if (isTRUE(col$type %in% c("integer", "decimal"))) {
+    } else if (isTRUE(col$type %in% c("integer", "decimal", "date"))) {
       if (!values_match_type(rng, col$type)) {
         problems <- rbind(
           problems,
@@ -284,7 +284,7 @@ check_values_range_types <- function(col, file, entry) {
             sprintf("'range' entries do not match declared type '%s'", col$type)
           )
         )
-      } else if (rng[[1]] > rng[[2]]) {
+      } else if (range_descending(rng, col$type)) {
         problems <- rbind(
           problems,
           spec_problem(
@@ -309,9 +309,29 @@ values_match_type <- function(vals, type) {
       \(v) is.numeric(v) && isTRUE(v %% 1 == 0),
       logical(1)
     ),
-    decimal = vapply(vals, is.numeric, logical(1))
+    decimal = vapply(vals, is.numeric, logical(1)),
+    date = vapply(
+      vals,
+      \(v) is.character(v) && is_iso_date(v),
+      logical(1)
+    )
   )
   all(ok)
+}
+
+# Strict ISO YYYY-MM-DD: must parse AND survive the round trip (decision 5).
+is_iso_date <- function(x) {
+  parsed <- as.Date(x, format = "%Y-%m-%d")
+  !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
+}
+
+range_descending <- function(rng, type) {
+  if (type == "date") {
+    as.Date(rng[[1]], format = "%Y-%m-%d") >
+      as.Date(rng[[2]], format = "%Y-%m-%d")
+  } else {
+    rng[[1]] > rng[[2]]
+  }
 }
 
 new_dictionary <- function(raw, path) {
