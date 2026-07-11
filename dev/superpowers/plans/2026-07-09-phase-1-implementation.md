@@ -837,6 +837,12 @@ joins:
   declare expected column overlap between sides (`shared:`), with overlap beyond
   keys+shared a finding? (Liz 2026-07-11: overlap semantics differ between
   same-variables merges and different-information merges.)
+- REQUIREMENT (Liz 2026-07-11, Task 4 review): many-to-many joins must be
+  declarable. `relationship`'s planned domain [one-to-one, one-to-many]
+  cannot express them — it gains `many-to-many`, and J002's key-uniqueness
+  expectation applies only to a side a declared relationship makes "one".
+  Resolve the exact semantics at this task's walkthrough, alongside the
+  open levels/granularity question recorded under Task 4.
 
 ### Task 6: Generic readers + dispatch + R-checks (`read.R`)
 
