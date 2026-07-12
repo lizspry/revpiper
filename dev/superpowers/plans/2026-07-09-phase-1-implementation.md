@@ -799,6 +799,18 @@ roles/levels/cwl is consumed in Task 4.)
 > are keyed by entry name (duplicates fail at parse; single-source section
 > gained the registry-key-uniqueness rule). Task 5 inherits this vocabulary
 > — its schema rows are `appears_in: [join]` etc.
+> (f) Parked design discussion (Liz 2026-07-12, closing Task 4): kinds/
+> sections/refers_to and identifiers/levels each deal with overlapping
+> things — a possible design smell, deliberately left until more of the
+> pipeline exists. Considerations to return to: identifiers may need
+> NESTING (unique participants within clusters; identifying unique
+> participants vs unique studies); levels' practical use is still unclear
+> (substudies within a study, feeding constant-within checks?); a column
+> can be BOTH an identifier and a level — e.g. checking a column is
+> consistent within the identifier column(s) — so the two may be one
+> concept. Liz also floated a `levels` field nested under an identifier
+> entry (usage to be explained by her). Revisit at/after the Task 5
+> walkthrough together with (c); do not redesign unilaterally.
 
 ### Task 5: Joins spec (`spec-joins.R`)
 

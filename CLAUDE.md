@@ -46,17 +46,26 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   (amended through 2026-07-11 by Phase 1 execution amendments).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
   SIGNED OFF with execution amendments 1-6 (all signed; see its Status
-  block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b plus
-  structural follow-ups (schema-driven validation: inst/schema/fields.yaml
-  + checks.yaml are single sources of truth; scope-prefixed codes YF/YE/YS/
-  YX). NEXT: Task 4 — its plan section carries a Gate status note with
-  resolved decisions; Liz requires a FRESH walkthrough before execution.
+  block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b, 4 —
+  Task 4 closed 2026-07-12 with review follow-ups (a)-(f) recorded in a
+  blockquote under its plan section: roles→identifiers rename, settled
+  five-word vocabulary (file/section/entry/field/name + kind; retired
+  words listed in conventions Terminology), registries keyed by entry
+  name, /simplify pass applied. NEXT: Task 5 (joins) — Liz requires a
+  FRESH walkthrough before execution. Resolve AT that walkthrough: drop
+  levels/granularity? (follow-up (c) + parked design considerations (f) —
+  identifiers/levels overlap, nesting, a column as both); many-to-many
+  joins REQUIREMENT (recorded in Task 5 section); amendment 4's `shared:`
+  overlap question. Task 5 schema rows are born in the new vocabulary
+  (`appears_in: [join]`).
   Binding protocol: walkthrough-gated per task (explain, incl. a
   facts-and-sources section, → Liz reads plan step + code → she confirms →
-  execute), pre-commit duplication pass, via superpowers:executing-plans.
-  READ dev/conventions.md FIRST — it gained Terminology, Naming, and
-  Single-source-of-truth sections that bind all code. Liz edits/commits on
-  the host too: fetch /run/sandbox/source and fast-forward before working.
+  execute), pre-commit duplication pass, /simplify on the task diff before
+  final commit (edits reviewed jointly), via superpowers:executing-plans.
+  READ dev/conventions.md FIRST — Terminology (settled vocabulary +
+  retired words), Naming, and Single-source-of-truth sections bind all
+  code. Liz edits/commits on the host too: fetch /run/sandbox/source and
+  fast-forward before working.
   Planning rationale:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
 - Completed: Phase 0 (merged to main 2026-07-08; its plan's Status section
