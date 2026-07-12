@@ -304,8 +304,10 @@
   `specs/tables/` (`"joins.yaml"` resolves to `specs/joins.yaml`) —
   runs that one file with within-file checks only (Liz: filename
   selection, 2026-07-12). Return is type-stable: always `list(tables =
-  <named list>, joins = <rev_joins or NULL>)`, length-1 tables when one
-  dictionary is selected.
+  <named list>, joins = <joins tibble>)` — zero-row when skipped or not
+  selected (implementation note 2026-07-12: the pre-existing
+  `no_joins()` idiom, not the NULL this amendment first sketched) —
+  length-1 tables when one dictionary is selected.
   (d) **Joins disposition (Liz, 2026-07-12; default confirmable at Task
   17's walkthrough):** a plain TRUE/FALSE `joins` parameter on BOTH
   `rev_spec_audit()` and `rev_spec_run()` — the user simply states
