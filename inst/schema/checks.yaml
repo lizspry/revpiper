@@ -102,10 +102,18 @@ checks:
   YE06:
     scope: entry
     property: "custom: union dispatch"
-    meaning: an identifier entry is neither a column name nor a combination of columns
-    message_template: "identifier '{identifier}' must be a column name or a combination of columns"
-    params: [identifier]
-    fix: identifiers section
+    meaning: a level entry neither names a column nor declares keys or combine
+    message_template: "level '{level}' must be a column name or a mapping with 'keys' or 'combine'"
+    params: [level]
+    fix: levels section
+    implemented: true
+  YE07:
+    scope: entry
+    property: requires
+    meaning: a field is present without the field it requires
+    message_template: "'{field}' requires '{required_field}'"
+    params: [field, required_field]
+    fix: the named entry
     implemented: true
 
   # YS: source checks (across entries within one file)
@@ -134,6 +142,14 @@ checks:
     params: [reader]
     fix: source section / readers.R
     implemented: false
+  YS04:
+    scope: source
+    property: "custom: nesting"
+    meaning: level nesting via 'within' is circular
+    message_template: "level nesting is circular: {cycle}"
+    params: [cycle]
+    fix: levels section
+    implemented: true
 
   # YX: cross-source checks (across files)
 

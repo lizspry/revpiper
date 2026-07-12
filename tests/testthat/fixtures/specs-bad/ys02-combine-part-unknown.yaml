@@ -1,7 +1,7 @@
 table: estimates
 source:
   file: data/raw/estimates.csv
-identifiers:
+levels:
   study_id:
     combine: [studdy, year]
     separator: "_"

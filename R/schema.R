@@ -38,30 +38,42 @@ schema_properties <- cached(function() {
 })
 
 # One field per row, one property per column; every cell read from the yaml
-# and converted per its property's declared loading type. The entry key is
-# the field property.
+# and converted per its property's declared loading type. Fields are grouped
+# under their kind, so the entry key supplies the field property and the
+# group header supplies the kind property.
 schema_fields <- cached(function() {
   props <- schema_properties()
-  fields <- schema_yaml("fields.yaml")$fields
+  kinds <- schema_yaml("fields.yaml")$fields
   do.call(
     rbind,
-    lapply(names(fields), \(name) {
-      f <- c(list(field = name), fields[[name]])
-      cells <- lapply(seq_len(nrow(props)), \(i) {
-        value <- f[[props$property[i]]]
-        switch(
-          props$type[i],
-          string = value %||% NA_character_,
-          boolean = value,
-          list_of_strings = list(unlist(value)),
-          verbatim = list(value)
-        )
-      })
-      names(cells) <- props$property
-      do.call(tibble::tibble, cells)
+    lapply(names(kinds), \(kind) {
+      fields <- kinds[[kind]]
+      do.call(
+        rbind,
+        lapply(names(fields), \(name) {
+          f <- c(list(field = name, kind = kind), fields[[name]])
+          cells <- lapply(seq_len(nrow(props)), \(i) {
+            value <- f[[props$property[i]]]
+            switch(
+              props$type[i],
+              string = value %||% NA_character_,
+              boolean = value,
+              list_of_strings = list(unlist(value)),
+              verbatim = list(value)
+            )
+          })
+          names(cells) <- props$property
+          do.call(tibble::tibble, cells)
+        })
+      )
     })
   )
 })
+
+# The closed set of entry kinds, read from the schema's kinds list.
+schema_kinds <- function() {
+  unlist(schema_yaml("fields.yaml")$kinds)
+}
 
 # The check registry: one row per code, keyed by code.
 check_registry <- cached(function() {
@@ -85,10 +97,10 @@ check_registry <- cached(function() {
   )
 })
 
-# Schema rows for one kind of entry ("file", "source", "column", "combine").
+# Schema rows for one kind of entry ("file", "source", "column", "level", ...).
 field_schema <- function(kind) {
   s <- schema_fields()
-  s[vapply(s$appears_in, \(k) kind %in% k, logical(1)), ]
+  s[s$kind == kind, ]
 }
 
 # The type universe, read from the type row's inline domain.

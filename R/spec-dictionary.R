@@ -21,7 +21,7 @@ rev_read_dictionary <- function(path) {
   problems <- rbind(
     run_entry_checks(raw, "file", path, "file entry"),
     run_contents_checks(raw, "file", path),
-    check_identifier_entries(raw, path),
+    check_level_entries(raw, path),
     resolve_references(raw, path)
   )
   if (nrow(problems) > 0) {
@@ -101,7 +101,11 @@ run_entry_checks <- function(x, kind, file, entry) {
     ok[[f]] <- res$ok
   }
 
-  problems <- rbind(problems, check_excludes(x, schema, file, entry))
+  problems <- rbind(
+    problems,
+    check_excludes(x, schema, file, entry),
+    check_requires(x, schema, file, entry)
+  )
 
   # Type-dependent checks: permission, then content, then order, each gated
   # on the one before.
@@ -208,10 +212,9 @@ entry_label <- function(id, i, kind) {
   }
 }
 
-# Label an identifier entry: the one home for the phrase every
-# identifier check uses.
-identifier_label <- function(identifier) {
-  sprintf("identifier '%s'", identifier)
+# Label a level entry: the one home for the phrase every level check uses.
+level_label <- function(level) {
+  sprintf("level '%s'", level)
 }
 
 # YF: form checks (within one field)
@@ -383,6 +386,23 @@ check_excludes <- function(x, schema, file, entry) {
   }))
 }
 
+# YE07: a field present without the field it requires
+check_requires <- function(x, schema, file, entry) {
+  rows <- schema[!is.na(schema$requires), ]
+  bind_problems(lapply(seq_len(nrow(rows)), \(i) {
+    if (is.null(x[[rows$field[i]]]) || !is.null(x[[rows$requires[i]]])) {
+      return(no_problems())
+    }
+    flag_problem(
+      file,
+      entry,
+      "YE07",
+      field = rows$field[i],
+      required_field = rows$requires[i]
+    )
+  }))
+}
+
 # YE05: constraint entries do not match the declared type
 check_content_typed <- function(entries, type, row, file, entry) {
   if (!row$content_typed || matches_type(entries, type)) {
@@ -417,31 +437,76 @@ is_iso_date <- function(x) {
   !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
 }
 
-# YE06: identifier entry neither a column name nor a combination of
-# columns. A string resolves as a reference (YS02); a mapping validates as
-# a combine entry and registers a virtual column named by its identifier.
-check_identifier_entries <- function(raw, file) {
-  if (!is_mapping(raw$identifiers)) {
+# YE06: a level entry neither names a column nor declares keys or combine.
+# A string resolves as a reference (YS02); a mapping validates as a level
+# entry, and one with a combine registers a virtual column named by the
+# level. Dispatch is by field NAME, so a declared-but-broken keys or combine
+# reports its own root cause once instead of YE06 on top.
+check_level_entries <- function(raw, file) {
+  if (!is_mapping(raw$levels)) {
     return(no_problems()) # absence/shape already reported
   }
-  bind_problems(lapply(names(raw$identifiers), \(identifier) {
-    value <- raw$identifiers[[identifier]]
+  problems <- bind_problems(lapply(names(raw$levels), \(level) {
+    value <- raw$levels[[level]]
     if (is_string(value)) {
       return(no_problems())
     }
     if (is_mapping(value)) {
-      return(run_entry_checks(
-        value,
-        "combine",
-        file,
-        identifier_label(identifier)
-      ))
+      battery <- run_entry_checks(value, "level", file, level_label(level))
+      if (!any(c("keys", "combine") %in% names(value))) {
+        battery <- rbind(
+          battery,
+          flag_problem(file, "levels section", "YE06", level = level)
+        )
+      }
+      return(battery)
     }
-    flag_problem(file, "identifiers section", "YE06", identifier = identifier)
+    flag_problem(file, "levels section", "YE06", level = level)
   }))
+  rbind(problems, check_level_nesting(raw$levels, file))
 }
 
 # YS: source checks (across entries within one file)
+
+# YS04: level nesting via within is circular. Chains walk only through
+# mapping entries (a string level has no within); each cycle is reported
+# once, rotated to start at its alphabetically first level.
+check_level_nesting <- function(levels, file) {
+  entries <- Filter(is_mapping, levels)
+  parents <- vapply(
+    entries,
+    \(e) if (is_string(e$within)) e$within else NA_character_,
+    character(1)
+  )
+  cycles <- list()
+  for (start in names(parents)) {
+    path <- character(0)
+    current <- start
+    while (
+      !is.na(current) && current %in% names(parents) && !(current %in% path)
+    ) {
+      path <- c(path, current)
+      current <- parents[[current]]
+    }
+    if (!is.na(current) && current %in% path) {
+      nodes <- path[seq(which(path == current), length(path))]
+      anchor <- which(nodes == min(nodes))[1]
+      rotated <- c(
+        nodes[seq(anchor, length(nodes))],
+        nodes[seq_len(anchor - 1)]
+      )
+      cycles[[paste(rotated, collapse = " ")]] <- rotated
+    }
+  }
+  bind_problems(lapply(cycles, \(nodes) {
+    flag_problem(
+      file,
+      "levels section",
+      "YS04",
+      cycle = paste0("'", c(nodes, nodes[[1]]), "'", collapse = " -> ")
+    )
+  }))
+}
 
 # YS01: two sibling entries claim the same name
 check_identity <- function(ids, kind, file) {
@@ -513,20 +578,18 @@ check_reference <- function(values, declared, section, file, entry) {
 reference_instances <- function(raw, field) {
   switch(
     field,
-    identifiers = {
-      if (!is_mapping(raw$identifiers)) {
-        return(list())
-      }
-      strings <- Filter(is_string, raw$identifiers)
-      lapply(strings, \(v) list(values = v, entry = "identifiers section"))
-    },
     levels = {
       if (!is_mapping(raw$levels)) {
         return(list())
       }
-      keys <- Filter(is.character, lapply(raw$levels, unlist))
-      lapply(keys, \(v) list(values = v, entry = "levels section"))
+      strings <- Filter(is_string, raw$levels)
+      lapply(names(strings), \(level) {
+        list(values = strings[[level]], entry = level_label(level))
+      })
     },
+    keys = level_field_instances(raw, "keys"),
+    combine = level_field_instances(raw, "combine"),
+    within = level_field_instances(raw, "within"),
     constant_within_level = {
       if (!is_list_of_mappings(raw$columns)) {
         return(list())
@@ -541,27 +604,29 @@ reference_instances <- function(raw, field) {
       })
       Filter(Negate(is.null), instances)
     },
-    combine = {
-      if (!is_mapping(raw$identifiers)) {
-        return(list())
-      }
-      instances <- lapply(names(raw$identifiers), \(identifier) {
-        combination <- raw$identifiers[[identifier]]
-        if (!is_mapping(combination)) {
-          return(NULL)
-        }
-        parts <- unlist(combination$combine)
-        if (!is.character(parts)) {
-          return(NULL)
-        }
-        list(values = parts, entry = identifier_label(identifier))
-      })
-      Filter(Negate(is.null), instances)
-    },
     cli::cli_abort(
       "Internal error: reference_instances() cannot place field {.val {field}}."
     )
   )
+}
+
+# Instances of one field across the well-shaped mapping entries of levels.
+level_field_instances <- function(raw, field) {
+  if (!is_mapping(raw$levels)) {
+    return(list())
+  }
+  instances <- lapply(names(raw$levels), \(level) {
+    entry <- raw$levels[[level]]
+    if (!is_mapping(entry)) {
+      return(NULL)
+    }
+    values <- unlist(entry[[field]])
+    if (!is.character(values)) {
+      return(NULL)
+    }
+    list(values = values, entry = level_label(level))
+  })
+  Filter(Negate(is.null), instances)
 }
 
 # The names a section declares, by section. The unknown-section abort is
@@ -572,10 +637,26 @@ declared_names <- function(raw, section) {
     section,
     columns = declared_columns(raw),
     levels = declared_levels(raw),
+    "key columns" = {
+      columns <- declared_columns(raw)
+      if (is.null(columns)) NULL else c(columns, virtual_columns(raw))
+    },
     cli::cli_abort(
       "Internal error: no section named {.val {section}} declares names."
     )
   )
+}
+
+# The virtual columns combine levels register, each named by its level.
+virtual_columns <- function(x) {
+  if (!is_mapping(x$levels)) {
+    return(character(0))
+  }
+  combines <- Filter(
+    \(entry) is_mapping(entry) && !is.null(entry$combine),
+    x$levels
+  )
+  names(combines) %||% character(0)
 }
 
 # Declared column names, or NULL when the columns section is malformed.
@@ -680,7 +761,6 @@ new_dictionary <- function(raw, path) {
         sheet = raw$source$sheet,
         reader = raw$source$reader
       ),
-      identifiers = raw$identifiers %||% list(),
       levels = raw$levels %||% list(),
       columns = columns,
       path = path
@@ -690,8 +770,7 @@ new_dictionary <- function(raw, path) {
 }
 
 # Columns usable as keys: every declared column, plus the virtual column
-# each combine identifier registers (named by its identifier).
+# each combine level registers (named by its level).
 dictionary_key_columns <- function(dict) {
-  virtual <- names(Filter(is_mapping, dict$identifiers))
-  c(dict$columns$name, virtual)
+  c(dict$columns$name, virtual_columns(dict))
 }

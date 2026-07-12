@@ -28,6 +28,31 @@ set_field <- function(x, field, value) {
   x
 }
 
+# Place one field of one kind into a minimal dictionary. For the level kind
+# the baseline entry satisfies every OTHER field's rules (separator needs a
+# combine beside it), so only the placed field's own problem surfaces.
+place_field <- function(d, kind, field, value) {
+  if (kind == "file") {
+    return(set_field(d, field, value))
+  }
+  if (kind == "source") {
+    d$source <- set_field(d$source, field, value)
+    return(d)
+  }
+  if (kind == "column") {
+    d$columns[[1]] <- set_field(d$columns[[1]], field, value)
+    return(d)
+  }
+  base <- switch(
+    field,
+    separator = list(combine = c("study", "mean_age")),
+    within = list(keys = "study"),
+    list()
+  )
+  d$levels <- list(l1 = set_field(base, field, value))
+  d
+}
+
 # Round-trip a dictionary list through a temp yaml file.
 read_dict <- function(dict) {
   tmp <- tempfile(fileext = ".yaml")
@@ -96,18 +121,11 @@ test_that("vocabulary: unknown fields flag YE01 for every kind of entry", {
 
 test_that("empty: a NULL value flags YF01 unless the schema says empty_ok", {
   base <- minimal_dict()
-  for (kind in c("file", "source", "column")) {
+  for (kind in c("file", "source", "column", "level")) {
     schema <- field_schema(kind)
     for (i in seq_len(nrow(schema))) {
       row <- schema[i, ]
-      d <- base
-      if (kind == "file") {
-        d <- set_field(d, row$field, NULL)
-      } else if (kind == "source") {
-        d$source <- set_field(d$source, row$field, NULL)
-      } else {
-        d$columns[[1]] <- set_field(d$columns[[1]], row$field, NULL)
-      }
+      d <- place_field(base, kind, row$field, NULL)
       got <- codes_of(d)
       if (row$empty_ok) {
         expect_identical(got, character(0), info = paste(kind, row$field))
@@ -127,19 +145,11 @@ test_that("shape and cardinality violations flag YF02, without cascade", {
     mapping = "not a mapping",
     list_of_mappings = "not mappings"
   )
-  for (kind in c("file", "source", "column")) {
+  for (kind in c("file", "source", "column", "level")) {
     schema <- field_schema(kind)
     for (i in seq_len(nrow(schema))) {
       row <- schema[i, ]
-      d <- base
-      bad <- bad_for[[row$shape]]
-      if (kind == "file") {
-        d[[row$field]] <- bad
-      } else if (kind == "source") {
-        d$source[[row$field]] <- bad
-      } else {
-        d$columns[[1]][[row$field]] <- bad
-      }
+      d <- place_field(base, kind, row$field, bad_for[[row$shape]])
       expect_identical(codes_of(d), "YF02", info = paste(kind, row$field))
     }
   }
@@ -256,12 +266,23 @@ test_that("refers_to: every referring field flags YS02 or resolves silently", {
     d <- minimal_dict()
     switch(
       field,
-      identifiers = {
-        d$identifiers <- list(study_id = value)
-        d
-      },
       levels = {
         d$levels <- list(study = value)
+        d
+      },
+      keys = {
+        d$levels <- list(study = list(keys = value))
+        d
+      },
+      combine = {
+        d$levels <- list(study_id = list(combine = value, separator = "_"))
+        d
+      },
+      within = {
+        d$levels <- list(
+          study = "study",
+          substudy = list(keys = "mean_age", within = value)
+        )
         d
       },
       constant_within_level = {
@@ -269,24 +290,22 @@ test_that("refers_to: every referring field flags YS02 or resolves silently", {
         d$columns[[2]]$constant_within_level <- value
         d
       },
-      combine = {
-        d$identifiers <- list(study_id = list(combine = value, separator = "_"))
-        d
-      },
       stop(sprintf("refers_to matrix has no builder for field '%s'", field))
     )
   }
   resolving <- list(
-    identifiers = "study",
     levels = "study",
-    constant_within_level = "study",
-    combine = c("study", "mean_age")
+    keys = "study",
+    combine = c("study", "mean_age"),
+    within = "study",
+    constant_within_level = "study"
   )
   broken <- list(
-    identifiers = "no_such_column",
     levels = "no_such_column",
-    constant_within_level = "no_such_level",
-    combine = c("no_such_column", "mean_age")
+    keys = "no_such_column",
+    combine = c("no_such_column", "mean_age"),
+    within = "no_such_level",
+    constant_within_level = "no_such_level"
   )
   s <- schema_fields()
   referring <- s$field[!is.na(s$refers_to)]
@@ -311,32 +330,87 @@ test_that("every refers_to vocabulary value has declared names", {
   }
 })
 
-test_that("identifier entries dispatch: string, combination, else YE06", {
+test_that("level entries dispatch: string, keys, combination, else YE06", {
   d <- minimal_dict()
-  d$identifiers <- list(study_id = "study")
+  d$levels <- list(study = "study")
   expect_identical(codes_of(d), character(0))
-  d$identifiers <- list(
+  d$levels <- list(study = list(keys = c("study", "mean_age")))
+  expect_identical(codes_of(d), character(0))
+  d$levels <- list(
     study_id = list(combine = c("study", "mean_age"), separator = "_")
   )
   expect_identical(codes_of(d), character(0))
   for (bad in list(7, TRUE, c("study", "mean_age"))) {
-    d$identifiers <- list(study_id = bad)
+    d$levels <- list(study_id = bad)
     expect_identical(codes_of(d), "YE06", info = class(bad))
   }
+  # a mapping that neither names nor builds its key columns
+  d$levels <- list(study = "study", sub = list(within = "study"))
+  expect_identical(codes_of(d), "YE06")
 })
 
-test_that("a malformed combination reports battery codes, not YE06", {
+test_that("a combination without separator is legal (direct concatenation)", {
   d <- minimal_dict()
-  d$identifiers <- list(study_id = list(combine = c("study", "mean_age")))
-  expect_identical(codes_of(d), "YE02")
-  d$identifiers <- list(
+  d$levels <- list(study_key = list(combine = c("study", "mean_age")))
+  expect_identical(codes_of(d), character(0))
+})
+
+test_that("a malformed level mapping reports battery codes precisely", {
+  d <- minimal_dict()
+  d$levels <- list(
     study_id = list(combyne = c("study", "mean_age"), separator = "_")
   )
-  expect_setequal(codes_of(d), c("YE01", "YE02"))
-  d$identifiers <- list(
+  expect_setequal(codes_of(d), c("YE01", "YE06", "YE07"))
+  d$levels <- list(
     study_id = list(combine = c("study", "study"), separator = "_")
   )
   expect_identical(codes_of(d), "YF04")
+  d$levels <- list(
+    study_id = list(keys = "study", combine = c("study", "mean_age"))
+  )
+  expect_identical(codes_of(d), "YE04")
+  d$levels <- list(study_id = list(keys = "study", separator = "_"))
+  expect_identical(codes_of(d), "YE07")
+})
+
+test_that("within nests levels, tolerating forward references", {
+  d <- minimal_dict()
+  d$levels <- list(
+    study = "study",
+    substudy = list(keys = "mean_age", within = "study")
+  )
+  expect_identical(codes_of(d), character(0))
+  d$levels <- list(
+    substudy = list(keys = "mean_age", within = "study"),
+    study = "study"
+  )
+  expect_identical(codes_of(d), character(0))
+})
+
+test_that("circular within nesting flags YS04 exactly once per cycle", {
+  d <- minimal_dict()
+  d$levels <- list(
+    a = list(keys = "study", within = "b"),
+    b = list(keys = "mean_age", within = "a")
+  )
+  problems <- problems_of(d)
+  expect_identical(unique(problems$code), "YS04")
+  expect_identical(nrow(problems), 1L)
+  d$levels <- list(a = list(keys = "study", within = "a"))
+  expect_identical(codes_of(d), "YS04")
+})
+
+test_that("a level's keys may reference another level's virtual column", {
+  d <- minimal_dict()
+  d$levels <- list(
+    study_key = list(combine = c("study", "mean_age"), separator = "_"),
+    substudy = list(keys = "study_key")
+  )
+  expect_identical(codes_of(d), character(0))
+  expect_identical(
+    dictionary_key_columns(read_dict(d)),
+    c("study", "mean_age", "study_key")
+  )
 })
 
 test_that("dictionary_key_columns returns declared plus virtual columns", {
@@ -345,9 +419,9 @@ test_that("dictionary_key_columns returns declared plus virtual columns", {
     dictionary_key_columns(dict),
     c("study", "design", "mean_age", "rob_score", "notes_temp")
   )
-  # good variant: a combine identifier parses and registers its virtual column
+  # good variant: a combine level parses and registers its virtual column
   d <- minimal_dict()
-  d$identifiers <- list(
+  d$levels <- list(
     study_id = list(combine = c("study", "mean_age"), separator = "_")
   )
   expect_identical(
@@ -386,7 +460,6 @@ test_that("rev_read_dictionary parses a valid dictionary into every slot", {
   expect_equal(dict$source$file, "data/raw/estimates.csv")
   expect_null(dict$source$sheet)
   expect_null(dict$source$reader)
-  expect_equal(dict$identifiers$study_id, "study")
   expect_equal(dict$levels$study, "study")
   expect_equal(dict$path, good_path())
 
@@ -464,9 +537,13 @@ test_that("each single-defect dictionary aborts naming its problem", {
   expect_snapshot(error = TRUE, read_bad("yf04-duplicate-values.yaml"))
   expect_snapshot(error = TRUE, read_bad("yf05-descending-range.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys01-duplicate-column.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye06-identifier-number.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ye06-level-number.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ye07-separator-without-combine.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ys02-key-unknown-column.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys02-combine-part-unknown.yaml"))
   expect_snapshot(error = TRUE, read_bad("ys02-cwl-unknown-level.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ys02-within-unknown-level.yaml"))
+  expect_snapshot(error = TRUE, read_bad("ys04-within-cycle.yaml"))
   expect_snapshot(error = TRUE, read_bad("yf04-duplicate-combine-parts.yaml"))
 })
 

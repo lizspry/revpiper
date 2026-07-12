@@ -16,9 +16,13 @@ source), not here — this document covers code conventions only.
   pairs): a column with its fields, the source with its fields, a
   combination of columns with its fields — and the file itself, whose
   top-level fields form the file entry.
-- Entries come in four **kinds** — file, source, column, combine. Which
-  fields are legal depends on the kind (schema property `appears_in`);
-  container fields declare the kind of entry inside them (`contains`).
+- Entries come in **kinds** — file, source, column, level, and (from the
+  joins spec) join and join_file. The schema groups fields under their kind
+  (`kinds:` list; there is no appears_in property), so which fields are
+  legal follows from the grouping and the same field name may carry
+  kind-specific properties; container fields declare the kind of entry
+  inside them (`contains`). "kind" is provisional wording — internal-only,
+  cheap to rename, under later review (Liz 2026-07-12).
 - An entry's **name** is the value of the one field that identifies it
   (`name:` for a column, `table:` for the file; the schema marks that
   field `identity: true`). Messages point at entries by name; duplicate
@@ -26,22 +30,25 @@ source), not here — this document covers code conventions only.
 - A field the schema marks `refers_to` a section must have values naming
   something that section declares (a declared column, a declared level);
   unresolved references get did-you-mean suggestions.
-- An **identifier** (section `identifiers:`, formerly `roles:`) maps a
-  pipeline handle such as `study_id` to one of the user's own columns, or
-  to a combination of columns (`combine` + `separator`) — the built column
-  is a **virtual column** named by the identifier. Identifier keys are
-  pipeline vocabulary; identifier values are always the user's words.
+- A **level** (section `levels:`, which absorbed `identifiers:` —
+  execution amendment 7) maps a user-named grouping of the data to what
+  identifies it: a column name, `keys:` naming column(s), or `combine:`
+  building a **virtual column** named by the level (optional `separator`,
+  default `""`); optional `within:` names the parent level (explicit
+  nesting; cycles are spec errors). Level names are always the user's
+  words — nothing is pipeline-reserved.
 - The package schema (`inst/schema/fields.yaml`) defines each field's
   **properties** (shape, cardinality, domain, ...). Properties generate
   **checks**; check failures are **problems** (spec side, abort) or
   **findings** (data side, routed). Never say "attributes" (R-reserved).
 - A **mapping** is a named group of `key: value` pairs (YAML mapping, R
   named list); a mapping with no `contains` kind has user-chosen keys —
-  data, not vocabulary (identifiers, levels).
-- Retired words — never reintroduce: "level"/"context" for entry kinds
-  (and "top" for the file kind), "block" (say section), "collection" (say
-  what a section declares), "role" (say identifier), "walker" (describe
-  the job).
+  data, not vocabulary (levels).
+- Retired words — never reintroduce: "context" for entry kinds (and "top"
+  for the file kind), "block" (say section), "collection" (say what a
+  section declares), "role" and "identifier" (say level — the sections
+  merged, amendment 7), "appears_in" (kind grouping replaced it), "walker"
+  (describe the job).
 - Spec-check codes carry a scope prefix, with one term per scope used
   everywhere: **YF** form (within one field), **YE** entry (across fields
   within one entry), **YS** source (across entries within one file),

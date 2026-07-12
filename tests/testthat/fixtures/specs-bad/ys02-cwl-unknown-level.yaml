@@ -2,7 +2,7 @@ table: estimates
 source:
   file: data/raw/estimates.csv
 levels:
-  study: [study]
+  study: study
 columns:
   - name: study
     type: text

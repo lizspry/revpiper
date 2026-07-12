@@ -126,11 +126,29 @@
 ---
 
     Code
-      read_bad("ye06-identifier-number.yaml")
+      read_bad("ye06-level-number.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YE06 fixtures/specs-bad/ye06-identifier-number.yaml / identifiers section: identifier 'study_id' must be a column name or a combination of columns
+      x YE06 fixtures/specs-bad/ye06-level-number.yaml / levels section: level 'study_id' must be a column name or a mapping with 'keys' or 'combine'
+
+---
+
+    Code
+      read_bad("ye07-separator-without-combine.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YE07 fixtures/specs-bad/ye07-separator-without-combine.yaml / level 'study': 'separator' requires 'combine'
+
+---
+
+    Code
+      read_bad("ys02-key-unknown-column.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS02 fixtures/specs-bad/ys02-key-unknown-column.yaml / level 'study': 'studyy' does not name one of the declared key columns (did you mean 'study'?)
 
 ---
 
@@ -139,7 +157,7 @@
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YS02 fixtures/specs-bad/ys02-combine-part-unknown.yaml / identifier 'study_id': 'studdy' does not name one of the declared columns (did you mean 'study'?)
+      x YS02 fixtures/specs-bad/ys02-combine-part-unknown.yaml / level 'study_id': 'studdy' does not name one of the declared columns (did you mean 'study'?)
 
 ---
 
@@ -153,11 +171,29 @@
 ---
 
     Code
+      read_bad("ys02-within-unknown-level.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS02 fixtures/specs-bad/ys02-within-unknown-level.yaml / level 'substudy': 'study' does not name one of the declared levels
+
+---
+
+    Code
+      read_bad("ys04-within-cycle.yaml")
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS04 fixtures/specs-bad/ys04-within-cycle.yaml / levels section: level nesting is circular: 'study' -> 'substudy' -> 'study'
+
+---
+
+    Code
       read_bad("yf04-duplicate-combine-parts.yaml")
     Condition
       Error:
       ! Spec validation failed (1 problem):
-      x YF04 fixtures/specs-bad/yf04-duplicate-combine-parts.yaml / identifier 'study_id': field 'combine' has duplicate entries: 'study'
+      x YF04 fixtures/specs-bad/yf04-duplicate-combine-parts.yaml / level 'study_id': field 'combine' has duplicate entries: 'study'
 
 # every problem in a broken dictionary is reported at once
 

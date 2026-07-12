@@ -2,9 +2,9 @@ table: estimates
 source:
   file: data/raw/estimates.csv
 levels:
-  study_id:
-    combine: [study, study]
-    separator: "_"
+  substudy:
+    keys: substudy_code
+    within: study
 columns:
-  - name: study
+  - name: substudy_code
     type: text

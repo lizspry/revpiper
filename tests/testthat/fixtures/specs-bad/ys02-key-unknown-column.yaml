@@ -1,8 +1,9 @@
 table: estimates
 source:
   file: data/raw/estimates.csv
-identifiers:
-  study_id: 7
+levels:
+  study:
+    keys: studyy
 columns:
   - name: study
     type: text

@@ -19,10 +19,34 @@ test_that("field_schema returns rows for every kind, shaped by properties", {
   )
   expect_setequal(
     field_schema("file")$field,
-    c("table", "description", "source", "identifiers", "levels", "columns")
+    c("table", "description", "source", "levels", "columns")
   )
   expect_setequal(field_schema("source")$field, c("file", "sheet", "reader"))
-  expect_setequal(field_schema("combine")$field, c("combine", "separator"))
+  expect_setequal(
+    field_schema("level")$field,
+    c("keys", "combine", "separator", "within")
+  )
+})
+
+test_that("the kinds list closes the schema's kind vocabulary", {
+  kinds <- schema_kinds()
+  s <- schema_fields()
+  expect_true(all(s$kind %in% kinds))
+  expect_true(all(s$contains[!is.na(s$contains)] %in% kinds))
+})
+
+test_that("same-named fields across kinds agree unless recorded divergent", {
+  # Recorded divergences — same name, deliberately different properties per
+  # kind. Input to the amendment 7h fact-home review. None yet.
+  recorded <- character(0)
+  s <- schema_fields()
+  shared <- setdiff(unique(s$field[duplicated(s$field)]), recorded)
+  for (f in shared) {
+    rows <- s[s$field == f, setdiff(names(s), "kind")]
+    for (j in seq_len(nrow(rows))[-1]) {
+      expect_identical(rows[j, ], rows[1, ], info = f)
+    }
+  }
 })
 
 test_that("schema_types returns the five types from type's inline domain", {
@@ -71,10 +95,15 @@ test_that("relational meta-rules hold across schema rows", {
   restricted <- !vapply(s$permitted_types, identical, logical(1), "any")
   expect_true(all(restricted[s$content_typed]))
   expect_true(all(restricted[!is.na(s$ordered)]))
-  # excludes targets are fields that exist
-  for (targets in s$excludes) {
+  # excludes and requires targets are fields of the same kind, never self
+  for (i in seq_len(nrow(s))) {
+    siblings <- setdiff(s$field[s$kind == s$kind[i]], s$field[i])
+    targets <- s$excludes[[i]]
     if (!is.null(targets)) {
-      expect_true(all(targets %in% s$field))
+      expect_true(all(targets %in% siblings), info = s$field[i])
+    }
+    if (!is.na(s$requires[i])) {
+      expect_true(s$requires[i] %in% siblings, info = s$field[i])
     }
   }
   # contains only on mapping shapes
