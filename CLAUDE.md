@@ -52,14 +52,16 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   dropped, `adds: variables | observations`, four-value relationship
   domain, fields.yaml nested by kind, joins spec + YX02/YX03 live;
   /simplify pass applied, reviewed jointly). NEXT (before Task 6's
-  walkthrough): the two Task 5-close checkpoints recorded in the plan's
-  Task 5 blockquote — (1) the FORMAT REVIEW with Liz (user-facing spec
-  format against goals; agenda includes the schema vocabulary gaps,
-  permitted_when generalisation, "kind" wording), then (2) the
-  collaborator deliverable (academic-planning skill; Liz owns structure;
-  framing recorded in the blockquote). m:m/append data-check semantics
-  parked to Task 11's walkthrough; structural reviews at Task 14
-  (amendment 7h).
+  walkthrough), in order: (1) SPEC CONSOLIDATION per
+  dev/superpowers/plans/2026-07-12-spec-consolidation-brief.md —
+  extraction table first, then rewrite, Liz reviews the diff; (2) the
+  architecture discussion with Liz (agenda in the plan's Task 5-close
+  blockquote: schema vocabulary gaps, permitted_when, "kind" wording,
+  divergence list — decisions only, no pre-built review apparatus);
+  (3) the collaborator deliverable (academic-planning skill; Liz owns
+  structure; framing in the same blockquote). m:m/append data-check
+  semantics parked to Task 11's walkthrough; structural reviews at
+  Task 14 (amendment 7h).
   Binding protocol: walkthrough-gated per task (explain, incl. a
   facts-and-sources section, → Liz reads plan step + code → she confirms →
   execute), pre-commit duplication pass, /simplify on the task diff before
