@@ -274,8 +274,8 @@
   fix the old text rather than annotate it; pre-amendment wording is in
   git history).
 - **Execution amendment 9 (2026-07-12; from Liz's review at the Task 15
-  walkthrough — the reader pair and step-command naming; DRAFTED,
-  AWAITING LIZ'S SIGN-OFF):** user-facing naming grammar + one door per
+  walkthrough — the reader pair and step-command naming; SIGNED OFF,
+  Liz 2026-07-12):** user-facing naming grammar + one door per
   purpose.
   (a) **Naming grammar (binds all user-facing workflow functions):**
   `rev_<step>_<action>`, step words per conventions Terminology (spec,
@@ -311,10 +311,11 @@
   `rev_spec_audit()` and `rev_spec_run()` — the user simply states
   whether joins are included. `TRUE` + no `joins.yaml` = error; `FALSE`
   = joins skipped regardless of availability (no warning — deliberate).
-  Three-state auto rejected. Default `FALSE` (explicit opt-in; a
-  single-table project works out of the box — the default is the one
-  sub-point left to confirm at the walkthrough). The report and
-  certificate ALWAYS state the joins disposition (included / excluded)
+  Three-state auto rejected. Default `TRUE` (Liz, 2026-07-12: the user
+  must intentionally override — a safeguard when a joins file exists;
+  single-table projects state `joins = FALSE` explicitly). The report
+  and certificate ALWAYS state the joins disposition (included /
+  excluded)
   — a certificate silent on what it skipped would misrepresent what was
   certified.
   (e) **Relation to `rev_run()` (amendment 8) — DEFERRED to Phase 2

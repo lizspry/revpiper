@@ -48,7 +48,10 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   audited in
   dev/superpowers/plans/2026-07-12-spec-consolidation-extraction.md).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
-  SIGNED OFF with execution amendments 1-8 (amendment 8 signed off
+  SIGNED OFF with execution amendments 1-9 (amendment 9, 2026-07-12:
+  `rev_<step>_<action>` grammar, audit/run action pair per step,
+  rev_spec_audit + rev_spec_run(dir, file, joins = TRUE) replacing the
+  three exported readers; amendment 8 signed off
   2026-07-12 after one review amendment, the front matter rewritten in
   place: workflow step model spec → load → process → transform;
   rev_run(); Phase 1 re-cut to SPEC ONLY, phases re-numbered 1-7 with
