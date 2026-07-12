@@ -1,4 +1,4 @@
-# Phase 1 — Spec Machinery + Stages 1–3 Implementation Plan
+# Phase 1 — Spec Machinery Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (Liz's
 > standing preference: checkpointed mode, check in at every checkpoint) to implement
@@ -256,7 +256,7 @@
   vs `load-`/`process-`/`transform-*` execution; shared machinery
   unprefixed. Phase 1 renames: spec-dictionary.R → spec-check.R (shared
   battery + plumbing) + spec-source.R (within-source + set identity);
-  spec-joins.R → spec-join.R. The File map above is superseded accordingly.
+  spec-joins.R → spec-join.R. The File map above is restated accordingly.
   (e) **Held Task 5-close agenda dispositions:** format convolution check
   passed (no change); "kind" wording kept (question closed);
   same-named-field divergence list kept (conformance test guards drift);
@@ -267,22 +267,28 @@
   moves to the process phase's close-out).
   (f) Spec amended in the same commit (§2, §3, §6, §7.3, §9, §10);
   conventions Terminology gains the step words and retires "derive"
-  user-facing. The Goal/Architecture front matter above reads as authored
-  2026-07-09 and is superseded where it conflicts with this amendment.
+  user-facing. The title, Goal/Architecture front matter, and File map are
+  rewritten in place to state the re-cut scope (Liz's review 2026-07-12:
+  fix the old text rather than annotate it; pre-amendment wording is in
+  git history).
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (consolidated 2026-07-12). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
 
-**Goal:** Implement revpiper's spec machinery and pipeline stages 1–3 — per-table
-dictionaries, joins spec, readers, standardisation, per-table validation, joins with
-J-checks, the consequence-based findings object with certification, `rev_check()`,
-and the minimal dictionary draft generator — fully TDD'd, CI green.
+**Goal:** Implement revpiper's spec machinery — the workflow's spec step:
+per-table dictionaries, the joins spec, schema-driven validation, the spec
+report with certification, and the spec-step runner — fully TDD'd, CI green.
+(Phase 1 was re-cut to the spec step by amendment 8; old Tasks 6–13 below
+are FROZEN source material for Phases 2–3, not executable from this plan.)
 
-**Architecture:** Functional core; one file per topic (provisional layout, spec §5);
-S3 for `rev_dictionary`, `rev_findings`, `rev_report`. All input read as
-character; types exist only via declared coercion (prespecify-then-check). Findings
-carry consequences, never severities; certification = zero standing findings, with
-explicit acknowledgment declarations the only pass.
+**Architecture:** Functional core; two-axis file layout (spec §7.3):
+`spec-*` declaration surfaces vs later steps' execution files, shared
+machinery unprefixed; S3 for `rev_dictionary` and `rev_report`. Checks are
+GENERATED from schema properties — `inst/schema/fields.yaml` is the single
+source of truth. Spec problems abort loading with all problems listed
+(file+entry, did-you-mean); the spec-step runner catches them into the
+spec report, which always completes — certification = zero standing
+problems, and the CERTIFIED report is the registerable artifact.
 
 **Tech Stack:** R (4.2 floor), yaml, readxl, writexl, dplyr, tidyr, stringi, cli,
 rlang (>= 1.3.0, supplying the entry-point type checkers); testthat 3e (parallel,
@@ -367,24 +373,23 @@ snapshots).
    only. Supersedes both the `home: exclude` mechanism (doesn't exist in pkgdown
    2.2.0) and the interim post-build-prune proposal.
 
-## File map (provisional layout per spec §5)
+## File map (two-axis layout, spec §7.3; re-cut by amendment 8)
 
 | File | Responsibility | Test twin |
 |---|---|---|
 | `R/utils-messages.R` | spec-error formatting, did-you-mean, cli wrappers | `tests/testthat/test-utils-messages.R` |
-| `R/spec-dictionary.R` | load/validate `specs/tables/<t>.yaml` → `rev_dictionary` (Y-checks) | `test-spec-dictionary.R` |
-| `R/spec-joins.R` | load/validate `specs/joins.yaml` (Y-checks vs dictionaries) | `test-spec-joins.R` |
-| `R/read.R` | generic csv/xlsx readers, reader dispatch, R-checks | `test-read.R` |
-| `R/read-covidence.R` | Covidence all-data CSV importer | `test-read-covidence.R` |
-| `R/standardise.R` | five ops + composed keys + counts log | `test-standardise.R` |
-| `R/report.R` | generic stage report + certification machinery (all stages) | `test-report.R` |
-| `R/findings.R` | `rev_findings`, consequences, check-stage item schema | `test-findings.R` |
-| `R/validate.R` | V-checks per table | `test-validate.R` |
-| `R/join.R` | join execution + J-checks + near-miss suggestions | `test-join.R` |
-| `R/check.R` | `rev_check()` orchestration + diagnostics output | `test-check.R` |
-| `R/draft.R` | `rev_draft_dictionary()` | `test-draft.R` |
 | `inst/schema/fields.yaml` | single source of truth: every spec field's properties | schema self-validation in `test-schema.R` |
 | `R/schema.R` | schema loader (cached), accessors | `test-schema.R` |
+| `R/spec-check.R` | generic schema-driven battery: check definitions, shape/type matchers, problem plumbing (Task 15 splits it out of `spec-dictionary.R`) | `test-spec-check.R` |
+| `R/spec-source.R` | `rev_read_dictionary()`/`rev_read_dictionaries()`: per-table dictionaries, levels, reference resolution, set identity (the split's other half) | `test-spec-source.R` |
+| `R/spec-join.R` | load/validate `specs/joins.yaml` (Y-checks vs dictionaries; renamed from `spec-joins.R`, Task 15) | `test-spec-join.R` |
+| `R/report.R` | stage report + certification machinery, spec instantiation only (findings item schema lands in Phase 2) | `test-report.R` |
+| spec-step runner — file named with the user-facing command at Task 17's walkthrough | data-free spec step: load specs, catch problems, report, certify | mirror rule |
+
+Files for the frozen old Tasks 6–13 (`read.R`, `read-covidence.R`,
+`standardise.R`, `findings.R`, `validate.R`, `join.R`, `check.R`,
+`draft.R`) move to Phases 2–3 with their tasks and get their spec-§7.3
+names in those phases' plans.
 
 ## Check catalogue, routing, and data-dict coverage (plan deliverable)
 
