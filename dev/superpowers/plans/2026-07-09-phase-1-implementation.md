@@ -279,39 +279,60 @@
   purpose.
   (a) **Naming grammar (binds all user-facing workflow functions):**
   `rev_<step>_<action>`, step words per conventions Terminology (spec,
-  load, process, transform). Action words at v1: `audit` — run the
-  step's checks and write its report + certificate, never aborting;
-  `read` — programmatic loader returning validated objects, aborting
-  with all problems listed. `run` is RESERVED for data execution:
-  `rev_run()` (amendment 8) keeps its step-free name because running is
-  the one cross-step verb (steps as prefixes of one run); no per-step
-  `_run` exists. Internal `check_*` naming (conventions, closed
-  decision) is untouched — "audit" is the user-facing word, "check"
-  stays internal. Later steps' command spellings follow this grammar,
-  settling per phase as amendment 8 provides.
+  load, process, transform). Two action words, the same pair at every
+  step (Liz, 2026-07-12 — deliberate): `audit` — check and report:
+  write the step's report + certificate, never aborting; `run` —
+  actually execute the step and produce its output (spec step: the
+  validated spec objects; later steps: their artifacts, e.g. saved
+  files). A run of an unsound step cannot produce output: `run` aborts
+  with all problems listed, pointing at the step's audit. Internal
+  `check_*` naming (conventions, closed decision) is untouched —
+  "audit" is the user-facing word, "check" stays internal. Later
+  steps' spellings follow this grammar, settling per phase as
+  amendment 8 provides.
   (b) **Task 17's runner is `rev_spec_audit()`** (replaces the incumbent
   candidate `rev_check_specs()`; semantics exactly as Task 17 states).
-  (c) **Reader merge — one export replaces three.** `rev_spec_read(dir =
-  "specs", file = NULL)` replaces exported `rev_read_dictionary()`,
-  `rev_read_dictionaries()`, and `rev_read_joins()`, which become
-  internal `read_dictionary()`, `read_dictionaries()`, `read_joins()`
-  (the decomposition is unchanged; it stops being API). Default (`file
-  = NULL`): read + validate the whole spec set — every dictionary
-  standalone, the set-identity check, `joins.yaml` validated against
-  the dictionaries; absent `joins.yaml` → joins slot NULL (single-table
-  projects). `file = "<name>.yaml"` — a FILENAME, not a path, resolved
-  against `specs/tables/` (`"joins.yaml"` resolves to
-  `specs/joins.yaml`) — reads that one file with within-file checks
-  only (Liz: filename selection, 2026-07-12). Return is type-stable:
-  always `list(tables = <named list>, joins = <rev_joins or NULL>)`,
-  length-1 tables when one dictionary is selected.
-  (d) **Sequencing:** implemented as its own TDD commit BEFORE Task 15,
+  (c) **Reader merge — one export replaces three.** `rev_spec_run(dir =
+  "specs", file = NULL, joins = NULL)` replaces exported
+  `rev_read_dictionary()`, `rev_read_dictionaries()`, and
+  `rev_read_joins()`, which become internal `read_dictionary()`,
+  `read_dictionaries()`, `read_joins()` (the decomposition is
+  unchanged; it stops being API). Default (`file = NULL`): read +
+  validate the whole spec set — every dictionary standalone, the
+  set-identity check, `joins.yaml` validated against the dictionaries.
+  `file = "<name>.yaml"` — a FILENAME, not a path, resolved against
+  `specs/tables/` (`"joins.yaml"` resolves to `specs/joins.yaml`) —
+  runs that one file with within-file checks only (Liz: filename
+  selection, 2026-07-12). Return is type-stable: always `list(tables =
+  <named list>, joins = <rev_joins or NULL>)`, length-1 tables when one
+  dictionary is selected.
+  (d) **Joins disposition (incumbent design; resolves at Task 17's
+  walkthrough):** the dict and joins specs may not both exist or be
+  ready, and the user may not want both handled at once. Incumbent: a
+  three-state `joins` parameter on BOTH `rev_spec_audit()` and
+  `rev_spec_run()` — `NULL` (default) = include `joins.yaml` iff
+  present; `FALSE` = exclude even if present (drafted but not ready);
+  `TRUE` = require (its absence is itself a problem). The report and
+  certificate ALWAYS state the joins disposition (included / absent /
+  excluded by user) — a certificate that silently skipped a joins spec
+  would misrepresent what was certified. Flagged as an open question in
+  spec §10.
+  (e) **Relation to `rev_run()` (amendment 8) — open, owned by Phase 2
+  planning:** per-step `_run` and the step-free `rev_run(through =)`
+  overlap as user surfaces. Incumbent reconciliation: read
+  `rev_<step>_run` as the stateless prefix run through that step
+  (amendment 8's "steps are prefixes" semantics, spelled per-step), so
+  the step-free `rev_run()` may reduce to sugar or retire. For the spec
+  step — the first prefix — both readings coincide, so Phase 1 commits
+  to nothing beyond `rev_spec_run`'s semantics in (c). Flagged in spec
+  §10.
+  (f) **Sequencing:** implemented as its own TDD commit BEFORE Task 15,
   so the split files are born with the final API; Task 15's function
   lists read accordingly (`read_dictionary`/`read_dictionaries` →
   spec-source.R, `read_joins` → spec-join.R). Spec references to the
   readers and the runner name, and conventions Terminology (user-facing
-  action words audit / read / run), amended in the same commit; NEWS.md
-  bullet rides the change.
+  action words audit / run), amended in the same commit; NEWS.md bullet
+  rides the change.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (consolidated 2026-07-12). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
