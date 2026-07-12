@@ -75,6 +75,12 @@ schema_kinds <- function() {
   unlist(schema_yaml("fields.yaml")$kinds)
 }
 
+# The declared default of one field of one kind.
+field_default <- function(kind, field) {
+  s <- field_schema(kind)
+  s$default[[which(s$field == field)]]
+}
+
 # The check registry: one row per code, keyed by code.
 check_registry <- cached(function() {
   checks <- schema_yaml("checks.yaml")$checks

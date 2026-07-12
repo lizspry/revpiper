@@ -115,6 +115,14 @@ checks:
     params: [field, required_field]
     fix: the named entry
     implemented: true
+  YE08:
+    scope: entry
+    property: permitted_adds
+    meaning: a field appears on a join type outside its permitted set
+    message_template: "'{field}' is not allowed when a join adds {adds}"
+    params: [field, adds]
+    fix: joins.yaml entry
+    implemented: true
 
   # YS: source checks (across entries within one file)
 
@@ -164,8 +172,16 @@ checks:
   YX02:
     scope: cross-source
     property: refers_to
-    meaning: a cross-source reference does not resolve (join tables, keys, granularity)
+    meaning: a cross-source reference does not resolve (join tables, key columns)
     message_template: "'{value}' does not resolve against {section}"
     params: [value, section]
     fix: joins.yaml entry
-    implemented: false
+    implemented: true
+  YX03:
+    scope: cross-source
+    property: "custom: completeness"
+    meaning: a join's keys do not cover both sides
+    message_template: "keys must name both sides ('{left}' and '{right}')"
+    params: [left, right]
+    fix: joins.yaml entry
+    implemented: true

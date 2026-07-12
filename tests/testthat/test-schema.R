@@ -26,6 +26,11 @@ test_that("field_schema returns rows for every kind, shaped by properties", {
     field_schema("level")$field,
     c("keys", "combine", "separator", "within")
   )
+  expect_setequal(field_schema("join_file")$field, "joins")
+  expect_setequal(
+    field_schema("join")$field,
+    c("adds", "left", "right", "keys", "relationship", "unmatched_ok")
+  )
 })
 
 test_that("the kinds list closes the schema's kind vocabulary", {
@@ -37,8 +42,10 @@ test_that("the kinds list closes the schema's kind vocabulary", {
 
 test_that("same-named fields across kinds agree unless recorded divergent", {
   # Recorded divergences — same name, deliberately different properties per
-  # kind. Input to the amendment 7h fact-home review. None yet.
-  recorded <- character(0)
+  # kind. Input to the amendment 7h fact-home review.
+  # - keys: a level's keys are column names; a join's keys map each side to
+  #   its column names (same concept, kind-specific shape — amendment 7).
+  recorded <- "keys"
   s <- schema_fields()
   shared <- setdiff(unique(s$field[duplicated(s$field)]), recorded)
   for (f in shared) {
@@ -112,8 +119,18 @@ test_that("relational meta-rules hold across schema rows", {
   ))
   # exactly one identity field per scope: table (set), name (file)
   expect_identical(s$field[s$identity], c("table", "name"))
-  # domain is inline and lives only on type
-  expect_identical(s$field[!vapply(s$domain, is.null, logical(1))], "type")
+  # domain is inline and lives only on the closed-vocabulary fields
+  expect_setequal(
+    s$field[!vapply(s$domain, is.null, logical(1))],
+    c("type", "adds", "relationship")
+  )
+  # permitted_adds: the sentinel "any", or a subset of adds' own domain
+  adds_domain <- s$domain[[match("adds", s$field)]]
+  expect_true(all(vapply(
+    s$permitted_adds,
+    \(pa) identical(pa, "any") || all(pa %in% adds_domain),
+    logical(1)
+  )))
 })
 
 test_that("the check registry is closed and internally consistent", {
@@ -144,7 +161,10 @@ test_that("the check registry is closed and internally consistent", {
 })
 
 test_that("every implemented check code is exercised by a snapshot", {
-  snaps <- readLines(test_path("_snaps", "spec-dictionary.md"))
+  snaps <- unlist(lapply(
+    list.files(test_path("_snaps"), full.names = TRUE),
+    readLines
+  ))
   registry <- check_registry()
   for (code in registry$code[registry$implemented]) {
     expect_true(any(grepl(code, snaps, fixed = TRUE)), info = code)

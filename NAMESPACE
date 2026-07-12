@@ -2,4 +2,5 @@
 
 export(rev_read_dictionaries)
 export(rev_read_dictionary)
+export(rev_read_joins)
 importFrom(rlang,"%||%")

@@ -434,8 +434,9 @@ test_that("rev_read_dictionaries returns a table-named list of dictionaries", {
   dicts <- rev_read_dictionaries(
     test_path("fixtures", "specs-good", "tables")
   )
-  expect_named(dicts, "estimates")
+  expect_named(dicts, c("estimates", "rob"))
   expect_s3_class(dicts$estimates, "rev_dictionary")
+  expect_s3_class(dicts$rob, "rev_dictionary")
 })
 
 test_that("duplicate table names across files flag YX01", {

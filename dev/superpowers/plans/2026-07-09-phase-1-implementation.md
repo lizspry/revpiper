@@ -965,6 +965,33 @@ source file `data/raw/rob.csv`, columns `study_id` (text, required) +
 - Data-side J-semantics for many-to-many and observation appends: parked to
   Task 11's walkthrough (amendment 7e).
 
+> **Task 5-close checkpoints (recorded 2026-07-12, Liz):**
+> (1) **Format review** — the user-facing spec format against goals, before
+> Task 6's walkthrough: the whole spec surface exists and nothing is built
+> on it yet, so simplification is cheapest here. Agenda: convolution check
+> (Liz's standing concern); the schema vocabulary gaps held from Step 0
+> (a mapping-of-entries container shape, scalar shorthand as a property,
+> a one-of requirement, acyclic refers_to — each would replace custom level
+> code with schema rows); the "kind" wording; the recorded same-named-field
+> divergence list (currently: keys). The internal parsimony review stays at
+> Task 14 (amendment 7h), with full check inventory in view.
+> (2) **Collaborator deliverable** — prepared after the format review, via
+> the academic-planning skill; Liz owns the structure. Audience: three
+> reviews at spec/dictionary design stage (two pre-data-collection, one
+> retrofitting completed collection for clean/derive/vis). Framing (Liz
+> 2026-07-12): NOT mechanics-first — show why the spec stage exists and how
+> it enables the rest of the automation; this workflow is a paradigm shift
+> from messy-dataset + hand-cleaning + copy-pasted code, and even git/
+> versioning is new to these users, so (a) show it is manageable, (b) show
+> why: efficiency, transparency, ease of reproduction and rerun, machine-
+> and human-friendly artifacts, AI-enablement-ready as capabilities mature,
+> future-proofed building blocks over these reviews' timeframes. Make
+> flexibility EXPLICIT for the pre-spec collaborators: the dictionary is
+> not a lock-in — piloting and extraction changes are expected and allowed;
+> the spec evolves with the review. Invite engagement and refinement.
+> Describe (not demo) the certificate and draft generator as coming.
+> Quarto source; AI-use disclosure statement; seeds the Phase 3 vignette.
+
 ### Task 6: Generic readers + dispatch + R-checks (`read.R`)
 
 **Files:** Create `R/read.R`, `tests/testthat/test-read.R`, fixtures

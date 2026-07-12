@@ -104,7 +104,8 @@ run_entry_checks <- function(x, kind, file, entry) {
   problems <- rbind(
     problems,
     check_excludes(x, schema, file, entry),
-    check_requires(x, schema, file, entry)
+    check_requires(x, schema, file, entry),
+    check_permitted_adds(x, schema, file, entry)
   )
 
   # Type-dependent checks: permission, then content, then order, each gated
@@ -349,12 +350,22 @@ check_vocabulary <- function(x, schema, file, entry) {
   }))
 }
 
-# YE02: required field absent
+# YE02: required field absent. Requiredness applies only where the field
+# is permitted: a variables-only field is not demanded of an observations
+# join (amendment 7).
 check_required <- function(x, schema, file, entry) {
-  absent <- setdiff(schema$field[schema$required], names(x))
+  demanded <- schema$required &
+    vapply(schema$permitted_adds, is_permitted_adds, logical(1), x)
+  absent <- setdiff(schema$field[demanded], names(x))
   bind_problems(lapply(absent, \(f) {
     flag_problem(file, entry, "YE02", field = f)
   }))
+}
+
+# Whether a field's permitted_adds admits this entry's declared adds.
+is_permitted_adds <- function(permitted, x) {
+  identical(permitted, "any") ||
+    (is_string(x[["adds"]]) && x[["adds"]] %in% permitted)
 }
 
 # YE03: constraint on a column type outside its permitted set
@@ -383,6 +394,26 @@ check_excludes <- function(x, schema, file, entry) {
   pairs <- unique(pairs)
   bind_problems(lapply(pairs, \(p) {
     flag_problem(file, entry, "YE04", field1 = p[1], field2 = p[2])
+  }))
+}
+
+# YE08: a field appears on a join type outside its permitted set. Gated on
+# a valid adds value: an off-domain adds is its own root cause (YF03).
+check_permitted_adds <- function(x, schema, file, entry) {
+  restricted <- !vapply(schema$permitted_adds, identical, logical(1), "any")
+  adds <- x[["adds"]]
+  if (!any(restricted) || !is_string(adds)) {
+    return(no_problems())
+  }
+  if (!adds %in% schema$domain[[match("adds", schema$field)]]) {
+    return(no_problems())
+  }
+  rows <- schema[restricted, ]
+  bind_problems(lapply(seq_len(nrow(rows)), \(i) {
+    if (is.null(x[[rows$field[i]]]) || adds %in% rows$permitted_adds[[i]]) {
+      return(no_problems())
+    }
+    flag_problem(file, entry, "YE08", field = rows$field[i], adds = adds)
   }))
 }
 
@@ -731,8 +762,7 @@ is_string <- function(x) {
 # Constructor
 
 new_dictionary <- function(raw, path) {
-  col_schema <- field_schema("column")
-  default_of <- function(f) col_schema$default[[which(col_schema$field == f)]]
+  default_of <- function(f) field_default("column", f)
   columns <- do.call(
     rbind,
     lapply(raw$columns, \(col) {
