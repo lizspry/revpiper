@@ -16,3 +16,14 @@
       Status: NOT CERTIFIED
       Standing items: 1
 
+# annex lines render verbatim after the standing count
+
+    Code
+      print(report)
+    Output
+      revpiper spec report
+      Status: CERTIFIED
+      Standing items: 0
+      Joins: included
+      Dictionaries: 2
+

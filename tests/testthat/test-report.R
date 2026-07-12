@@ -11,14 +11,22 @@ one_item <- function() {
 test_that("a stage report certifies exactly at zero standing items", {
   certified <- new_stage_report("spec", no_problems())
   expect_s3_class(certified, "rev_report")
-  expect_identical(certified$status, "CERTIFIED")
-  standing <- new_stage_report("spec", one_item())
-  expect_identical(standing$status, "NOT CERTIFIED")
+  expect_true(is_certified(certified))
+  expect_false(is_certified(new_stage_report("spec", one_item())))
 })
 
 test_that("the certificate renders both statuses", {
   expect_snapshot(print(new_stage_report("spec", no_problems())))
   expect_snapshot(print(new_stage_report("spec", one_item())))
+})
+
+test_that("annex lines render verbatim after the standing count", {
+  report <- new_stage_report(
+    "spec",
+    no_problems(),
+    annex = c("Joins: included", "Dictionaries: 2")
+  )
+  expect_snapshot(print(report))
 })
 
 test_that("printing returns the report invisibly", {

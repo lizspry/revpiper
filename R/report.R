@@ -1,43 +1,36 @@
 # Stage report + certification machinery, generic over steps. Nothing here
 # is exported: each step's audit constructs, prints, and writes its report.
 # The spec stage's items are the problems tibble; the findings item schema
-# arrives with the load step (Phase 2).
+# and acknowledgment cancellation arrive with the load step (Phase 2).
 
-# A step's report: CERTIFIED exactly when zero items stand.
-new_stage_report <- function(
-  stage,
-  items,
-  acknowledgments = NULL,
-  unspecified = character(0)
-) {
+# A step's report. `annex` is pre-rendered certificate lines the step's
+# audit supplies (e.g. the joins disposition); the formatter appends them
+# verbatim and knows nothing about any stage.
+new_stage_report <- function(stage, items, annex = character(0)) {
   structure(
-    list(
-      stage = stage,
-      items = items,
-      acknowledgments = acknowledgments,
-      unspecified = unspecified,
-      status = if (nrow(items) == 0) "CERTIFIED" else "NOT CERTIFIED"
-    ),
+    list(stage = stage, items = items, annex = annex),
     class = "rev_report"
   )
+}
+
+# The certification rule, in one place: zero items stand.
+is_certified <- function(report) {
+  nrow(report$items) == 0
 }
 
 # The certificate text: the one home for its wording. The printed
 # certificate and the exported .txt are this same text.
 #' @export
 format.rev_report <- function(x, ...) {
-  lines <- c(
+  c(
     sprintf("revpiper %s report", x$stage),
-    sprintf("Status: %s", x$status),
-    sprintf("Standing items: %d", nrow(x$items))
+    sprintf(
+      "Status: %s",
+      if (is_certified(x)) "CERTIFIED" else "NOT CERTIFIED"
+    ),
+    sprintf("Standing items: %d", nrow(x$items)),
+    x$annex
   )
-  if (length(x$unspecified) > 0) {
-    lines <- c(
-      lines,
-      sprintf("Unspecified columns (annex): %s", toString(x$unspecified))
-    )
-  }
-  lines
 }
 
 #' @export
@@ -61,6 +54,6 @@ export_report <- function(report, dir) {
 }
 
 # The runstamp format: the one home for report file naming's time part.
-runstamp <- function(time = Sys.time()) {
-  format(time, "%Y%m%d-%H%M%S")
+runstamp <- function() {
+  format(Sys.time(), "%Y%m%d-%H%M%S")
 }

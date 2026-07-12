@@ -1528,10 +1528,13 @@ snapshots relocate with their test files.
 
 ### Task 16: Spec report machinery (`report.R`) — old Task 9's core, spec instantiation only
 
-**Interfaces — Produces:** `new_stage_report(stage, items,
-acknowledgments, unspecified)` → `rev_report` (status CERTIFIED iff zero
-standing items); `print.rev_report` certificate with the stage line;
-INTERNAL `export_report(report, dir)` → `<dir>/<stage>-<runstamp>.xlsx`
+**Interfaces — Produces:** `new_stage_report(stage, items, annex =
+character(0))` → `rev_report`; `is_certified(report)` — the
+certification rule's one home (zero standing items); `print.rev_report`
+certificate with the stage line, appending `annex` (pre-rendered
+stage-specific lines the audit supplies, e.g. the joins disposition)
+verbatim; INTERNAL `export_report(report, dir)` →
+`<dir>/<stage>-<runstamp>.xlsx`
 + `<stage>-<runstamp>-certificate.txt`, returning paths invisibly
 (un-exported at Liz's review 2026-07-12: the audit always writes, so no
 user door is needed — export later if a real need appears; the
@@ -1540,11 +1543,19 @@ Nothing in report.R is exported — the machinery serves the audits; the
 print method registers for the class. Certificate wording has one home
 (`format.rev_report`; the certificate file is the same text). Spec-
 stage items = the Task 2 problems tibble. The findings item schema is NOT
-built here (Phase 2, load).
+built here (Phase 2, load). Signature revised at the simplify pass
+(2026-07-12): `acknowledgments` dropped as a dead parameter — it
+returns in Phase 2 WITH its cancellation logic; the spec-specific
+`unspecified` field generalised to `annex` (its rendering was
+stage-knowledge leaked into the generic formatter; the load audit will
+render its own unspecified-columns line).
 
-- [ ] **Steps 1–5:** TDD per old Task 9, restricted to the spec
+- [x] **Steps 1–5:** TDD per old Task 9, restricted to the spec
   instantiation; certificate snapshots for both statuses, read before
-  acceptance (the certificate is the product's public record).
+  acceptance (the certificate is the product's public record). (Done
+  2026-07-12, commits 87be99a + the simplify-pass commit; certificate
+  snapshots for CERTIFIED, NOT CERTIFIED, and the annex presented to
+  Liz at the check-in.)
 
 ### Task 17: Spec-step audit
 
