@@ -273,6 +273,45 @@
   rewritten in place to state the re-cut scope (Liz's review 2026-07-12:
   fix the old text rather than annotate it; pre-amendment wording is in
   git history).
+- **Execution amendment 9 (2026-07-12; from Liz's review at the Task 15
+  walkthrough — the reader pair and step-command naming; DRAFTED,
+  AWAITING LIZ'S SIGN-OFF):** user-facing naming grammar + one door per
+  purpose.
+  (a) **Naming grammar (binds all user-facing workflow functions):**
+  `rev_<step>_<action>`, step words per conventions Terminology (spec,
+  load, process, transform). Action words at v1: `audit` — run the
+  step's checks and write its report + certificate, never aborting;
+  `read` — programmatic loader returning validated objects, aborting
+  with all problems listed. `run` is RESERVED for data execution:
+  `rev_run()` (amendment 8) keeps its step-free name because running is
+  the one cross-step verb (steps as prefixes of one run); no per-step
+  `_run` exists. Internal `check_*` naming (conventions, closed
+  decision) is untouched — "audit" is the user-facing word, "check"
+  stays internal. Later steps' command spellings follow this grammar,
+  settling per phase as amendment 8 provides.
+  (b) **Task 17's runner is `rev_spec_audit()`** (replaces the incumbent
+  candidate `rev_check_specs()`; semantics exactly as Task 17 states).
+  (c) **Reader merge — one export replaces three.** `rev_spec_read(dir =
+  "specs", file = NULL)` replaces exported `rev_read_dictionary()`,
+  `rev_read_dictionaries()`, and `rev_read_joins()`, which become
+  internal `read_dictionary()`, `read_dictionaries()`, `read_joins()`
+  (the decomposition is unchanged; it stops being API). Default (`file
+  = NULL`): read + validate the whole spec set — every dictionary
+  standalone, the set-identity check, `joins.yaml` validated against
+  the dictionaries; absent `joins.yaml` → joins slot NULL (single-table
+  projects). `file = "<name>.yaml"` — a FILENAME, not a path, resolved
+  against `specs/tables/` (`"joins.yaml"` resolves to
+  `specs/joins.yaml`) — reads that one file with within-file checks
+  only (Liz: filename selection, 2026-07-12). Return is type-stable:
+  always `list(tables = <named list>, joins = <rev_joins or NULL>)`,
+  length-1 tables when one dictionary is selected.
+  (d) **Sequencing:** implemented as its own TDD commit BEFORE Task 15,
+  so the split files are born with the final API; Task 15's function
+  lists read accordingly (`read_dictionary`/`read_dictionaries` →
+  spec-source.R, `read_joins` → spec-join.R). Spec references to the
+  readers and the runner name, and conventions Terminology (user-facing
+  action words audit / read / run), amended in the same commit; NEWS.md
+  bullet rides the change.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (consolidated 2026-07-12). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
