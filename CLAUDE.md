@@ -43,8 +43,9 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   never write into docs/ (gitignored pkgdown output). This overrides
   the superpowers skills' default docs/superpowers/ location.
 - Design spec: dev/superpowers/specs/2026-07-07-revpiper-design.md
-  (consolidated 2026-07-12 per the spec-consolidation brief, pending
-  Liz's diff review; git history holds the amendment trail, audited in
+  (consolidated 2026-07-12 per the spec-consolidation brief; diff
+  SIGNED OFF, Liz 2026-07-12; git history holds the amendment trail,
+  audited in
   dev/superpowers/plans/2026-07-12-spec-consolidation-extraction.md).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
   SIGNED OFF with execution amendments 1-8 (amendment 8 signed off
@@ -56,8 +57,7 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   Executing on branch phase-1-core. DONE:
   Tasks 1, 2, 3, 3b, 4, 5 (amendment 7: levels merge, joins spec,
   schema restructure) + spec consolidation per the 2026-07-12 brief
-  (Liz's explicit all-clear on the consolidation diff not yet recorded —
-  confirm before Phase 1 close-out). NEXT, in order: (1) execute
+  (diff signed off, Liz 2026-07-12). NEXT, in order: (1) execute
   Tasks 15-18 (spec-axis file split, spec report machinery, spec-step
   runner, Phase 1 close-out) under the walkthrough protocol; (2) the
   collaborator deliverable (academic-planning skill; Liz owns
