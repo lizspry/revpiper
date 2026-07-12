@@ -25,8 +25,7 @@ checks:
     params: [field, expected]
     fix: the named entry
     implemented: true
-    # Phrases rendered into {expected}: enumerated per shape and cardinality,
-    # never composed from fragments.
+    # Phrases rendered into {expected}, per shape and cardinality
     phrases:
       string: {one: a single text value, one_or_many: one or more text values, two: exactly two text values}
       boolean: {one: a single true/false value, one_or_many: one or more true/false values, two: exactly two true/false values}
