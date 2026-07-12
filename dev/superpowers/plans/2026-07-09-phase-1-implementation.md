@@ -306,26 +306,27 @@
   selection, 2026-07-12). Return is type-stable: always `list(tables =
   <named list>, joins = <rev_joins or NULL>)`, length-1 tables when one
   dictionary is selected.
-  (d) **Joins disposition (incumbent design; resolves at Task 17's
-  walkthrough):** the dict and joins specs may not both exist or be
-  ready, and the user may not want both handled at once. Incumbent: a
-  three-state `joins` parameter on BOTH `rev_spec_audit()` and
-  `rev_spec_run()` — `NULL` (default) = include `joins.yaml` iff
-  present; `FALSE` = exclude even if present (drafted but not ready);
-  `TRUE` = require (its absence is itself a problem). The report and
-  certificate ALWAYS state the joins disposition (included / absent /
-  excluded by user) — a certificate that silently skipped a joins spec
-  would misrepresent what was certified. Flagged as an open question in
-  spec §10.
-  (e) **Relation to `rev_run()` (amendment 8) — open, owned by Phase 2
-  planning:** per-step `_run` and the step-free `rev_run(through =)`
-  overlap as user surfaces. Incumbent reconciliation: read
-  `rev_<step>_run` as the stateless prefix run through that step
-  (amendment 8's "steps are prefixes" semantics, spelled per-step), so
-  the step-free `rev_run()` may reduce to sugar or retire. For the spec
-  step — the first prefix — both readings coincide, so Phase 1 commits
-  to nothing beyond `rev_spec_run`'s semantics in (c). Flagged in spec
-  §10.
+  (d) **Joins disposition (Liz, 2026-07-12; default confirmable at Task
+  17's walkthrough):** a plain TRUE/FALSE `joins` parameter on BOTH
+  `rev_spec_audit()` and `rev_spec_run()` — the user simply states
+  whether joins are included. `TRUE` + no `joins.yaml` = error; `FALSE`
+  = joins skipped regardless of availability (no warning — deliberate).
+  Three-state auto rejected. Default `FALSE` (explicit opt-in; a
+  single-table project works out of the box — the default is the one
+  sub-point left to confirm at the walkthrough). The report and
+  certificate ALWAYS state the joins disposition (included / excluded)
+  — a certificate silent on what it skipped would misrepresent what was
+  certified.
+  (e) **Relation to `rev_run()` (amendment 8) — DEFERRED to Phase 2
+  planning (Liz, 2026-07-12):** per-step `_run` and the step-free
+  `rev_run(through =)` overlap as user surfaces. Incumbent
+  reconciliation: read `rev_<step>_run` as the stateless prefix run
+  through that step (amendment 8's "steps are prefixes" semantics,
+  spelled per-step); step-free `rev_run()` — and a corresponding
+  `rev_audit()` — may be kept as syntactic sugar (thin wrappers, cheap
+  to implement; Liz leans keep). For the spec step — the first prefix —
+  all readings coincide, so Phase 1 commits to nothing beyond
+  `rev_spec_run`'s semantics in (c). Flagged in spec §10.
   (f) **Sequencing:** implemented as its own TDD commit BEFORE Task 15,
   so the split files are born with the final API; Task 15's function
   lists read accordingly (`read_dictionary`/`read_dictionaries` →
