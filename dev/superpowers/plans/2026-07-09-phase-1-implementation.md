@@ -143,6 +143,83 @@
   whole-package duplication/abstraction audit as the phase backstop. Specific
   homes remain plan/spec decisions (currently inst/schema/fields.yaml and
   checks.yaml).
+- **Execution amendment 7 (2026-07-12; drafted at the Task 5 walkthrough;
+  SIGNED OFF, Liz 2026-07-12, with addition (h)):** joins + levels redesign, resolving Task 4 follow-ups (c)
+  and (f), amendment 4(f)'s `shared:` question, and the many-to-many requirement.
+  (a) **Sections merge:** `identifiers:` dissolves into `levels:` (name kept —
+  users' multilevel vocabulary; `constant_within_level` keeps its name for the
+  same reason). A level entry maps a user-named level to what identifies it: a
+  bare column name (shorthand for `keys:`), or a mapping with `keys:` (one or
+  more columns) XOR `combine:` (one or more columns building a virtual column
+  named by the level; optional `separator`, default "" — `authorYEAR` is legal)
+  plus optional `within:` naming a parent level. Nesting is EXPLICIT (option B,
+  over composite-key-implicit nesting): it matches how users say it and makes
+  the hierarchy itself checkable (a child key under two parents — data-side
+  check, catalogued at Task 8/10). Effective grouping columns = own keys or
+  virtual column + all ancestors'. Forward references among sibling levels are
+  legal; nesting cycles are a new YS04 check. Level names are always the user's
+  words — nothing pipeline-reserved (Task 10's informational `study_id` lookup
+  resolves at its walkthrough: conventional name or drop). "Identifier" retires
+  as vocabulary (conventions Terminology updated in the rework); "virtual
+  column" survives. YE06 reworded for level entries.
+  (b) **Joins:** `granularity` is DROPPED — J002 derives its uniqueness
+  expectation from `keys` + `relationship` (single home); `levels:` is no longer
+  referenced by joins (it serves constant-within checks and key building). New
+  required field `adds: variables | observations` — the join's declared type
+  sets the overlap expectation, REPLACING per-column `shared:` declarations
+  (rejected: tedious, and the type carries the fact): `adds: variables` =
+  mutating join, where non-key column overlap becomes a data-side finding;
+  `adds: observations` = row append (bind_rows), where column mismatch becomes
+  the data-side finding (near-miss suggestions) and `keys` are the identity
+  columns for cross-table collision checks. The words are deliberately
+  shape-neutral (a wide input's on-disk layout never changes what a join
+  "adds"); orientation is the reader's job — see (f). `relationship` gains the
+  full dplyr domain [one-to-one, one-to-many, many-to-one, many-to-many] (users
+  never reorder a join to fit the vocabulary; the value passes through to dplyr
+  at Task 11). `relationship` and `unmatched_ok` are legal only when
+  `adds: variables`; requiredness applies only where a field is permitted. No
+  wrappers: each spec row compiles to one dplyr join / bind_rows call with
+  checks around it.
+  (c) **Schema restructure:** fields.yaml nests fields under their kind — a new
+  top-level `kinds:` list (file, source, column, level, join, join_file; the
+  `combine` kind dissolves into `level`) is the closed set's single home;
+  `appears_in` dissolves into the structure. Parse-time duplicate-key guarding
+  thereby lands at the right scope (per kind), letting same-named fields carry
+  different properties per kind — level `keys` vs join `keys`, the same concept
+  wearing the same word (one word per concept). Conformance tests: group
+  headers ⊆ kinds, `contains` values ⊆ kinds, and same-named fields whose
+  properties drift apart are flagged. New properties: `requires:`
+  (co-occurrence guard, new YE07 check; instance: `separator` requires
+  `combine`) and `permitted_adds:` (legality conditional on the sibling `adds`
+  value — second occurrence of the permitted_types pattern; rule of three says
+  the third extracts a general mechanism). "kind" recorded as provisional
+  wording (Liz: clunky; internal-only, so a later rename is cheap).
+  (d) **Certification granularity resolved (Liz, 2026-07-12):** a table
+  certification certifies internal coherence and correctness WITHOUT reference
+  to other files — that is its point; join-stage issues decertify the joined
+  artifact only (fixes may route back into tables and their corrections).
+  §8.2 updated; partial-processing gating rules remain Phase 2 planning.
+  (e) **Parked to Task 11's walkthrough:** exact data-side J-check semantics
+  for declared many-to-many joins (Liz: needed, shape unclear yet; candidates
+  recorded — observed-vs-declared looseness nudge, row accounting on the join
+  report) and for observation appends (column match, key collisions), plus
+  J-code assignments.
+  (f) **Reader guidance recorded:** every reader delivers the canonical frame
+  (rows = observations, columns = the declared variables); the join layer never
+  sees orientation. Users need guidance on both the target shape and how to
+  achieve it: the readers.R template (Phase 2 `rev_project()`) states the
+  contract explicitly, and an import-and-shaping vignette (worked transpose
+  example) lands with Task 14 docs / Phase 3 vignette work.
+  (g) **Task 4 contained rework executes as Task 5's Step 0** (own commit,
+  TDD): schema restructure + loader, identifiers→levels merge, YE06 rewording,
+  YE07 + YS04 registry rows, matrix regenerate, fixture updates. Design-spec
+  §3.1/§3.3/§8.2 amendments ride the task's commits (amendment 3 precedent).
+  (h) **Structural reviews added to the Task 14 backstop (Liz, at sign-off):**
+  alongside amendment 6's duplication audit — (i) fact-home review: the
+  schematic structure across facts (registry shapes, where each fact-family
+  lives, the recorded same-named-fields divergence list); (ii) check-parsimony
+  review: checks stay schema-generated wherever possible — never the same
+  check specified separately for elements one generic check could cover.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
   (as amended through 2026-07-11). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
@@ -812,59 +889,81 @@ roles/levels/cwl is consumed in Task 4.)
 > entry (usage to be explained by her). Revisit at/after the Task 5
 > walkthrough together with (c); do not redesign unilaterally.
 
-### Task 5: Joins spec (`spec-joins.R`)
+### Task 5: Joins spec (`spec-joins.R`) — RESTATED by execution amendment 7
 
 **Files:** Create `R/spec-joins.R`, `tests/testthat/test-spec-joins.R`, fixtures
-`fixtures/specs-good/joins.yaml` + bad variants.
+`fixtures/specs-good/joins.yaml` + bad variants. Step 0 also touches
+`inst/schema/fields.yaml`, `inst/schema/checks.yaml`, `R/schema.R`,
+`R/spec-dictionary.R`, the property matrix, and the good table fixtures.
 
 Good fixture:
 
 ```yaml
 # tests/testthat/fixtures/specs-good/joins.yaml
 joins:
-  - left: estimates
+  - adds: variables
+    left: estimates
     right: rob
     keys:
       estimates: [study]
       rob: [study_id]
-    granularity: study
     relationship: one-to-many
     unmatched_ok: false
 ```
 
-(Requires a second good table fixture `fixtures/specs-good/tables/rob.yaml`: table
-`rob`, source file `data/raw/rob.csv`, columns `study_id` (text, required) +
-`rob_direct` (text, values [low, high]); levels `study: [study_id]`.)
+(Second good table fixture `fixtures/specs-good/tables/rob.yaml`: table `rob`,
+source file `data/raw/rob.csv`, columns `study_id` (text, required) +
+`rob_direct` (text, values [low, high]); `levels: {study: study_id}`. In
+`estimates.yaml`, `identifiers:` + `levels:` merge to `levels: {study: study}`.)
+
+- [ ] **Step 0 (amendment 7 rework of Task 4's surface; own commit; TDD):**
+  fields.yaml restructured — `kinds:` list added; fields nested under their
+  kind; `appears_in` dissolved; `combine` kind dissolved into `level` (fields
+  `keys`/`combine`/`separator` (default "", requires: combine)/`within`
+  (refers_to: levels)); `identifiers` row deleted; new properties `requires` +
+  `permitted_adds` declared in `properties:`. schema.R loads groups
+  (`field_schema(kind)` unchanged for callers). spec-dictionary.R:
+  `check_identifier_entries()` becomes `check_level_entries()` (union dispatch:
+  string | mapping), YE07 requires check, YS04 nesting-cycle check (forward
+  references legal), YE06 reworded. Failing tests first: merged estimates
+  fixture parses; level combine variant registers its virtual column in
+  `dictionary_key_columns()`; `within:` chain resolves; curated fixtures +
+  snapshots for ys04 (cycle), ye07 (separator beside keys), ye06 (entry
+  neither form), ys02 (`within:` names unknown level); conformance tests
+  (group headers ⊆ kinds, `contains` ⊆ kinds, same-named-field property
+  drift); matrix regenerates over the nested schema.
 
 **Interfaces — Produces:**
-- Schema extension: `level: [join]` rows appended to `inst/schema/fields.yaml` —
-  `left`/`right` (required strings, `refers_to: tables`), `keys` (required
-  named_list; values `refers_to` the named side's `dictionary_key_columns()` —
-  the one context-parameterised reference, thin custom code), `granularity`
-  (required string, `refers_to` the "one" side's declared levels), `relationship`
-  (required string, `domain: [one-to-one, one-to-many]`), `unmatched_ok` (boolean,
-  `default: false`). The battery + resolver from Tasks 3b/4 do the rest: YE01
-  unknown fields, YE02 required, YF02 shapes, YF03 relationship domain, YX02
-  unresolved tables/keys/granularity.
-- `rev_read_joins(path, dictionaries)` → tibble(left, right, keys_left <list chr>,
-  keys_right <list chr>, granularity, relationship, unmatched_ok). Missing
-  joins.yaml → zero-row tibble (single-table projects are valid). This is the
-  across-source (YX) validation step — data-free, composable, callable on its own.
+- Schema rows. `join_file` kind: `joins` (required, list of join entries —
+  the only legal field in joins.yaml). `join` kind: `adds` (required string,
+  `domain: [variables, observations]`), `left`/`right` (required strings,
+  resolved against the loaded set's table names — YX02), `keys` (required
+  mapping side → column(s); mapping keys must be exactly the two sides; each
+  side's values resolve against that side's `dictionary_key_columns()` — the
+  one context-parameterised reference, thin custom code), `relationship`
+  (`permitted_adds: [variables]`, required there, `domain: [one-to-one,
+  one-to-many, many-to-one, many-to-many]`), `unmatched_ok`
+  (`permitted_adds: [variables]`, boolean, `default: false`). Requiredness
+  applies only where a field is permitted. The battery + resolver do the
+  rest: YE01/YE02/YF02/YF03/YE07 per entry; YX02 for unresolved
+  tables/keys.
+- `rev_read_joins(path, dictionaries)` → tibble(adds, left, right,
+  keys_left <list chr>, keys_right <list chr>, relationship (NA on
+  observation appends), unmatched_ok). Missing joins.yaml → zero-row tibble
+  (single-table projects are valid). This is the across-source (YX)
+  validation step — data-free, composable, callable on its own; table
+  certification never depends on it (amendment 7d).
+- checks.yaml: YX02 flips `implemented: true`.
 
-- [ ] **Steps 1–5:** failing tests (good parse incl. defaults `unmatched_ok = FALSE`;
-  matrix additions for the join schema rows; snapshot per curated bad fixture —
-  unknown table, unknown key, bad relationship, granularity not a level; absent
-  file → zero rows), watch fail, implement, watch pass, format+lint, commit.
-- Open question resolved AT THIS TASK's walkthrough (amendment 4): should joins
-  declare expected column overlap between sides (`shared:`), with overlap beyond
-  keys+shared a finding? (Liz 2026-07-11: overlap semantics differ between
-  same-variables merges and different-information merges.)
-- REQUIREMENT (Liz 2026-07-11, Task 4 review): many-to-many joins must be
-  declarable. `relationship`'s planned domain [one-to-one, one-to-many]
-  cannot express them — it gains `many-to-many`, and J002's key-uniqueness
-  expectation applies only to a side a declared relationship makes "one".
-  Resolve the exact semantics at this task's walkthrough, alongside the
-  open levels/granularity question recorded under Task 4.
+- [ ] **Steps 1–5 (joins proper):** failing tests (good parse incl. default
+  `unmatched_ok = FALSE`; an `adds: observations` good variant with
+  relationship legally absent; matrix covers the join rows via regeneration;
+  snapshot per curated bad fixture — unknown table, unknown key column, bad
+  relationship value, relationship on an observations join, keys naming a
+  non-side table; absent file → zero rows), watch fail, implement, watch
+  pass, format+lint, commit.
+- Data-side J-semantics for many-to-many and observation appends: parked to
+  Task 11's walkthrough (amendment 7e).
 
 ### Task 6: Generic readers + dispatch + R-checks (`read.R`)
 
@@ -1229,8 +1328,11 @@ build-ignored).
   error_on = "note")` (0/0/0), plus the phase's duplication/abstraction audit
   (amendment 6): sweep the whole package for facts with two homes, literals in
   code that belong in a registry, and parallel code that failed to generalise;
-  findings fixed or explicitly justified before handoff. Fix anything found;
-  commit.
+  and the structural reviews (amendment 7h): the fact-home/schematic structure
+  across registries (including the same-named-fields divergence list) and
+  check parsimony (no per-element checks where one schema-generated check
+  covers all). Findings fixed or explicitly justified before handoff. Fix
+  anything found; commit.
 - [ ] **Step 5: handoff.** Report to Liz: branch `phase-1-core` ready; she fetches,
   pushes, opens the PR (squash-merge; CI green gate). Spec §4 one-line amendment
   (rev_check diagnostics, Decision 1) rides the same PR.
