@@ -1512,10 +1512,19 @@ amendment 9) is already axis-named and does not move.
 `tests/testthat/test-spec-dictionary.R` splits along the same seam;
 snapshots relocate with their test files.
 
-- [ ] **Step 1:** mechanical moves only — no behaviour change. Full suite
+- [x] **Step 1:** mechanical moves only — no behaviour change. Full suite
   green before and after; relocated snapshots re-accepted only where
-  content is identical.
-- [ ] **Step 2:** `air format .`, zero lints, commit.
+  content is identical. (Done 2026-07-12, commit 1a0f5d2: sorted-line
+  content-identity verified for the R split, the test split, and the
+  snapshot split; the joins trio byte-identical. Placement judgment
+  calls, by the genericity rule: check_identity, check_reference, and
+  the plumbing predicates → spec-check.R because spec-join.R calls
+  them; shared test helpers → helper-spec.R for parallel test
+  processes; the shape_phrase wording test rides with the battery
+  tests.)
+- [x] **Step 2:** `air format .`, zero lints, commit. (Done, same
+  commit; 345 pass, 9 pre-existing session-dependent lints — the Task
+  18 lint-gate question.)
 
 ### Task 16: Spec report machinery (`report.R`) — old Task 9's core, spec instantiation only
 

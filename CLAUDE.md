@@ -60,9 +60,11 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   Executing on branch phase-1-core. DONE:
   Tasks 1, 2, 3, 3b, 4, 5 (amendment 7: levels merge, joins spec,
   schema restructure) + spec consolidation per the 2026-07-12 brief
-  (diff signed off, Liz 2026-07-12). NEXT, in order: (1) execute
-  Tasks 15-18 (spec-axis file split, spec report machinery, spec-step
-  runner, Phase 1 close-out) under the walkthrough protocol; (2) the
+  (diff signed off, Liz 2026-07-12) + amendment 9 implementation
+  (rev_spec_run, commits 03d8d22/59aaa1d) + Task 15 (two-axis file
+  split, 1a0f5d2). NEXT, in order: (1) execute
+  Tasks 16-18 (spec report machinery, spec-step audit, Phase 1
+  close-out) under the walkthrough protocol; (2) the
   collaborator deliverable (academic-planning skill; Liz owns
   structure; framing in the plan's Task 5-close blockquote).
   m:m/append data-check semantics parked to the process phase (old
