@@ -50,8 +50,8 @@ paper is explicitly not a goal.
 Three modules, built in order:
 
 1. **Processing module** (this spec, detailed): user files + data dictionary
-   in → assembled, cleaned, validated, corrected, derived, certified dataset
-   out.
+   in → assembled, cleaned, validated, corrected, transformed, certified
+   dataset out.
 2. **Visualisation module, static** (own spec later): consumes the processed
    dataset through one stable data contract; produces standard review
    tables/figures with declarative control.
@@ -80,44 +80,57 @@ collaborators, flexibility is explicit: the dictionary is not a lock-in;
 piloting and extraction changes are expected, and the spec evolves with the
 review.
 
-**The workflow:**
+**The workflow** is a sequence of discrete steps — **spec → load →
+process**, then **transform** (v2) and **present** (v3) — each a standalone
+unit of work with its own verification, its own report + certification
+(§6.1), and its own fix surface. Steps compose through `rev_run()`
+(default: all shipped steps; `through =` stops earlier — steps are prefixes
+of one deterministic run from the raw files, §6.2, so nothing stale passes
+between them), and each step keeps its own check command (spellings settle
+at each phase's implementation walkthrough). The order is how work is
+checked and delivered, not a straitjacket: a user can add a dataset first
+and generate a template dictionary from it (`rev_draft_dictionary()`), or
+author and certify the full spec before any data exists.
 
-- **Step 0 — install & scaffold (once):** `remotes::install_github(...)`;
+- **Get the project (once):** `remotes::install_github(...)`;
   `rev_project("my-review/")` creates `data/raw/`, `specs/`
-  (`tables/<table>.yaml` per input + `joins.yaml`; derivations and reference
-  tables from Phase 2 — all as complete working examples wired to the
-  bundled synthetic dataset), `readers.R` and `derivations.R` templates
+  (`tables/<table>.yaml` per input + `joins.yaml`; transform declarations
+  and reference tables from v2 — all as complete working examples wired to
+  the bundled synthetic dataset), `readers.R` and `derivations.R` templates
   (each with a fill-in-the-blanks AI-assistant prompt block),
   `corrections.csv`, `run.R`, `output/`, renv initialisation, git init. The
   example project runs successfully the moment it is created; users swap in
   their reality piece by piece.
-- **Step 1 — describe (iterative):** drop extraction sheet(s) into
-  `data/raw/`; edit dictionaries and joins (`rev_draft_dictionary()`
-  generates skeletons). Tight loop: `rev_check()` → read findings → fix spec
-  or data → repeat. Specs can be authored and certified before any data
-  exists (§6, stage contract).
-- **Step 2 — clean, correct, derive (iterative):** findings needing judgment
-  become `corrections.csv` entries; `rev_check()` until clean; `rev_clean()`
-  certifies and writes the clean dataset — the natural sign-off point. Then
-  declare derivations; `rev_derive()` consumes the clean artefact.
-  `rev_process()` composes all stages, primarily for update/rerun
-  consistency.
-- **Step 3 — present (module 2, previewed):** a declarative output spec +
-  `rev_render()`, consuming only the data contract; processing and
-  presentation rerun independently.
-- **Step 4 — update (the payoff):** new search results → update the raw file
-  → `rev_process()`. Corrections re-apply (stale ones fail loudly by name);
+- **Spec:** author dictionaries and joins by editing the working templates;
+  verify (data-free); fix by editing the spec YAML. Deliverable: a
+  CERTIFIED spec report — a timestamped prespecification artifact,
+  achievable as a first or standalone deliverable before data collection
+  begins.
+- **Load:** drop data files into `data/raw/`; verify structurally — files
+  readable, sheets present, declared columns found, undeclared columns
+  annexed. Fix by editing the dictionary, re-exporting the source file, or
+  fixing the reader.
+- **Process:** standardise → correct → validate → join (§6.2); fix via
+  `corrections.csv` (the audited value-level mechanism) or spec edits.
+  Deliverable: the certified clean dataset — the natural sign-off point.
+- **Transform (v2):** declare derived variables and mappings (the transform
+  stage's own prespecification spec); run; verify against the derived
+  dictionary; fix via the mapping/valence tables or spec edits.
+- **Present (v3):** a declarative output spec + `rev_render()`, consuming
+  only the data contract; processing and presentation rerun independently.
+- **Update (the payoff):** new search results → update the raw file →
+  `rev_run()`. Corrections re-apply (stale ones fail loudly by name);
   derivations re-run identically; the run summary and git diff show exactly
   what changed.
 
-`rev_check()` diagnoses without touching pipeline state: it always reflects
-the user's corrections to date, and its outputs are reports and diagnostics
-only (`output/reports/`, `output/diagnostics/` — §6), never pipeline
-artifacts or anything in `data/raw/`.
+Check commands diagnose without touching pipeline state: they always
+reflect the user's corrections to date, and their outputs are reports and
+diagnostics only (`output/reports/`, `output/diagnostics/` — §6), never
+pipeline artifacts or anything in `data/raw/`.
 
 **Ergonomic commitments:** every user-facing function takes the project path
 (no working-directory magic); failures name file/column/row and route to the
-fix location in the user's vocabulary; `rev_check()` is always safe;
+fix location in the user's vocabulary; check commands are always safe;
 `data/raw/` is never modified.
 
 **Capability calibration (accepted):** the floor is baseline R, not zero-R.
@@ -132,15 +145,20 @@ stays human (multi-reviewer structures: §10).
 
 ## 3. Scope & non-goals
 
-**v1 scope:** the processing module (spec machinery + six pipeline stages),
-the scaffold, the designed synthetic review, task-oriented vignettes, and
-the minimal dictionary draft generator (`rev_draft_dictionary()` is in v1 —
-needed for the Phase 4 dress rehearsal).
+**Releases map to workflow steps (§2):** **v1** ships the spec, load, and
+process steps (through clean-certification, including the corrections
+engine), the scaffold, the designed synthetic review, task-oriented
+vignettes, and the minimal dictionary draft generator
+(`rev_draft_dictionary()` — needed for the dress rehearsal). **v2** ships
+transform; **v3** ships the visualisation module. ("v1/v2/v3" are milestone
+names; the R version numbers they ship under follow standard
+MAJOR.MINOR.PATCH practice, decided at release.)
 
-**Explicitly out of scope for v1:** the interactive layer and dashboards;
-umbrella/scoping reviews; codebook-document→YAML parsing (the draft
-generator is in; document parsing stays v1.x); CRAN submission; pre-commit
-hooks; fledge-style NEWS automation.
+**Explicitly out of scope for v1:** the transform and present steps (v2 and
+v3); the interactive layer and dashboards; umbrella/scoping reviews;
+codebook-document→YAML parsing (the draft generator is in; document parsing
+stays v1.x); CRAN submission; pre-commit hooks; fledge-style NEWS
+automation.
 
 **Visualisation module — boundary commitments only:** input is the data
 contract, never raw files or upstream specs (the forcing function keeping
@@ -156,21 +174,31 @@ ggplot2 objects with save helpers. Reserved now: the `prepare-*.R` /
 `render-*.R` namespace and an output-spec slot in the scaffold. Everything
 else stays open for module 2's own brainstorm.
 
-**Roadmap** (each phase: spec → plan → TDD → review):
+**Roadmap** (each phase: spec → plan → TDD → review). Phases mirror the
+workflow steps deliberately — one contained, PR-able workflow unit per
+phase (decision 2026-07-12):
 
 - **Phase 0 — bootstrap:** DONE (merged 2026-07-08).
-- **Phase 1 — spec machinery + stages 1–3** (dictionaries, joins, readers,
-  standardise, validate, findings, `rev_check()`, draft generator). The
-  expressiveness risk burns down here. IN PROGRESS
-  (dev/superpowers/plans/2026-07-09-phase-1-implementation.md).
-- **Phase 2 — stages 4–6** (corrections engine, three-tier derive, metafor
-  wrappers, certify, provenance).
-- **Phase 3 — scaffold + synthetic review + vignettes** (`rev_project()`,
+- **Phase 1 — spec:** schema machinery, dictionary and join spec checking,
+  spec reports/certification, the spec-step command, spec-axis file
+  layout. The expressiveness risk starts burning down here. IN PROGRESS
+  (dev/superpowers/plans/2026-07-09-phase-1-implementation.md, as re-cut by
+  execution amendment 8).
+- **Phase 2 — load:** readers (shipped, generic, user-written), structural
+  R-checks, findings machinery, the load report;
+  `rev_draft_dictionary()` (a spec-axis tool, but it reads data files, so
+  it ships here); `rev_run()` arrives with the second step.
+- **Phase 3 — process:** standardise, validate, join execution, the
+  corrections engine, clean-certification.
+- **Phase 4 — scaffold + synthetic review + vignettes** (`rev_project()`,
   designed synthetic dataset, getting-started and prepare-your-data
   vignettes, pkgdown live).
-- **Phase 4 — dress rehearsal** (original-review specs + validation fixture;
+- **Phase 5 — dress rehearsal** (original-review specs + validation fixture;
   divergences adjudicated individually).
-- **Phase 5 — usability pilot; then the module-2 brainstorm.**
+- **Phase 6 — usability pilot** → **v1**.
+- **Phase 7 — transform** (three tiers, metafor wrappers, policies,
+  derived-dictionary certification) → **v2**; then the module-2
+  (visualisation) brainstorm → v3.
 
 **Risks & mitigations:**
 
@@ -246,7 +274,7 @@ booleans, `missing` codes (declared reactively via findings; only
 ""/whitespace are auto-missing), `constant_within_level` (§5.3),
 `description`. The purpose/semantics axis (id/ordinal/quantity, value
 labels) is deliberately absent — designed later beside its consumers
-(derive, module 2).
+(transform, module 2).
 
 Source columns not declared are surfaced informationally, never as
 findings, and are dropped from pipeline artifacts until declared (§6).
@@ -271,7 +299,8 @@ its own declared table with its reader and its join.
 a bare column name, `keys:` naming column(s), or `combine:` naming columns
 whose concatenation (optional `separator`, default `""`) builds a **virtual
 column** named by the level. Combined keys exist solely because joins
-cannot wait for the derive stage; they are concatenation only, built after
+cannot wait for the transform stage; they are concatenation only, built
+after
 standardisation. Optional `within:` names the parent level — nesting is
 explicit because that matches how users say it and makes the hierarchy
 itself checkable; nesting cycles are spec errors. A level's keys may
@@ -364,18 +393,26 @@ only, with fixes routing back into tables as needed. Acceptance happens
 only by explicit declaration (e.g. `unmatched_ok: true`), listed on the
 certificate.
 
-The user-facing stage vocabulary is provisional (working model: spec →
-load → correct → transform, each followed by a package check); resolution
-owners in §10.
+The steps are named **spec, load, process, transform** (resolved
+2026-07-12; "derive" is retired as the user-facing stage word). Reports and
+certificates carry the step name; `rev_run()` (renamed from
+`rev_process()`, whose old name became a step's) composes the steps —
+default all shipped, `through =` to stop earlier — and per-step command
+spellings settle at each phase's implementation walkthrough.
 
 ### 6.2 Run order and stages
 
-Per table: read → standardise → compose keys → apply corrections →
-validate; then joins (skipped only on key findings); one consolidated
-report. Every v1 check is per-table because post-join validation would
-multiply study-level findings across estimate rows.
+The load step reads each table; the process step then runs per table:
+standardise → compose keys → apply corrections → validate; then joins
+(skipped only on key findings); one consolidated process report. Every
+per-table check runs before joins because post-join validation would
+multiply study-level findings across estimate rows. The steps are prefixes
+of this one deterministic run — running a later step re-does the earlier
+work from the raw files and reports it, so nothing is handed between steps
+and nothing can go stale; the one true handoff is transform consuming the
+certified clean artifact.
 
-**Read.** Readers produce canonical per-table frames (rows = observations,
+**Load.** Readers produce canonical per-table frames (rows = observations,
 columns = the declared variables); the join layer never sees orientation.
 Shape-normalisation happens through readers, not a user-facing reshape
 grammar (real export shapes are tool-specific patterns; a grammar crept
@@ -424,7 +461,7 @@ auto-applied) as the key-drift net. The loud failure remains the
 *undeclared* many-to-many. Exact data-side semantics for declared
 many-to-many joins and observation appends are parked (§10).
 
-**Corrections** (manual, audited; engine lands in Phase 2 against a
+**Corrections** (manual, audited; engine lands in Phase 3 against a
 designed-in per-table seam). A corrections file applied programmatically —
 the auditable replacement for hard-coded patch lines. Every correction
 targets a named input table and applies pre-join, where the value
@@ -436,7 +473,7 @@ loudly by correction (the data shifted underneath) — and a mandatory
 (read-only by convention and code); the fix path is a correction entry or a
 fresh export committed as a new data version.
 
-**Derive** (Phase 2). Three tiers, in declared order, each derivation
+**Transform** (v2). Three tiers, in declared order, each derivation
 documenting inputs/outputs for lineage:
 
 - *Tier 1 — declarative primitives* (closed set, pure spec): recode/map,
@@ -468,9 +505,11 @@ value-keyed attributes. Inline by default; promoted to a standalone
 reference table only when earned (long, reused, or externally maintained).
 Both forms feed identical machinery.
 
-**Certify & hand off.** Validation against the derived dictionary (the user
-declares expectations for derived variables too), provenance stamping, and
-the data contract written to `output/`.
+**Certify & hand off** (closes transform, v2). Validation against the
+derived dictionary (the user declares expectations for derived variables
+too — the transform stage's own prespecification), provenance stamping, and
+the data contract written to `output/`. In v1, the process step's
+clean-certification is the terminal certificate.
 
 ### 6.3 Findings
 
@@ -500,9 +539,9 @@ git repositories (specs, corrections, outputs committed — study-level data
 is small and non-sensitive) plus a per-run run summary (row counts,
 correction hits, derivation and findings counts), so diffs answer "what
 changed since last run"; stale corrections failing loudly is the third leg.
-Artefact checksums are staleness guards: `rev_derive()` on an out-of-date
-snapshot warns loudly; `rev_process()` makes staleness impossible by
-construction.
+Artefact checksums are staleness guards: the transform step on an
+out-of-date clean snapshot warns loudly; `rev_run()` makes staleness
+impossible by construction.
 
 ## 7. Architecture
 
@@ -573,9 +612,19 @@ refers_to) would each replace custom code with schema rows.
 
 ### 7.3 Package internals
 
-File layout is a provisional starting shape, never a commitment: the
-binding rules are the mirror rule, topic-coherent files, the
-`utils-<domain>.R` convention, and no user-facing "clean" naming before
+R files mirror the workflow units on two axes (decision 2026-07-12).
+`spec-*` files hold declaration surfaces: `spec-check.R` (the shared
+schema-driven check battery — the one named exception to files-as-workflow-
+units, since shared machinery belongs to no single unit), `spec-source.R`
+(one dictionary, within-source, plus reading the set), `spec-join.R` (the
+join declarations, across-source), `spec-draft.R` (the skeleton generator),
+and later `spec-transform.R` (the derived-variable prespecification, which
+validates through the same battery). Execution stages prefix their own
+files: `load*.R`, `process-*.R` (standardise, validate, join, correct,
+certify), `transform-*.R`. Stage-neutral machinery is unprefixed
+(`schema.R`, `report.R`, `findings.R`) or `utils-*`. Within that principle
+the layout stays adjustable: the binding rules remain the mirror rule,
+topic-coherent files, and no user-facing "clean" naming before
 certification; reshuffling in PRs is free and expected. S3 classes are few
 and purposeful: `rev_dictionary`, `rev_findings`, `rev_report` exist;
 `rev_corrections`, `rev_derivation_spec`, and `rev_dataset` (a tibble
@@ -612,7 +661,7 @@ boundary-legal tests carry positive coverage; do not resurrect it.
 Fixture policy: the Covidence example export is dummy data and may seed
 shape-realistic fixtures; the real family-comparison workbook is NEVER
 committed — it serves as a local-only, skip-if-absent fixture, with a
-committed synthetic derivative folded into Phase 3's designed synthetic
+committed synthetic derivative folded into Phase 4's designed synthetic
 review.
 
 Infrastructure: testthat 3e, parallel, TDD, covr+Codecov measured-not-
@@ -666,15 +715,21 @@ phase-1 plan's amendment trail.
 | 2026-07-12 | Deferred schema refactor recorded as direction, not plan. Triggers: the architecture discussion / Phase 2 planning, and Task 14's structural review | the vocabulary gaps (container shape, scalar shorthand, one-of, acyclic refers_to, `permitted_when`) each replace custom code with schema rows — decided with the full check inventory in view |
 | 2026-07-12 | No architecture-review skill | considered and dropped as overengineering |
 | 2026-07-12 | Spec consolidated (this rewrite) | git holds the history; the document holds the present |
+| 2026-07-12 | Workflow re-modelled as discrete steps — spec → load → process → transform (v2) → present (v3) — each with its own verification, report + certificate, and fix surface (spec: edit YAML; load: dictionary, source file, or reader; process: corrections.csv or spec; transform: mapping/valence tables or spec) | modular units workable standalone and composable; the fix mechanism honestly differs per step and findings route accordingly |
+| 2026-07-12 | `rev_run()` (renamed from `rev_process()`) composes steps, default all shipped, `through =` to stop earlier | the pipeline is stateless, so steps are prefixes of one run — "which steps" honestly means "how far"; "process" became a step name |
+| 2026-07-12 | Step vocabulary settled: spec, load, process, transform; "derive" retired as the user-facing stage word | resolves the provisional stage vocabulary (amendment 5) ahead of its Task 9 schedule |
+| 2026-07-12 | Releases: v1 = spec + load + process; v2 = transform; v3 = vis. Phases re-cut one workflow unit each (Phase 1 = spec only); corrections + clean-certification move ahead of transform | phases mirroring steps keeps each deliverable contained and manageable; verify-and-correct is what makes v1 complete |
+| 2026-07-12 | Two-axis file naming: `spec-*` declaration surfaces vs `load-`/`process-`/`transform-*` execution; shared machinery unprefixed; spec-dictionary.R splits into spec-check.R + spec-source.R; spec-joins.R renamed spec-join.R | files map to discrete workflow units; the shared battery is the one named exception |
+| 2026-07-12 | Held architecture agenda closed: user-facing format passes the convolution check; "kind" wording kept; same-named-field divergence list kept (conformance test guards drift); schema vocabulary gaps + `permitted_when` stay deferred — triggers: the transform spec's kinds as the likely third permission instance, and phase close-out structural reviews | decide with evidence in view; build nothing speculatively |
 
 ## 10. Open questions (with owners)
 
 | Question | Owner | Status |
 |---|---|---|
 | data-dict: format-only vs CLI dependency | Module-1 implementation planning | **Resolved 2026-07-09** (§5.1: own schema, aligned vocabulary, no CLI; convergence review at data-dict 1.0) |
-| Shared-mapping representation (named in-spec vs external files) | Module-1 implementation planning | Open — deferred to Phase 2 planning (derivation mappings; value→label maps deferred there too, 2026-07-09) |
+| Shared-mapping representation (named in-spec vs external files) | Module-1 implementation planning | Open — deferred to Phase 7 (transform) planning (derivation mappings; value→label maps deferred there too, 2026-07-09) |
 | Extraction-tool export formats (Covidence, DistillerSR) | Module-1 implementation planning | **Resolved 2026-07-09** (real-file investigation → readers design, §6.2; findings in the Phase 1 planning notes) |
-| `escalc()` coverage vs original pipeline's derivations | Module-1 implementation planning | Open — Phase 2 planning |
+| `escalc()` coverage vs original pipeline's derivations | Module-1 implementation planning | Open — Phase 7 (transform) planning |
 | Check-type→routing table for findings | Module-1 implementation planning | **Structured 2026-07-09** (scope/family codes + consequence model, §4/§6); full enumeration incl. the data-dict coverage mapping delivered in the phase-1 plan |
 | Multi-reviewer row structures (declaration + handling; v1 = consensus rows only) | Later phase / user consultation | Open (deferred 2026-07-09) |
 | Citation rendering (flextable/officer vs Quarto-mediated) | Module-2 design | Open |
@@ -682,13 +737,13 @@ phase-1 plan's amendment trail.
 | Documentation templates per function type | Phase 1, with real functions | Open — lands during Phase 1 implementation |
 | Missing-codes-in-dictionary vs corrections split (UX) | Usability pilot / user consultation | Open (flagged 2026-07-09) |
 | Package split: data spec / data process / data vis as 2-3 packages (boundary discipline enforced now — spec machinery never reaches pipeline internals) | Later phase decision | Open (flagged 2026-07-11, amendment 4) |
-| User-facing stage model: spec → load (import) → correct (manual, non-algorithmic) → transform (derive), each followed by a package check; correct standalone vs folded; joins placement. Function/report/certificate renames (incl. user-facing `rev_*` verbs) expected to follow — cheap pre-release, so resolve no later than Task 9 | Task 9 walkthrough (report naming); Phase 2 planning (full model) | Open (flagged 2026-07-11, amendment 5) |
+| User-facing stage model: step names, correct standalone vs folded, joins placement, function/report/certificate renames | Task 9 walkthrough (report naming); Phase 2 planning (full model) | **Resolved 2026-07-12** (workflow amendment, plan amendment 8: steps spec → load → process → transform, each with verify + fix; joins execute and report in process, the joins *spec* reports in the spec step; `rev_run()` composes; per-step command spellings settle at each phase's walkthrough) |
 | Joins declaring expected column overlap between sides (`shared:`); overlap semantics differ between same-variables merges and different-information merges | Task 5 walkthrough (Phase 1) | **Resolved 2026-07-12** (amendment 7: the join's declared type `adds: variables \| observations` sets the overlap expectation; per-column `shared:` rejected) |
-| Data-side J-check semantics for declared many-to-many joins (candidates: observed-vs-declared looseness nudge, row accounting on the join report) and for observation appends (column match with near-miss suggestions, key collisions); J-code assignments | Task 11 walkthrough (Phase 1) | Open (flagged 2026-07-12, amendment 7e) |
+| Data-side J-check semantics for declared many-to-many joins (candidates: observed-vs-declared looseness nudge, row accounting on the join report) and for observation appends (column match with near-miss suggestions, key collisions); J-code assignments | Phase 3 (process) — old Task 11's walkthrough | Open (flagged 2026-07-12, amendment 7e) |
 | Certification granularity: certify table A while table B is broken? | Task 5 walkthrough (Phase 1) | **Resolved 2026-07-12** (amendment 7d: yes — table certifications certify internal coherence only, without reference to other files) |
-| R file organisation: review what lives in each per-topic R file vs a shared utils file, once enough code exists to see the seams | First pass at Task 14's audit; revisit at Phase 2 planning | Open (flagged 2026-07-11) |
-| Workflow ordering: within-source data checking + corrections vs across-source post-join checking + corrections; join spec may be authored upfront so sheets are set up compatibly; pipeline gating rules for partial processing (loading/processing one source before others are join-ready) — amendment 5 defers | Phase 2 planning (corrections engine) | Open (flagged 2026-07-11) |
-| Schema vocabulary and "kind" wording (the deferred refactor direction, §9 2026-07-12) | Architecture discussion (agenda in the phase-1 plan's Task 5-close blockquote); Task 14 structural review | Open (flagged 2026-07-12) |
+| R file organisation: review what lives in each per-topic R file vs a shared utils file, once enough code exists to see the seams | First pass at Task 14's audit; revisit at Phase 2 planning | **Resolved 2026-07-12** (two-axis scheme, §7.3; seams confirmed at each phase's close-out review) |
+| Workflow ordering: within-source data checking + corrections vs across-source post-join checking + corrections; join spec may be authored upfront so sheets are set up compatibly; pipeline gating rules for partial processing (loading/processing one source before others are join-ready) — amendment 5 defers | Phase 3 (process) planning (corrections engine) | Open (flagged 2026-07-11) |
+| Schema vocabulary gaps (container shape, scalar shorthand, one-of, acyclic refers_to) and `permitted_when` generalisation — the deferred refactor direction, §9 | Phase close-out structural reviews; the transform spec's kinds are the likely third permission instance | Open ("kind" wording **Resolved 2026-07-12**: kept, internal-only) |
 
 **Resolution mechanism:** when a phase begins, its owned questions become
 the first tasks of that phase's planning step (typically short

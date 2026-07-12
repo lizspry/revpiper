@@ -220,8 +220,57 @@
   lives, the recorded same-named-fields divergence list); (ii) check-parsimony
   review: checks stay schema-generated wherever possible — never the same
   check specified separately for elements one generic check could cover.
+- **Execution amendment 8 (2026-07-12; drafted at the post-consolidation
+  workflow/architecture discussion; AWAITING LIZ'S SIGN-OFF):** workflow
+  step model and phase re-cut.
+  (a) **Step model + vocabulary** (resolves amendment 5's provisional
+  vocabulary and Task 9's naming question early): the user workflow is
+  discrete steps — spec → load → process → transform (v2) → present (v3) —
+  each with its own verification, report + certificate, and fix surface
+  (spec: edit the YAML; load: dictionary, source file, or reader; process:
+  corrections.csv or spec; transform: mapping/valence tables or spec).
+  "derive" retires as the user-facing stage word. Steps compose via
+  `rev_run()` (renamed from `rev_process()`), default all shipped steps,
+  `through =` to stop earlier — steps are prefixes of one stateless run, so
+  there is no non-contiguous selection and no stale handoff (transform,
+  consuming the certified clean artifact, is the one true handoff).
+  Per-step command spellings settle at each phase's implementation
+  walkthrough; reports/certificates carry the step name. Joins execute and
+  report in process; the joins SPEC reports in the spec step.
+  (b) **Releases and phases:** v1 = spec + load + process; v2 = transform;
+  v3 = vis. Phases re-cut one workflow unit each: 1 spec, 2 load, 3 process
+  (standardise, validate, joins, corrections engine, clean-certification),
+  4 scaffold+synthetic+vignettes, 5 dress rehearsal, 6 usability pilot
+  (→ v1), 7 transform (→ v2). Corrections and clean-certification move
+  AHEAD of derive.
+  (c) **Phase 1 re-scoped to spec only.** Remaining Phase 1 work = Tasks
+  15–18 (appended below): spec-axis file reorganisation, spec report
+  machinery, the spec-step runner, close-out. Old Tasks 6–13 MOVE to their
+  steps' phases — 6, 7, 13 and the findings half of 9 to Phase 2 (load);
+  8, 10, 11 and the data half of 12 to Phase 3 (process) — their text below
+  is FROZEN as source material for those phases' plans; do not execute from
+  this plan. `rev_draft_dictionary()` ships in Phase 2 (it reads data
+  files) under its spec-axis file name; `rev_run()` lands with Phase 2
+  (first multi-step composition).
+  (d) **Two-axis file scheme** (spec §7.3): `spec-*` declaration surfaces
+  vs `load-`/`process-`/`transform-*` execution; shared machinery
+  unprefixed. Phase 1 renames: spec-dictionary.R → spec-check.R (shared
+  battery + plumbing) + spec-source.R (within-source + set identity);
+  spec-joins.R → spec-join.R. The File map above is superseded accordingly.
+  (e) **Held Task 5-close agenda dispositions:** format convolution check
+  passed (no change); "kind" wording kept (question closed);
+  same-named-field divergence list kept (conformance test guards drift);
+  schema vocabulary gaps and `permitted_when` deferred with named triggers
+  (the transform spec's kinds as the likely third permission instance; each
+  phase's close-out structural review — Task 18 runs amendment 6/7h reviews
+  scoped to spec-stage code; the full-inventory check-parsimony review
+  moves to the process phase's close-out).
+  (f) Spec amended in the same commit (§2, §3, §6, §7.3, §9, §10);
+  conventions Terminology gains the step words and retires "derive"
+  user-facing. The Goal/Architecture front matter above reads as authored
+  2026-07-09 and is superseded where it conflicts with this amendment.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
-  (as amended through 2026-07-11). Rationale trail:
+  (consolidated 2026-07-12). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
 
 **Goal:** Implement revpiper's spec machinery and pipeline stages 1–3 — per-table
@@ -997,6 +1046,12 @@ source file `data/raw/rob.csv`, columns `study_id` (text, required) +
 > Describe (not demo) the certificate and draft generator as coming.
 > Quarto source; AI-use disclosure statement; seeds the Phase 3 vignette.
 
+> **Tasks 6–13 below MOVED out of Phase 1 by execution amendment 8** —
+> old 6, 7, 13 and the findings half of 9 to Phase 2 (load); old 8, 10, 11
+> and the data half of 12 to Phase 3 (process). Their text is frozen here
+> as source material for those phases' plans; do NOT execute from this
+> plan. Phase 1 continues at Tasks 15–18.
+
 ### Task 6: Generic readers + dispatch + R-checks (`read.R`)
 
 **Files:** Create `R/read.R`, `tests/testthat/test-read.R`, fixtures
@@ -1368,6 +1423,69 @@ build-ignored).
 - [ ] **Step 5: handoff.** Report to Liz: branch `phase-1-core` ready; she fetches,
   pushes, opens the PR (squash-merge; CI green gate). Spec §4 one-line amendment
   (rev_check diagnostics, Decision 1) rides the same PR.
+
+### Task 15: Spec-axis file reorganisation (amendment 8)
+
+**Files:** rename `R/spec-joins.R` → `R/spec-join.R` (+ test twin + its
+`_snaps/` file); split `R/spec-dictionary.R` into `R/spec-check.R` (the
+generic schema-driven battery: `run_entry_checks`/`run_contents_checks`/
+`run_list_checks`/`run_field_checks`, the YF/YE check definitions,
+`matches_shape`/`matches_type`, problem plumbing, `entry_names`/
+`entry_label`) and `R/spec-source.R` (`rev_read_dictionary`,
+`rev_read_dictionaries` incl. the set-level identity check, level entries +
+nesting, reference resolution wiring, the constructor,
+`dictionary_key_columns`). `tests/testthat/test-spec-dictionary.R` splits
+along the same seam; snapshots relocate with their test files.
+
+- [ ] **Step 1:** mechanical moves only — no behaviour change. Full suite
+  green before and after; relocated snapshots re-accepted only where
+  content is identical.
+- [ ] **Step 2:** `air format .`, zero lints, commit.
+
+### Task 16: Spec report machinery (`report.R`) — old Task 9's core, spec instantiation only
+
+**Interfaces — Produces:** `new_stage_report(stage, items,
+acknowledgments, unspecified)` → `rev_report` (status CERTIFIED iff zero
+standing items); `print.rev_report` certificate with the stage line;
+`rev_export_report(report, dir)` → `output/reports/<stage>-<runstamp>.xlsx`
++ `<stage>-<runstamp>-certificate.txt`, returning paths invisibly. Spec-
+stage items = the Task 2 problems tibble. The findings item schema is NOT
+built here (Phase 2, load).
+
+- [ ] **Steps 1–5:** TDD per old Task 9, restricted to the spec
+  instantiation; certificate snapshots for both statuses, read before
+  acceptance (the certificate is the product's public record).
+
+### Task 17: Spec-step runner
+
+**Interfaces — Produces:** the user-facing spec command (spelling decided
+at this task's walkthrough; incumbent candidate `rev_check_specs()`).
+Data-free: loads dictionaries + joins via the constructors, catching their
+classed aborts through the `problems` condition field; ALWAYS completes —
+prints the spec report, writes it via `rev_export_report()`, returns it
+invisibly (loaded specs as attribute when certified); NOT CERTIFIED on
+problems, no abort. Deliberately checks that `source.file` is declared,
+never that it exists (prespecification workflow: the CERTIFIED spec report
+is the registerable artifact).
+
+- [ ] **Steps 1–5:** TDD per old Task 12's spec-only half — good-spec
+  fixture set → CERTIFIED snapshot + report files exist; bad-spec variant →
+  completes NOT CERTIFIED, problems as items, files written, no error; a
+  copy with data/raw/ deleted → still CERTIFIED (no data required).
+
+### Task 18: Phase 1 close-out (old Task 14, re-scoped to the spec step)
+
+- [ ] **Step 1:** CLAUDE.md relocation + `.Rbuildignore` + pkgdown
+  verification (old Task 14 Step 1, unchanged).
+- [ ] **Step 2:** roxygen pass for the spec-stage exports (runnable
+  examples on the spec fixtures); NEWS bullets re-scoped to the spec step
+  (authoring, checking, certification before data collection).
+- [ ] **Step 3:** full pre-push suite + the duplication/abstraction audit
+  and structural reviews (amendments 6 and 7h) scoped to spec-stage code;
+  the full-inventory check-parsimony review moves to the process phase's
+  close-out.
+- [ ] **Step 4:** handoff — Liz fetches, pushes, opens the Phase 1 PR
+  (squash-merge; CI green gate).
 
 ## Self-review (performed at authoring)
 

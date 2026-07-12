@@ -47,23 +47,23 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   Liz's diff review; git history holds the amendment trail, audited in
   dev/superpowers/plans/2026-07-12-spec-consolidation-extraction.md).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
-  SIGNED OFF with execution amendments 1-7 (all signed; see its Status
-  block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b, 4,
-  5 — Task 5 closed 2026-07-12 per execution amendment 7 (identifiers
-  merged into `levels:` with explicit `within:` nesting, granularity
-  dropped, `adds: variables | observations`, four-value relationship
-  domain, fields.yaml nested by kind, joins spec + YX02/YX03 live;
-  /simplify pass applied, reviewed jointly). NEXT (before Task 6's
-  walkthrough), in order: (1) SPEC CONSOLIDATION per
-  dev/superpowers/plans/2026-07-12-spec-consolidation-brief.md —
-  extraction table first, then rewrite, Liz reviews the diff; (2) the
-  architecture discussion with Liz (agenda in the plan's Task 5-close
-  blockquote: schema vocabulary gaps, permitted_when, "kind" wording,
-  divergence list — decisions only, no pre-built review apparatus);
-  (3) the collaborator deliverable (academic-planning skill; Liz owns
-  structure; framing in the same blockquote). m:m/append data-check
-  semantics parked to Task 11's walkthrough; structural reviews at
-  Task 14 (amendment 7h).
+  SIGNED OFF with execution amendments 1-7; amendment 8 DRAFTED
+  2026-07-12 (workflow step model spec → load → process → transform;
+  rev_run(); Phase 1 re-cut to SPEC ONLY, phases re-numbered 1-7 with
+  releases v1 = spec+load+process, v2 = transform, v3 = vis; two-axis
+  file scheme; old Tasks 6-13 frozen and moved to Phases 2-3) —
+  AWAITING LIZ'S SIGN-OFF. Executing on branch phase-1-core. DONE:
+  Tasks 1, 2, 3, 3b, 4, 5 (amendment 7: levels merge, joins spec,
+  schema restructure) + spec consolidation per the 2026-07-12 brief
+  (pending Liz's diff review). NEXT, in order: (1) Liz reviews the
+  consolidation diff and signs off (or amends) amendment 8; (2) execute
+  Tasks 15-18 (spec-axis file split, spec report machinery, spec-step
+  runner, Phase 1 close-out) under the walkthrough protocol; (3) the
+  collaborator deliverable (academic-planning skill; Liz owns
+  structure; framing in the plan's Task 5-close blockquote).
+  m:m/append data-check semantics parked to the process phase (old
+  Task 11); structural reviews at each phase's close-out (amendment
+  7h/8e).
   Binding protocol: walkthrough-gated per task (explain, incl. a
   facts-and-sources section, → Liz reads plan step + code → she confirms →
   execute), pre-commit duplication pass, /simplify on the task diff before

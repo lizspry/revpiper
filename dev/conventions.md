@@ -56,6 +56,11 @@ source), not here — this document covers code conventions only.
   within one entry), **YS** source (across entries within one file),
   **YX** cross-source (across files). Within-source validation is
   standalone; across-source is a separate, composable, data-free step.
+- Workflow **steps** — spec, load, process, transform (then present,
+  module 2) — are the user-facing stage words (2026-07-12, plan amendment
+  8, pending sign-off): reports, certificates, and R-file prefixes carry
+  them. "derive" is retired as the user-facing stage word (say transform;
+  internal helper names may keep it where clearer).
 
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml
