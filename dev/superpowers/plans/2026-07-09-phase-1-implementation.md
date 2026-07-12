@@ -221,7 +221,9 @@
   review: checks stay schema-generated wherever possible — never the same
   check specified separately for elements one generic check could cover.
 - **Execution amendment 8 (2026-07-12; drafted at the post-consolidation
-  workflow/architecture discussion; AWAITING LIZ'S SIGN-OFF):** workflow
+  workflow/architecture discussion; SIGNED OFF, Liz 2026-07-12, after one
+  review amendment — the front matter rewritten in place, commit b2f9bcc):**
+  workflow
   step model and phase re-cut.
   (a) **Step model + vocabulary** (resolves amendment 5's provisional
   vocabulary and Task 9's naming question early): the user workflow is
