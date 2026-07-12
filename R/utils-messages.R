@@ -42,10 +42,11 @@ stop_spec <- function(problems) {
   )
 }
 
-# Abort (spec-error class) when a required input file is absent; `what`
-# names the file's role in the message.
-stop_missing_file <- function(what, path) {
-  if (file.exists(path)) {
+# Abort (spec-error class) when a required input path is absent; `what`
+# names the path's role in the message, `found` its existence test
+# (dir.exists(path) for directories).
+stop_missing_path <- function(what, path, found = file.exists(path)) {
+  if (found) {
     return(invisible(NULL))
   }
   cli::cli_abort(

@@ -3,7 +3,7 @@
 # file validates with zero knowledge of any other source.
 read_dictionary <- function(path) {
   rlang::check_string(path)
-  stop_missing_file("Dictionary file", path)
+  stop_missing_path("Dictionary file", path)
   raw <- yaml::read_yaml(path)
   problems <- rbind(
     run_entry_checks(raw, "file", path, "file entry"),
@@ -22,22 +22,20 @@ read_dictionary <- function(path) {
 # name. Returns the list named by table.
 read_dictionaries <- function(dir) {
   rlang::check_string(dir)
-  if (!dir.exists(dir)) {
-    cli::cli_abort(
-      "Dictionary directory {.file {dir}} does not exist.",
-      class = "revpiper_spec_error",
-      call = NULL
-    )
-  }
+  stop_missing_path("Dictionary directory", dir, dir.exists(dir))
   files <- sort(list.files(dir, pattern = "\\.ya?ml$", full.names = TRUE))
-  dicts <- lapply(files, read_dictionary)
-  tables <- vapply(dicts, \(d) d$table, character(1))
-  problems <- check_table_identity(tables, files)
+  dicts <- name_by_table(lapply(files, read_dictionary))
+  problems <- check_table_identity(names(dicts), files)
   if (nrow(problems) > 0) {
     stop_spec(problems)
   }
-  names(dicts) <- tables
   dicts
+}
+
+# Name a list of dictionaries by their tables: the one home for how a
+# tables list is keyed.
+name_by_table <- function(dicts) {
+  stats::setNames(dicts, vapply(dicts, \(d) d$table, character(1)))
 }
 
 # Orchestration

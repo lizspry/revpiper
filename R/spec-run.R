@@ -39,11 +39,12 @@ rev_spec_run <- function(dir = "specs", file = NULL, joins = TRUE) {
   }
   if (file == spec_joins_file) {
     path <- spec_joins_path(dir)
-    stop_missing_file("Spec file", path)
+    stop_missing_path("Spec file", path)
     return(spec_set(joins = read_joins(path)))
   }
-  dict <- read_dictionary(file.path(spec_tables_dir(dir), file))
-  spec_set(tables = stats::setNames(list(dict), dict$table))
+  path <- file.path(spec_tables_dir(dir), file)
+  stop_missing_path("Spec file", path)
+  spec_set(tables = name_by_table(list(read_dictionary(path))))
 }
 
 run_spec_set <- function(dir, joins) {

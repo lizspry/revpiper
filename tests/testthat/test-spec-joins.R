@@ -217,3 +217,14 @@ test_that("each single-defect joins file aborts naming its problem", {
     read_bad("joins-ye08-relationship-on-observations.yaml")
   )
 })
+
+test_that("read_joins() distinguishes no dictionaries from zero dictionaries", {
+  # NULL = within-file scope, references unchecked; an empty dictionary
+  # set = resolve against nothing, every reference fails. Load-bearing.
+  j <- minimal_join()
+  expect_null(spec_problems(joins_from_list(list(j), NULL)))
+  expect_identical(
+    spec_codes(spec_problems(joins_from_list(list(j), list()))),
+    "YX02"
+  )
+})
