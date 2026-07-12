@@ -1531,8 +1531,14 @@ snapshots relocate with their test files.
 **Interfaces — Produces:** `new_stage_report(stage, items,
 acknowledgments, unspecified)` → `rev_report` (status CERTIFIED iff zero
 standing items); `print.rev_report` certificate with the stage line;
-`rev_export_report(report, dir)` → `output/reports/<stage>-<runstamp>.xlsx`
-+ `<stage>-<runstamp>-certificate.txt`, returning paths invisibly. Spec-
+INTERNAL `export_report(report, dir)` → `<dir>/<stage>-<runstamp>.xlsx`
++ `<stage>-<runstamp>-certificate.txt`, returning paths invisibly
+(un-exported at Liz's review 2026-07-12: the audit always writes, so no
+user door is needed — export later if a real need appears; the
+`output/reports/` layout fact lands with Task 17, the one caller).
+Nothing in report.R is exported — the machinery serves the audits; the
+print method registers for the class. Certificate wording has one home
+(`format.rev_report`; the certificate file is the same text). Spec-
 stage items = the Task 2 problems tibble. The findings item schema is NOT
 built here (Phase 2, load).
 
