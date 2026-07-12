@@ -37,43 +37,42 @@ schema_properties <- cached(function() {
   )
 })
 
-# One field per row, one property per column; every cell read from the yaml
-# and converted per its property's declared loading type. Fields are grouped
-# under their kind, so the entry key supplies the field property and the
-# group header supplies the kind property.
+# One row of the fields table: one field of one kind, every cell converted
+# per its property's declared loading type.
+field_row <- function(kind, name, spec, props) {
+  f <- c(list(field = name, kind = kind), spec)
+  cells <- lapply(seq_len(nrow(props)), \(i) {
+    value <- f[[props$property[i]]]
+    switch(
+      props$type[i],
+      string = value %||% NA_character_,
+      boolean = value,
+      list_of_strings = list(unlist(value)),
+      verbatim = list(value)
+    )
+  })
+  names(cells) <- props$property
+  do.call(tibble::tibble, cells)
+}
+
+# One field per row, one property per column. Fields are grouped under
+# their kind, so the entry key supplies the field property and the group
+# header supplies the kind property.
 schema_fields <- cached(function() {
   props <- schema_properties()
   kinds <- schema_yaml("fields.yaml")$fields
-  do.call(
-    rbind,
-    lapply(names(kinds), \(kind) {
-      fields <- kinds[[kind]]
-      do.call(
-        rbind,
-        lapply(names(fields), \(name) {
-          f <- c(list(field = name, kind = kind), fields[[name]])
-          cells <- lapply(seq_len(nrow(props)), \(i) {
-            value <- f[[props$property[i]]]
-            switch(
-              props$type[i],
-              string = value %||% NA_character_,
-              boolean = value,
-              list_of_strings = list(unlist(value)),
-              verbatim = list(value)
-            )
-          })
-          names(cells) <- props$property
-          do.call(tibble::tibble, cells)
-        })
-      )
+  rows <- lapply(names(kinds), \(kind) {
+    lapply(names(kinds[[kind]]), \(name) {
+      field_row(kind, name, kinds[[kind]][[name]], props)
     })
-  )
+  })
+  do.call(rbind, unlist(rows, recursive = FALSE))
 })
 
 # The closed set of entry kinds, read from the schema's kinds list.
-schema_kinds <- function() {
+schema_kinds <- cached(function() {
   unlist(schema_yaml("fields.yaml")$kinds)
-}
+})
 
 # The declared default of one field of one kind.
 field_default <- function(kind, field) {

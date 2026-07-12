@@ -122,7 +122,10 @@ Closed decisions (this project):
 - Pure functions: data + explicit args in, value out; side effects only
   at orchestration edges. Fail fast with cli_abort at entry points.
 - Rule of three, qualified: third occurrence forces a decision —
-  extract, or leave a one-line written justification.
+  extract, or leave a one-line written justification. It is a floor,
+  not a barrier (Liz, 2026-07-12): duplication flagged at two
+  occurrences (review, /simplify) may be extracted whenever the
+  extraction is judged an improvement.
 - usethis-first for all scaffolding/config.
 
 ## Single source of truth (recorded 2026-07-11, Phase 1 amendment 6)

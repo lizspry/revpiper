@@ -2,10 +2,6 @@ joins_path <- function(fixture) {
   test_path("fixtures", "specs-good", fixture)
 }
 
-bad_joins_path <- function(fixture) {
-  test_path("fixtures", "specs-bad", fixture)
-}
-
 good_dictionaries <- function() {
   rev_read_dictionaries(test_path("fixtures", "specs-good", "tables"))
 }
@@ -30,18 +26,11 @@ read_joins <- function(joins, dictionaries = good_dictionaries()) {
 }
 
 join_problems_of <- function(joins) {
-  tryCatch(
-    {
-      read_joins(joins)
-      NULL
-    },
-    revpiper_spec_error = \(e) e$problems
-  )
+  spec_problems(read_joins(joins))
 }
 
 join_codes_of <- function(joins) {
-  problems <- join_problems_of(joins)
-  if (is.null(problems)) character(0) else sort(unique(problems$code))
+  spec_codes(join_problems_of(joins))
 }
 
 # ---- Layer 1: matrix over the join schema rows ----
@@ -215,7 +204,7 @@ test_that("dictionaries must be rev_dictionary objects", {
 test_that("each single-defect joins file aborts naming its problem", {
   dicts <- good_dictionaries()
   read_bad <- function(fixture) {
-    rev_read_joins(bad_joins_path(fixture), dicts)
+    rev_read_joins(bad_path(fixture), dicts)
   }
 
   expect_snapshot(error = TRUE, read_bad("joins-yx02-unknown-table.yaml"))

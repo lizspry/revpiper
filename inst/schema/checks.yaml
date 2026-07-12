@@ -171,7 +171,7 @@ checks:
     implemented: true
   YX02:
     scope: cross-source
-    property: refers_to
+    property: "custom: cross-source resolution"
     meaning: a cross-source reference does not resolve (join tables, key columns)
     message_template: "'{value}' does not resolve against {section}"
     params: [value, section]

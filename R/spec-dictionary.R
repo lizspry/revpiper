@@ -410,7 +410,10 @@ check_permitted_adds <- function(x, schema, file, entry) {
   }
   rows <- schema[restricted, ]
   bind_problems(lapply(seq_len(nrow(rows)), \(i) {
-    if (is.null(x[[rows$field[i]]]) || adds %in% rows$permitted_adds[[i]]) {
+    if (
+      is.null(x[[rows$field[i]]]) ||
+        is_permitted_adds(rows$permitted_adds[[i]], x)
+    ) {
       return(no_problems())
     }
     flag_problem(file, entry, "YE08", field = rows$field[i], adds = adds)
@@ -521,12 +524,14 @@ check_level_nesting <- function(levels, file) {
     }
     if (!is.na(current) && current %in% path) {
       nodes <- path[seq(which(path == current), length(path))]
-      anchor <- which(nodes == min(nodes))[1]
+      anchor <- match(min(nodes), nodes)
       rotated <- c(
         nodes[seq(anchor, length(nodes))],
         nodes[seq_len(anchor - 1)]
       )
-      cycles[[paste(rotated, collapse = " ")]] <- rotated
+      # each level has one parent at most, so cycles are node-disjoint:
+      # the anchor node alone identifies the cycle
+      cycles[[rotated[[1]]]] <- rotated
     }
   }
   bind_problems(lapply(cycles, \(nodes) {
@@ -587,14 +592,22 @@ resolve_references <- function(raw, file) {
   problems
 }
 
-# YS02: a value does not name something its section declares
-check_reference <- function(values, declared, section, file, entry) {
+# YS02 (within one file) / YX02 (across sources): a value does not name
+# something its declared pool contains.
+check_reference <- function(
+  values,
+  declared,
+  section,
+  file,
+  entry,
+  code = "YS02"
+) {
   bad <- setdiff(values, declared)
   bind_problems(lapply(bad, \(v) {
     flag_problem(
       file,
       entry,
-      "YS02",
+      code,
       value = v,
       section = section,
       suggestion = suggest_name(v, declared)
@@ -618,9 +631,9 @@ reference_instances <- function(raw, field) {
         list(values = strings[[level]], entry = level_label(level))
       })
     },
-    keys = level_field_instances(raw, "keys"),
-    combine = level_field_instances(raw, "combine"),
-    within = level_field_instances(raw, "within"),
+    keys = ,
+    combine = ,
+    within = level_field_instances(raw, field),
     constant_within_level = {
       if (!is_list_of_mappings(raw$columns)) {
         return(list())
@@ -762,7 +775,11 @@ is_string <- function(x) {
 # Constructor
 
 new_dictionary <- function(raw, path) {
-  default_of <- function(f) field_default("column", f)
+  defaults <- list(
+    required = field_default("column", "required"),
+    unique = field_default("column", "unique"),
+    missing = field_default("column", "missing")
+  )
   columns <- do.call(
     rbind,
     lapply(raw$columns, \(col) {
@@ -772,10 +789,10 @@ new_dictionary <- function(raw, path) {
         values = list(if (is.null(col$values)) NULL else unlist(col$values)),
         range = list(if (is.null(col$range)) NULL else unlist(col$range)),
         units = col$units %||% NA_character_,
-        required = col$required %||% default_of("required"),
-        unique = col$unique %||% default_of("unique"),
+        required = col$required %||% defaults$required,
+        unique = col$unique %||% defaults$unique,
         missing = list(as.character(unlist(
-          col$missing %||% default_of("missing")
+          col$missing %||% defaults$missing
         ))),
         constant_within_level = col$constant_within_level %||% NA_character_,
         description = col$description %||% NA_character_

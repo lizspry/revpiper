@@ -2,10 +2,6 @@ good_path <- function() {
   test_path("fixtures", "specs-good", "tables", "estimates.yaml")
 }
 
-bad_path <- function(fixture) {
-  test_path("fixtures", "specs-bad", fixture)
-}
-
 # A zero-problem dictionary the matrix mutates one aspect at a time.
 minimal_dict <- function() {
   list(
@@ -62,18 +58,11 @@ read_dict <- function(dict) {
 }
 
 problems_of <- function(dict) {
-  tryCatch(
-    {
-      read_dict(dict)
-      NULL
-    },
-    revpiper_spec_error = \(e) e$problems
-  )
+  spec_problems(read_dict(dict))
 }
 
 codes_of <- function(dict) {
-  problems <- problems_of(dict)
-  if (is.null(problems)) character(0) else sort(unique(problems$code))
+  spec_codes(problems_of(dict))
 }
 
 # ---- Layer 1: property matrix, generated from the schema ----

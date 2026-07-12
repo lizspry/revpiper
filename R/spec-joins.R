@@ -53,21 +53,31 @@ no_joins <- function() {
 }
 
 new_joins <- function(joins) {
+  schema <- field_schema("join")
+  default_unmatched <- field_default("join", "unmatched_ok")
+  # A field applies to a join exactly where validation permits it: derived
+  # from the schema's permitted_adds, never restated here.
+  applies <- function(field, join) {
+    is_permitted_adds(schema$permitted_adds[[match(field, schema$field)]], join)
+  }
   do.call(
     rbind,
     c(
       list(no_joins()),
       lapply(joins, \(join) {
-        variables <- join$adds == "variables"
         tibble::tibble(
           adds = join$adds,
           left = join$left,
           right = join$right,
           keys_left = list(as.character(unlist(join$keys[[join$left]]))),
           keys_right = list(as.character(unlist(join$keys[[join$right]]))),
-          relationship = if (variables) join$relationship else NA_character_,
-          unmatched_ok = if (variables) {
-            join$unmatched_ok %||% field_default("join", "unmatched_ok")
+          relationship = if (applies("relationship", join)) {
+            join$relationship
+          } else {
+            NA_character_
+          },
+          unmatched_ok = if (applies("unmatched_ok", join)) {
+            join$unmatched_ok %||% default_unmatched
           } else {
             NA
           }
@@ -78,9 +88,11 @@ new_joins <- function(joins) {
 }
 
 # YX02/YX03: across-source resolution — sides against the loaded tables,
-# key columns against the named side's key pool (declared plus virtual
-# columns), keys' own names against the join's sides. Only well-shaped
-# values are resolved: their shape problems are already reported.
+# keys' own names against the join's sides, key columns against the named
+# side's key pool (declared plus virtual columns). Every pool resolves
+# through check_reference (YS02's engine, cross-source code). Only
+# well-shaped values are resolved: their shape problems are already
+# reported.
 resolve_join_references <- function(raw, file, dictionaries) {
   if (!is_list_of_mappings(raw$joins)) {
     return(no_problems())
@@ -89,61 +101,44 @@ resolve_join_references <- function(raw, file, dictionaries) {
   bind_problems(lapply(seq_along(raw$joins), \(i) {
     join <- raw$joins[[i]]
     entry <- entry_label(NA_character_, i, "join")
-    problems <- no_problems()
-
     sides <- unlist(Filter(is_string, list(join$left, join$right)))
-    for (side in setdiff(sides, tables)) {
-      problems <- rbind(
-        problems,
-        flag_problem(
-          file,
-          entry,
-          "YX02",
-          value = side,
-          section = "the loaded tables",
-          suggestion = suggest_name(side, tables)
-        )
-      )
-    }
-
+    problems <- check_reference(
+      sides,
+      tables,
+      "the loaded tables",
+      file,
+      entry,
+      code = "YX02"
+    )
     if (!is_mapping(join$keys)) {
       return(problems)
     }
-    for (key_table in setdiff(names(join$keys), sides)) {
+    key_values <- lapply(join$keys, \(v) as.character(unlist(v)))
+    problems <- rbind(
+      problems,
+      check_reference(
+        names(key_values),
+        sides,
+        "the join's sides",
+        file,
+        entry,
+        code = "YX02"
+      )
+    )
+    for (side in intersect(names(key_values), intersect(sides, tables))) {
       problems <- rbind(
         problems,
-        flag_problem(
+        check_reference(
+          key_values[[side]],
+          dictionary_key_columns(dictionaries[[side]]),
+          sprintf("the key columns of '%s'", side),
           file,
           entry,
-          "YX02",
-          value = key_table,
-          section = "the join's sides",
-          suggestion = suggest_name(key_table, sides)
+          code = "YX02"
         )
       )
     }
-    for (key_table in intersect(names(join$keys), intersect(sides, tables))) {
-      pool <- dictionary_key_columns(dictionaries[[key_table]])
-      values <- as.character(unlist(join$keys[[key_table]]))
-      for (value in setdiff(values, pool)) {
-        problems <- rbind(
-          problems,
-          flag_problem(
-            file,
-            entry,
-            "YX02",
-            value = value,
-            section = sprintf("the key columns of '%s'", key_table),
-            suggestion = suggest_name(value, pool)
-          )
-        )
-      }
-    }
-    covered <- vapply(
-      sides,
-      \(side) length(as.character(unlist(join$keys[[side]]))) > 0,
-      logical(1)
-    )
+    covered <- vapply(sides, \(side) length(key_values[[side]]) > 0, logical(1))
     if (length(sides) == 2 && !all(covered)) {
       problems <- rbind(
         problems,

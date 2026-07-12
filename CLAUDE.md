@@ -46,17 +46,20 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   (amended through 2026-07-11 by Phase 1 execution amendments).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
   SIGNED OFF with execution amendments 1-7 (all signed; see its Status
-  block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b, 4 —
-  Task 4 closed 2026-07-12 with review follow-ups (a)-(f) recorded in a
-  blockquote under its plan section. NEXT: Task 5 (joins) EXECUTING per
-  execution amendment 7 (walkthrough held + signed off 2026-07-12; it
-  resolved follow-ups (c)/(f), `shared:`, and many-to-many): identifiers
-  merged into `levels:` (explicit `within:` nesting, option B),
-  granularity dropped, `adds: variables | observations`, four-value
-  relationship domain, fields.yaml restructured nested-by-kind; Step 0 =
-  contained Task 4 rework (own commit); m:m/append data-check semantics
-  parked to Task 11's walkthrough; structural reviews added to Task 14's
-  backstop (amendment 7h).
+  block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b, 4,
+  5 — Task 5 closed 2026-07-12 per execution amendment 7 (identifiers
+  merged into `levels:` with explicit `within:` nesting, granularity
+  dropped, `adds: variables | observations`, four-value relationship
+  domain, fields.yaml nested by kind, joins spec + YX02/YX03 live;
+  /simplify pass applied, reviewed jointly). NEXT (before Task 6's
+  walkthrough): the two Task 5-close checkpoints recorded in the plan's
+  Task 5 blockquote — (1) the FORMAT REVIEW with Liz (user-facing spec
+  format against goals; agenda includes the schema vocabulary gaps,
+  permitted_when generalisation, "kind" wording), then (2) the
+  collaborator deliverable (academic-planning skill; Liz owns structure;
+  framing recorded in the blockquote). m:m/append data-check semantics
+  parked to Task 11's walkthrough; structural reviews at Task 14
+  (amendment 7h).
   Binding protocol: walkthrough-gated per task (explain, incl. a
   facts-and-sources section, → Liz reads plan step + code → she confirms →
   execute), pre-commit duplication pass, /simplify on the task diff before

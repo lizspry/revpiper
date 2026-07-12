@@ -916,7 +916,7 @@ source file `data/raw/rob.csv`, columns `study_id` (text, required) +
 `rob_direct` (text, values [low, high]); `levels: {study: study_id}`. In
 `estimates.yaml`, `identifiers:` + `levels:` merge to `levels: {study: study}`.)
 
-- [ ] **Step 0 (amendment 7 rework of Task 4's surface; own commit; TDD):**
+- [x] **Step 0 (amendment 7 rework of Task 4's surface; own commit; TDD):**
   fields.yaml restructured — `kinds:` list added; fields nested under their
   kind; `appears_in` dissolved; `combine` kind dissolved into `level` (fields
   `keys`/`combine`/`separator` (default "", requires: combine)/`within`
@@ -955,7 +955,8 @@ source file `data/raw/rob.csv`, columns `study_id` (text, required) +
   certification never depends on it (amendment 7d).
 - checks.yaml: YX02 flips `implemented: true`.
 
-- [ ] **Steps 1–5 (joins proper):** failing tests (good parse incl. default
+- [x] **Steps 1–5 (joins proper; DONE 2026-07-12, incl. /simplify pass):**
+  failing tests (good parse incl. default
   `unmatched_ok = FALSE`; an `adds: observations` good variant with
   relationship legally absent; matrix covers the join rows via regeneration;
   snapshot per curated bad fixture — unknown table, unknown key column, bad
@@ -972,9 +973,13 @@ source file `data/raw/rob.csv`, columns `study_id` (text, required) +
 > (Liz's standing concern); the schema vocabulary gaps held from Step 0
 > (a mapping-of-entries container shape, scalar shorthand as a property,
 > a one-of requirement, acyclic refers_to — each would replace custom level
-> code with schema rows); the "kind" wording; the recorded same-named-field
-> divergence list (currently: keys). The internal parsimony review stays at
-> Task 14 (amendment 7h), with full check inventory in view.
+> code with schema rows); generalising permitted_types + permitted_adds
+> into one conditional-permission property naming its own discriminator
+> (permitted_when — referred here from the Task 5 /simplify pass, Liz
+> 2026-07-12; decides the YE03/YE08 message unification with it); the
+> "kind" wording; the recorded same-named-field divergence list
+> (currently: keys). The internal parsimony review stays at Task 14
+> (amendment 7h), with full check inventory in view.
 > (2) **Collaborator deliverable** — prepared after the format review, via
 > the academic-planning skill; Liz owns the structure. Audience: three
 > reviews at spec/dictionary design stage (two pre-data-collection, one
