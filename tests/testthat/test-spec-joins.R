@@ -3,7 +3,7 @@ joins_path <- function(fixture) {
 }
 
 good_dictionaries <- function() {
-  rev_read_dictionaries(test_path("fixtures", "specs-good", "tables"))
+  read_dictionaries(test_path("fixtures", "specs-good", "tables"))
 }
 
 # A zero-problem join the matrix mutates one aspect at a time.
@@ -18,15 +18,15 @@ minimal_join <- function() {
 }
 
 # Round-trip a joins list through a temp yaml file.
-read_joins <- function(joins, dictionaries = good_dictionaries()) {
+joins_from_list <- function(joins, dictionaries = good_dictionaries()) {
   tmp <- tempfile(fileext = ".yaml")
   on.exit(unlink(tmp))
   yaml::write_yaml(list(joins = joins), tmp)
-  rev_read_joins(tmp, dictionaries)
+  read_joins(tmp, dictionaries)
 }
 
 join_problems_of <- function(joins) {
-  spec_problems(read_joins(joins))
+  spec_problems(joins_from_list(joins))
 }
 
 join_codes_of <- function(joins) {
@@ -143,17 +143,17 @@ test_that("a join key may be another table's virtual column", {
     ),
     file.path(dir, "rob.yaml")
   )
-  dicts <- rev_read_dictionaries(dir)
+  dicts <- read_dictionaries(dir)
   j <- minimal_join()
   j$keys$estimates <- "study_key"
-  joins <- read_joins(list(j), dicts)
+  joins <- joins_from_list(list(j), dicts)
   expect_identical(joins$keys_left[[1]], "study_key")
 })
 
 # ---- Layer 2: parsing, defaults, and curated fixtures ----
 
 test_that("the good joins file parses into the tibble, defaults applied", {
-  joins <- rev_read_joins(joins_path("joins.yaml"), good_dictionaries())
+  joins <- read_joins(joins_path("joins.yaml"), good_dictionaries())
   expect_identical(nrow(joins), 1L)
   expect_identical(joins$adds, "variables")
   expect_identical(joins$left, "estimates")
@@ -164,11 +164,11 @@ test_that("the good joins file parses into the tibble, defaults applied", {
   expect_false(joins$unmatched_ok)
   # the default: a join declaring no unmatched_ok gets FALSE
   j <- minimal_join()
-  expect_false(read_joins(list(j))$unmatched_ok)
+  expect_false(joins_from_list(list(j))$unmatched_ok)
 })
 
 test_that("an observations join parses; relationship and unmatched_ok are NA", {
-  joins <- rev_read_joins(
+  joins <- read_joins(
     joins_path("joins-observations.yaml"),
     good_dictionaries()
   )
@@ -178,7 +178,7 @@ test_that("an observations join parses; relationship and unmatched_ok are NA", {
 })
 
 test_that("a missing joins file is a valid single-table project: zero rows", {
-  joins <- rev_read_joins("no/such/joins.yaml", good_dictionaries())
+  joins <- read_joins("no/such/joins.yaml", good_dictionaries())
   expect_identical(nrow(joins), 0L)
   expect_named(
     joins,
@@ -196,7 +196,7 @@ test_that("a missing joins file is a valid single-table project: zero rows", {
 
 test_that("dictionaries must be rev_dictionary objects", {
   expect_error(
-    rev_read_joins(joins_path("joins.yaml"), list(1)),
+    read_joins(joins_path("joins.yaml"), list(1)),
     "rev_dictionary"
   )
 })
@@ -204,7 +204,7 @@ test_that("dictionaries must be rev_dictionary objects", {
 test_that("each single-defect joins file aborts naming its problem", {
   dicts <- good_dictionaries()
   read_bad <- function(fixture) {
-    rev_read_joins(bad_path(fixture), dicts)
+    read_joins(bad_path(fixture), dicts)
   }
 
   expect_snapshot(error = TRUE, read_bad("joins-yx02-unknown-table.yaml"))

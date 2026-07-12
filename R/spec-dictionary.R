@@ -1,22 +1,9 @@
-#' Read and validate one table dictionary
-#'
-#' Parses `specs/tables/<table>.yaml` into a `rev_dictionary`, collecting
-#' every spec problem before aborting so the user sees all of them at once.
-#' Validation is complete for a single source: one file validates with zero
-#' knowledge of any other source.
-#'
-#' @param path Path to a single table's dictionary YAML file.
-#' @return A `rev_dictionary` object.
-#' @export
-rev_read_dictionary <- function(path) {
+# Parse one specs/tables/<table>.yaml into a rev_dictionary, collecting
+# every spec problem before aborting. Complete for a single source: one
+# file validates with zero knowledge of any other source.
+read_dictionary <- function(path) {
   rlang::check_string(path)
-  if (!file.exists(path)) {
-    cli::cli_abort(
-      "Dictionary file {.file {path}} does not exist.",
-      class = "revpiper_spec_error",
-      call = NULL
-    )
-  }
+  stop_missing_file("Dictionary file", path)
   raw <- yaml::read_yaml(path)
   problems <- rbind(
     run_entry_checks(raw, "file", path, "file entry"),
@@ -30,16 +17,10 @@ rev_read_dictionary <- function(path) {
   new_dictionary(raw, path)
 }
 
-#' Read and validate a directory of table dictionaries
-#'
-#' Loads every dictionary in `dir` standalone via [rev_read_dictionary()]
-#' (each file validates with zero knowledge of the others), then runs the
-#' data-free set-level check: no two files may claim the same table name.
-#'
-#' @param dir Directory containing table dictionary YAML files.
-#' @return A named list of `rev_dictionary` objects, named by table.
-#' @export
-rev_read_dictionaries <- function(dir) {
+# Load every dictionary in dir standalone via read_dictionary(), then run
+# the data-free set-level check: no two files may claim the same table
+# name. Returns the list named by table.
+read_dictionaries <- function(dir) {
   rlang::check_string(dir)
   if (!dir.exists(dir)) {
     cli::cli_abort(
@@ -49,7 +30,7 @@ rev_read_dictionaries <- function(dir) {
     )
   }
   files <- sort(list.files(dir, pattern = "\\.ya?ml$", full.names = TRUE))
-  dicts <- lapply(files, rev_read_dictionary)
+  dicts <- lapply(files, read_dictionary)
   tables <- vapply(dicts, \(d) d$table, character(1))
   problems <- check_table_identity(tables, files)
   if (nrow(problems) > 0) {
@@ -741,7 +722,7 @@ check_table_identity <- function(tables, files) {
   }))
 }
 
-# YX02 (cross-source references) arrives with rev_read_joins() in Task 5.
+# YX02 (cross-source references) arrives with read_joins() in Task 5.
 
 # Plumbing
 

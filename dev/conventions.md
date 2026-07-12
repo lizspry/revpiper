@@ -58,9 +58,15 @@ source), not here — this document covers code conventions only.
   standalone; across-source is a separate, composable, data-free step.
 - Workflow **steps** — spec, load, process, transform (then present,
   module 2) — are the user-facing stage words (2026-07-12, plan amendment
-  8, pending sign-off): reports, certificates, and R-file prefixes carry
+  8): reports, certificates, and R-file prefixes carry
   them. "derive" is retired as the user-facing stage word (say transform;
   internal helper names may keep it where clearer).
+- User-facing workflow functions read `rev_<step>_<action>` (2026-07-12,
+  plan amendment 9). Two **action** words, the same pair at every step:
+  **audit** — check and report (writes the step's report + certificate,
+  never aborts); **run** — execute the step and produce its output
+  (aborts on problems, pointing at the audit). "check" stays internal
+  (`check_*` functions); never name a user-facing function with it.
 
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml

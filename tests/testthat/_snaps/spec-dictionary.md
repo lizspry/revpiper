@@ -1,7 +1,7 @@
 # duplicate table names across files flag YX01
 
     Code
-      rev_read_dictionaries(bad_path("yx01-duplicate-table"))
+      read_dictionaries(bad_path("yx01-duplicate-table"))
     Condition
       Error:
       ! Spec validation failed (1 problem):
@@ -10,7 +10,7 @@
 # a nonexistent dictionary path aborts with the classed error
 
     Code
-      rev_read_dictionary("no/such/dictionary.yaml")
+      read_dictionary("no/such/dictionary.yaml")
     Condition
       Error:
       ! Dictionary file 'no/such/dictionary.yaml' does not exist.
@@ -198,7 +198,7 @@
 # every problem in a broken dictionary is reported at once
 
     Code
-      rev_read_dictionary(bad_path("many-defects.yaml"))
+      read_dictionary(bad_path("many-defects.yaml"))
     Condition
       Error:
       ! Spec validation failed (3 problems):

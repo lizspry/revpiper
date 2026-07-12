@@ -54,7 +54,7 @@ read_dict <- function(dict) {
   tmp <- tempfile(fileext = ".yaml")
   on.exit(unlink(tmp))
   yaml::write_yaml(dict, tmp)
-  rev_read_dictionary(tmp)
+  read_dictionary(tmp)
 }
 
 problems_of <- function(dict) {
@@ -403,7 +403,7 @@ test_that("a level's keys may reference another level's virtual column", {
 })
 
 test_that("dictionary_key_columns returns declared plus virtual columns", {
-  dict <- rev_read_dictionary(good_path())
+  dict <- read_dictionary(good_path())
   expect_identical(
     dictionary_key_columns(dict),
     c("study", "design", "mean_age", "rob_score", "notes_temp")
@@ -419,8 +419,8 @@ test_that("dictionary_key_columns returns declared plus virtual columns", {
   )
 })
 
-test_that("rev_read_dictionaries returns a table-named list of dictionaries", {
-  dicts <- rev_read_dictionaries(
+test_that("read_dictionaries returns a table-named list of dictionaries", {
+  dicts <- read_dictionaries(
     test_path("fixtures", "specs-good", "tables")
   )
   expect_named(dicts, c("estimates", "rob"))
@@ -430,19 +430,19 @@ test_that("rev_read_dictionaries returns a table-named list of dictionaries", {
 
 test_that("duplicate table names across files flag YX01", {
   expect_error(
-    rev_read_dictionaries(bad_path("yx01-duplicate-table")),
+    read_dictionaries(bad_path("yx01-duplicate-table")),
     class = "revpiper_spec_error"
   )
   expect_snapshot(
     error = TRUE,
-    rev_read_dictionaries(bad_path("yx01-duplicate-table"))
+    read_dictionaries(bad_path("yx01-duplicate-table"))
   )
 })
 
 # ---- Layer 2: curated fixtures — wording and routing ----
 
-test_that("rev_read_dictionary parses a valid dictionary into every slot", {
-  dict <- rev_read_dictionary(good_path())
+test_that("read_dictionary parses a valid dictionary into every slot", {
+  dict <- read_dictionary(good_path())
 
   expect_s3_class(dict, "rev_dictionary")
   expect_equal(dict$table, "estimates")
@@ -496,15 +496,15 @@ test_that("boundary-legal declarations parse cleanly (permissive rule)", {
 
 test_that("a nonexistent dictionary path aborts with the classed error", {
   expect_error(
-    rev_read_dictionary("no/such/dictionary.yaml"),
+    read_dictionary("no/such/dictionary.yaml"),
     class = "revpiper_spec_error"
   )
-  expect_snapshot(error = TRUE, rev_read_dictionary("no/such/dictionary.yaml"))
+  expect_snapshot(error = TRUE, read_dictionary("no/such/dictionary.yaml"))
 })
 
 test_that("the classed abort carries the problems table as data", {
   err <- tryCatch(
-    rev_read_dictionary(bad_path("many-defects.yaml")),
+    read_dictionary(bad_path("many-defects.yaml")),
     error = \(e) e
   )
   expect_s3_class(err, "revpiper_spec_error")
@@ -513,7 +513,7 @@ test_that("the classed abort carries the problems table as data", {
 })
 
 test_that("each single-defect dictionary aborts naming its problem", {
-  read_bad <- function(fixture) rev_read_dictionary(bad_path(fixture))
+  read_bad <- function(fixture) read_dictionary(bad_path(fixture))
 
   expect_snapshot(error = TRUE, read_bad("ye01-file-entry.yaml"))
   expect_snapshot(error = TRUE, read_bad("ye02-missing-type.yaml"))
@@ -540,7 +540,7 @@ test_that("each single-defect dictionary aborts naming its problem", {
 test_that("every problem in a broken dictionary is reported at once", {
   expect_snapshot(
     error = TRUE,
-    rev_read_dictionary(bad_path("many-defects.yaml"))
+    read_dictionary(bad_path("many-defects.yaml"))
   )
 })
 

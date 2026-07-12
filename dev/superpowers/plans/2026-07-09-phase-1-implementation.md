@@ -445,10 +445,11 @@ snapshots).
 | `inst/schema/fields.yaml` | single source of truth: every spec field's properties | schema self-validation in `test-schema.R` |
 | `R/schema.R` | schema loader (cached), accessors | `test-schema.R` |
 | `R/spec-check.R` | generic schema-driven battery: check definitions, shape/type matchers, problem plumbing (Task 15 splits it out of `spec-dictionary.R`) | `test-spec-check.R` |
-| `R/spec-source.R` | `rev_read_dictionary()`/`rev_read_dictionaries()`: per-table dictionaries, levels, reference resolution, set identity (the split's other half) | `test-spec-source.R` |
-| `R/spec-join.R` | load/validate `specs/joins.yaml` (Y-checks vs dictionaries; renamed from `spec-joins.R`, Task 15) | `test-spec-join.R` |
+| `R/spec-source.R` | internal `read_dictionary()`/`read_dictionaries()` (amendment 9): per-table dictionaries, levels, reference resolution, set identity (the split's other half) | `test-spec-source.R` |
+| `R/spec-join.R` | internal `read_joins()`: load/validate `specs/joins.yaml` (Y-checks vs dictionaries; renamed from `spec-joins.R`, Task 15) | `test-spec-join.R` |
+| `R/spec-run.R` | `rev_spec_run(dir, file, joins)`: the spec step's run — validated spec objects or abort with all problems (amendment 9) | `test-spec-run.R` |
 | `R/report.R` | stage report + certification machinery, spec instantiation only (findings item schema lands in Phase 2) | `test-report.R` |
-| spec-step runner — file named with the user-facing command at Task 17's walkthrough | data-free spec step: load specs, catch problems, report, certify | mirror rule |
+| `R/spec-audit.R` | `rev_spec_audit()` (Task 17): data-free spec step audit — load specs, catch problems, report, certify | `test-spec-audit.R` |
 
 Files for the frozen old Tasks 6–13 (`read.R`, `read-covidence.R`,
 `standardise.R`, `findings.R`, `validate.R`, `join.R`, `check.R`,
@@ -1500,11 +1501,14 @@ build-ignored).
 generic schema-driven battery: `run_entry_checks`/`run_contents_checks`/
 `run_list_checks`/`run_field_checks`, the YF/YE check definitions,
 `matches_shape`/`matches_type`, problem plumbing, `entry_names`/
-`entry_label`) and `R/spec-source.R` (`rev_read_dictionary`,
-`rev_read_dictionaries` incl. the set-level identity check, level entries +
+`entry_label`) and `R/spec-source.R` (`read_dictionary`,
+`read_dictionaries` incl. the set-level identity check, level entries +
 nesting, reference resolution wiring, the constructor,
-`dictionary_key_columns`). `tests/testthat/test-spec-dictionary.R` splits
-along the same seam; snapshots relocate with their test files.
+`dictionary_key_columns`; internal names per amendment 9). `read_joins`
+stays in the renamed `R/spec-join.R`; `R/spec-run.R` (`rev_spec_run()`,
+amendment 9) is already axis-named and does not move.
+`tests/testthat/test-spec-dictionary.R` splits along the same seam;
+snapshots relocate with their test files.
 
 - [ ] **Step 1:** mechanical moves only — no behaviour change. Full suite
   green before and after; relocated snapshots re-accepted only where
@@ -1525,11 +1529,11 @@ built here (Phase 2, load).
   instantiation; certificate snapshots for both statuses, read before
   acceptance (the certificate is the product's public record).
 
-### Task 17: Spec-step runner
+### Task 17: Spec-step audit
 
-**Interfaces — Produces:** the user-facing spec command (spelling decided
-at this task's walkthrough; incumbent candidate `rev_check_specs()`).
-Data-free: loads dictionaries + joins via the constructors, catching their
+**Interfaces — Produces:** `rev_spec_audit()` (named by amendment 9; its
+`joins` parameter and TRUE default per amendment 9d).
+Data-free: loads dictionaries + joins via the internal readers, catching their
 classed aborts through the `problems` condition field; ALWAYS completes —
 prints the spec report, writes it via `rev_export_report()`, returns it
 invisibly (loaded specs as attribute when certified); NOT CERTIFIED on

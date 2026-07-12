@@ -1,28 +1,21 @@
-#' Read and validate the joins spec
-#'
-#' Parses `specs/joins.yaml` against the loaded dictionaries. This is the
-#' across-source validation step: data-free and composable, so each
-#' dictionary still validates standalone and a table certification never
-#' depends on it. A missing joins file is a valid single-table project and
-#' returns the zero-row tibble.
-#'
-#' @param path Path to the joins YAML file.
-#' @param dictionaries Named list of `rev_dictionary` objects, as returned
-#'   by [rev_read_dictionaries()].
-#' @return A tibble with one row per declared join: `adds`, `left`,
-#'   `right`, `keys_left` and `keys_right` (list columns), `relationship`
-#'   and `unmatched_ok` (both `NA` on observation appends, where they do
-#'   not apply).
-#' @export
-rev_read_joins <- function(path, dictionaries) {
+# Parse specs/joins.yaml against the loaded dictionaries — the
+# across-source validation step: data-free and composable, so each
+# dictionary still validates standalone and a table certification never
+# depends on it. A missing joins file is a valid single-table project and
+# returns the zero-row tibble. `dictionaries = NULL` runs within-file
+# checks only (no reference resolution), for single-file selection.
+# Returns a tibble, one row per declared join.
+read_joins <- function(path, dictionaries = NULL) {
   rlang::check_string(path)
-  is_dictionary_list <- is.list(dictionaries) &&
-    all(vapply(dictionaries, inherits, logical(1), "rev_dictionary"))
-  if (!is_dictionary_list) {
-    cli::cli_abort(
-      "{.arg dictionaries} must be a list of {.cls rev_dictionary} objects,
-       as returned by {.fun rev_read_dictionaries}."
-    )
+  if (!is.null(dictionaries)) {
+    is_dictionary_list <- is.list(dictionaries) &&
+      all(vapply(dictionaries, inherits, logical(1), "rev_dictionary"))
+    if (!is_dictionary_list) {
+      cli::cli_abort(
+        "{.arg dictionaries} must be a list of {.cls rev_dictionary}
+         objects, as returned by {.fun read_dictionaries}."
+      )
+    }
   }
   if (!file.exists(path)) {
     return(no_joins())
@@ -31,7 +24,9 @@ rev_read_joins <- function(path, dictionaries) {
   problems <- rbind(
     run_entry_checks(raw, "join_file", path, "file entry"),
     run_contents_checks(raw, "join_file", path),
-    resolve_join_references(raw, path, dictionaries)
+    if (!is.null(dictionaries)) {
+      resolve_join_references(raw, path, dictionaries)
+    }
   )
   if (nrow(problems) > 0) {
     stop_spec(problems)

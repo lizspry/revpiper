@@ -41,3 +41,16 @@ stop_spec <- function(problems) {
     problems = problems
   )
 }
+
+# Abort (spec-error class) when a required input file is absent; `what`
+# names the file's role in the message.
+stop_missing_file <- function(what, path) {
+  if (file.exists(path)) {
+    return(invisible(NULL))
+  }
+  cli::cli_abort(
+    "{what} {.file {path}} does not exist.",
+    class = "revpiper_spec_error",
+    call = NULL
+  )
+}
