@@ -256,7 +256,7 @@
   (first multi-step composition).
   (d) **Two-axis file scheme** (spec §7.3): `spec-*` declaration surfaces
   vs `load-`/`process-`/`transform-*` execution; shared machinery
-  unprefixed. Phase 1 renames: spec-dictionary.R → spec-check.R (shared
+  unprefixed. Phase 1 renames: spec-dictionary.R → spec-generic.R (shared
   battery + plumbing) + spec-source.R (within-source + set identity);
   spec-joins.R → spec-join.R. The File map above is restated accordingly.
   (e) **Held Task 5-close agenda dispositions:** format convolution check
@@ -446,7 +446,7 @@ snapshots).
 | `R/utils-messages.R` | spec-error formatting, did-you-mean, cli wrappers | `tests/testthat/test-utils-messages.R` |
 | `inst/schema/fields.yaml` | single source of truth: every spec field's properties | schema self-validation in `test-schema.R` |
 | `R/schema.R` | schema loader (cached), accessors | `test-schema.R` |
-| `R/spec-check.R` | generic schema-driven battery: check definitions, shape/type matchers, problem plumbing (Task 15 splits it out of `spec-dictionary.R`) | `test-spec-check.R` |
+| `R/spec-generic.R` | generic schema-driven battery: check definitions, shape/type matchers, problem plumbing (Task 15 splits it out of `spec-dictionary.R`) | `test-spec-generic.R` |
 | `R/spec-source.R` | internal `read_dictionary()`/`read_dictionaries()` (amendment 9): per-table dictionaries, levels, reference resolution, set identity (the split's other half) | `test-spec-source.R` |
 | `R/spec-join.R` | internal `read_joins()`: load/validate `specs/joins.yaml` (Y-checks vs dictionaries; renamed from `spec-joins.R`, Task 15) | `test-spec-join.R` |
 | `R/spec-run.R` | `rev_spec_run(dir, file, joins)`: the spec step's run — validated spec objects or abort with all problems (amendment 9) | `test-spec-run.R` |
@@ -1499,7 +1499,7 @@ build-ignored).
 ### Task 15: Spec-axis file reorganisation (amendment 8)
 
 **Files:** rename `R/spec-joins.R` → `R/spec-join.R` (+ test twin + its
-`_snaps/` file); split `R/spec-dictionary.R` into `R/spec-check.R` (the
+`_snaps/` file); split `R/spec-dictionary.R` into `R/spec-generic.R` (the
 generic schema-driven battery: `run_entry_checks`/`run_contents_checks`/
 `run_list_checks`/`run_field_checks`, the YF/YE check definitions,
 `matches_shape`/`matches_type`, problem plumbing, `entry_names`/
@@ -1518,7 +1518,7 @@ snapshots relocate with their test files.
   content-identity verified for the R split, the test split, and the
   snapshot split; the joins trio byte-identical. Placement judgment
   calls, by the genericity rule: check_identity, check_reference, and
-  the plumbing predicates → spec-check.R because spec-join.R calls
+  the plumbing predicates → spec-generic.R because spec-join.R calls
   them; shared test helpers → helper-spec.R for parallel test
   processes; the shape_phrase wording test rides with the battery
   tests.)
