@@ -1,299 +1,716 @@
 # revpiper — Design Specification
 
-- **Date:** 2026-07-07
-- **Status:** Approved by Liz (section-by-section) pending final review of this written document
-- **Process:** Produced through Socratic brainstorming (superpowers:brainstorming); all decisions below were made jointly and incrementally. AI-assisted (Claude Code); auditable via this repository's git history per TRIPOD-LLM disclosure practice.
-- **Scope of this spec:** standards & conventions (whole project), architecture (whole project), processing module (detailed). The visualisation module gets its own brainstorm and spec later; only its boundary is fixed here.
-
----
-
-## 1. Product overview
-
-### 1.1 What this is
-
-An open-source R package, **revpiper**, that takes a systematic review team from *extracted data* to *manuscript-ready and supplementary outputs*, driven by user-authored specifications rather than user-written code. It is GitHub-installable from day one; CRAN is a possible later milestone, not a prerequisite.
-
-The package ships a scaffolding function (`rev_project()`) that generates a ready-to-run project — data folders, complete working example specs wired to a bundled synthetic dataset, a three-line run script — so the user experience is "modify a working template," while all logic stays versioned, tested, and centrally fixable in the package.
-
-### 1.2 Relationship to the original review (`original-repo`)
-
-The existing Python/R pipeline is **inspiration and requirements source, not code to preserve**. It defines the tasks and functionality the new tool must achieve; the means may differ freely. Its raw data, transformed data, and final outputs serve as an end-to-end **validation fixture** (the data is study-level, drawn from published papers, confirmed non-sensitive and usable). Reproducing the original paper is explicitly **not** a goal.
-
-### 1.3 Target users
-
-Health-science researchers conducting standard reviews (intervention/exposure–outcome), with **baseline R skills**: can install packages, follow a vignette, run a short script, and edit well-templated plain-text specs. Explicitly not served in v1: zero-R users (the future interactive layer's audience), umbrella/scoping reviews.
-
-### 1.4 Module map and build order
-
-1. **Processing module** (build first): user files + data dictionary in → assembled, cleaned, validated, corrected, derived, certified dataset out.
-2. **Visualisation module, static** (build second; own spec later): consumes the processed dataset through one stable data contract; produces standard review tables/figures with declarative user control. Citation-rendering investigation lives here.
-3. **Interactive layer** (explicitly deferred; own brainstorm later): interactive supplements, possibly a dashboard. Constrains module 2 only via the shared content-preparation boundary (no code duplication across output types).
-
-**Boundary rule:** a single documented data contract — the processed dataset plus machine-readable metadata (dictionary + derivation provenance travelling together). Module 2 never reaches upstream of it; module 1 knows nothing about presentation.
-
-### 1.5 Name
-
-Package name **revpiper**; exported-function prefix **`rev_`**. Rationale: noun+`r` R-community convention; "piper" humanises the pipeline metaphor; "rev" keeps the review signal; no apparent collisions in the evidence-synthesis package cluster (revtools, metagear, synthesisr, PRISMA2020, appraise). `synthr` was rejected: one syllable from `synthesisr` (different purpose, same community) and "synth" connotes synthetic data/controls in statistics (`synthpop`, `synthdid`, `Synth`).
-
-- Mechanical availability check (`available::available("revpiper")`) is the first implementation step.
-- Rename window: cheap until the package is publicised and others' scripts call `rev_*` functions; the deadline for final conviction is **before inviting external users/contributors** (which precedes CRAN anyway). GitHub repo may stay `review-pipeline` or be renamed to match — decided at first push. **Resolved (Liz, 2026-07-07, before first push):** repo renamed to `revpiper`, so DESCRIPTION URLs, badges, and the pkgdown URL carry the final name from the start; local working folders may keep the old name (R reads only DESCRIPTION).
-
----
-
-## 2. Standards & conventions (decision log)
-
-These apply to this project and serve as Liz's standing template for future coding projects. Each area lists the decision and its rationale. The overall calibration, verified against current tidyverse/r-lib repositories (ellmer, duckplyr, usethis, July 2026): **current tidyverse practice, deliberately stricter on linting and testing discipline.**
-
-### Area 1 — Style & formatting
-
-- **Tidyverse style guide**, standard conventions, no customisation. Rationale: the de facto community standard (default target of styler/lintr/Air; used by tidyverse, r-lib, rOpenSci); easiest to learn from precedents; friction-free for contributors. Liz's Python-leaning preferences noted but standardisation chosen deliberately for simplicity and collaboration.
-- **Air** as formatter (Posit, 2025; deliberately non-configurable in the mould of black; confirmed present as `air.toml` in all inspected tidyverse repos). styler is the fallback if Air hits a limitation. Air is developer tooling only — users never need it.
-
-### Area 2 — Linting
-
-- **lintr**, default tidyverse rules **plus package-development checks** (undeclared dependencies, `library()` in package code, etc.). Rationale: the only maintained general R linter; catches real bugs, not just style.
-- Honest label: this is **stricter than tidyverse core practice** (none of the inspected repos carry a `.lintr`; they substitute intensive human review). Deliberate choice given team composition.
-
-### Area 3 — Testing
-
-- **testthat (3rd edition)**, `Config/testthat/parallel: true`. **TDD throughout** (per Liz's standing instructions).
-- Four test layers (see §7 for detail): toy-data unit tests; synthetic-dataset integration tests; original-review validation fixture; metafor agreement tests.
-- **Coverage:** covr + Codecov, **measured and visible on every PR, never gated**. ~90% informal expectation on core logic. Rationale: hard gates invite assertion-free test theatre; TDD keeps real coverage high; reports catch blind spots (uncovered lines = never-tested behaviour).
-
-### Area 4 — Documentation
-
-- **roxygen2** for function reference (no alternative worth considering; examples are executed by checks and cannot rot).
-- **Vignettes in R Markdown** (not Quarto, for now — avoids a contributor system dependency; Quarto questions consolidated in module 2). Task-oriented vignettes are the **primary user-facing documentation** and get the writing effort; reference docs complete but terse.
-- **pkgdown** site on GitHub Pages, auto-deployed by CI. Heavy or web-context content goes in `vignettes/articles/` (website-only, not bundled — installs from GitHub skip vignette building by default, so the site is the primary consumption channel anyway). *(2026-07-09: the site renders README and NEWS only — the default renders every top-level `.md`, including CLAUDE.md.)*
-- **NEWS.md** changelog, hand-curated for a user audience: every user-facing PR includes its own one-line bullet (review-checklist enforced). No Conventional Commits requirement (automation payoff designed away by squash merges + GitHub auto release notes; commit messages describe code for developers, NEWS describes changes for users). `fledge`-style automation noted as a later option (observed in duckplyr) if per-PR bullets prove annoying.
-- **Commenting:** tidyverse norms (why, not what; no density quotas) with a **brevity bias** — internal helpers ideally a single line. A "documentation templates by function type" section (exported / internal / pipeline-stage) will be agreed with real functions in front of us during Phase 1 and added to the conventions doc.
-
-### Area 5 — Continuous integration
-
-- **GitHub Actions using r-lib's maintained workflows**, installed via `usethis::use_tidy_github_actions()` (covers full-matrix `R CMD check` failing on warnings, coverage→Codecov, pkgdown deploy) **plus** the stock lintr workflow **plus** Air formatting via the stock **format-check** workflow *(2026-07-09, propagating Phase 0 execution amendment 5: Liz declined format-suggest's `pull_request_target` privilege pattern; format-check fails on unformatted code with read-only permissions)*.
-- Full OS/R-version matrix (users skew Windows; dev happens on Linux/macOS).
-- **Branch protection on `main`**: PRs required, checks must pass, no direct pushes.
-
-### Area 6 — Enforcement layers
-
-- Editor format-on-save (Liz: VS Code + Air extension + R extension for inline lintr) + **mandatory pre-push suite** (format, `devtools::test()`, `lintr::lint_package()`; `devtools::check()` before PRs) — encoded here as convention and wired into Claude Code session hooks so it is mechanical for AI sessions + **CI as backstop**.
-- **No pre-commit hooks initially** (friction vs. a solo-plus-Claude team; CI must stay authoritative for outside contributors regardless). Revisit only if unformatted commits actually slip through.
-
-### Area 7 — Dependencies & reproducibility
-
-- **Tidyverse-friendly Imports** where they carry weight (dplyr, tidyr; ggplot2, flextable in module 2). `Depends` reserved for the R version only.
-- **Justify-each-dependency, evaluated package-wide**: would removing it cost meaningful replicated code, correctness risk, or consistency *summed across all uses*? Weigh maintainer quality (r-lib ≫ solo-maintainer) and API surface used. Justifications logged in the conventions doc. Trigger points: writing similar boilerplate again (consider adding), a dependency used once trivially (inline and drop), release-time audits.
-- Three-way choice per need: **depend / vendor a standalone / write it** — vendoring via `usethis::use_standalone()` (r-lib-blessed single files, provenance headers, never hand-edited; observed as `import-standalone-*.R` in ellmer). `standalone-types-check` earmarked for input validation.
-- **No `library()` calls in package code** (lintr-enforced).
-- **renv for the development environment** (lockfile in repo, `.Rbuildignore`d; reproducible across disposable sandboxes). **CI deliberately unpinned** — installs current CRAN per `DESCRIPTION`, catching upstream drift early. Packages don't pin for users; `DESCRIPTION` declares minimum versions.
-- **renv in the scaffolded user project is a requirement** (module 1): each user's review version-frozen — a reproducibility credential for systematic reviews.
-
-### Area 8 — Git workflow & versioning
-
-- **PR-only `main`** (branch protection), short-lived feature branches (one per task, deleted after merge). Rationale: PRs are Liz's review gate over AI-produced work (auditable bounded diffs with CI verdicts), match the sandbox workflow, and are the single workflow outside contributors must use anyway.
-- **Squash-merge** every PR (one clean commit per finished task on `main`; TDD micro-history remains in the closed PR). Verified as tidyverse practice.
-- Plain, imperative, informative commit messages; body only when the *why* needs explaining.
-- **Standard R versioning**: MAJOR.MINOR.PATCH + `.9000` in-development convention; version bump + NEWS heading per release; releases as GitHub releases (tags).
-
-### Area 9 — License
-
-- **MIT** (tidyverse default; maximises adoption for an academic tool). Note: depending on GPL packages (e.g. flextable) does not force our license under the general R-community understanding. Relicensing requires all contributors' consent — final conviction needed **before accepting external PRs**.
-
-### Area 10 — R version support
-
-- **Tidyverse window**: current release + 4 previous minor versions (floor **R 4.2** as of July 2026, R current 4.6.1; rolls forward annually). Native pipe `|>` and lambda `\(x)` (both 4.1) fully usable; `_` placeholder (4.2) usable; extended placeholder forms (4.3) and base `%||%` (4.4) avoided — rlang's `%||%` used instead. No newer-than-floor features without logged justification.
-
-### Area 11 — Naming & file structure
-
-- `R/` organised by coherent topic: one file per pipeline stage, `utils-<domain>.R` for shared internals (observed convention in usethis), one file per S3 class. No numbering (load order is irrelevant in packages).
-- **Mirror rule**: every `R/` file has a `tests/testthat/test-*.R` twin (documented convention, R Packages 2e); principled exceptions allowed (package-doc file, vendored standalones).
-- **All exported functions prefixed `rev_`** (discoverability by autocomplete for weak-R users; collision-proofing). Internals unprefixed.
-- snake_case everywhere; verbs for functions, nouns for objects; **first argument of user-facing functions is the data / project path**; same concept = same argument name across the whole API.
-- The original repo's `c_`/`t_`/`r_` column-prefix scheme is **not** carried over; the new data model is designed on its own merits.
-
-### Area 12 — Code design principles
-
-- **Functional core + light S3**: pure functions (data frame + explicit args in → data frame out) composable into pipeline stages; S3 for spec objects/results with validators and friendly `print()` methods. **No R6/S4 unless a specific need is argued** (matches observed r-lib practice: R6 only where mutable state is essential, e.g. ellmer's chat sessions).
-- Single responsibility; exported functions are the user vocabulary (few, stable); internal helpers free and encouraged; explicit data flow (config and data always passed as arguments — no globals, no hidden state); **fail fast** with `cli::cli_abort()` and entry-point input validation; side effects (I/O, messages) quarantined at the orchestration layer.
-- **Qualified rule of three**: second occurrence of similar code → note it; third occurrence → **mandatory decision** — extract, or leave a one-line written justification (comment/PR note). Legitimate escapes: coincidental (semantically distinct) duplication; cross-module-boundary duplication where coupling costs more; test code (readable self-contained tests trump DRY). Exact-and-obvious duplication may extract earlier.
-- KISS and YAGNI as tiebreakers; the sanctioned exception is module boundaries, designed ahead so output types never force duplication.
-- **usethis-first**: prefer provided, maintained scaffolding over hand-rolled configuration; hand-roll only with logged justification (mirror of the dependency rule, applied to tooling).
-
----
-
-## 3. Processing module architecture
-
-### 3.1 Core concept: names free, shape prescribed, everything declared
-
-The pipeline never demands prescribed column names. The user authors a **data dictionary describing their own columns** — names, types, allowed ranges, controlled vocabularies — and assigns **roles** (which column identifies the study; which holds design, sample sizes, estimates…). Everything downstream refers to columns via the user's names. What is prescribed is the **canonical shape** (below) and the finite set of roles required by whichever stages the user runs. This is not a general mapping engine (rejected: unbounded structural variety); role assignment is a flat, finite, per-column declaration.
-
-**Dictionary format — resolved (Liz, 2026-07-09, Phase 1 planning; investigation findings and rationale in dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md):** revpiper owns its dictionary schema. Investigation showed data-dict v0.1.0 is pre-1.0 (breaking changes expected), closed to extension keys everywhere, and its data validation reads Parquet only — so neither a conformant superset nor the Rust CLI (user- or dev-side) is viable. We reuse its vocabulary where concepts overlap, adopt its check-code/level architecture, and log a **convergence review at data-dict 1.0**.
-
-The schema itself: **one YAML file per input table** (`specs/tables/<table>.yaml`) carrying the table's `source:` block (file, sheet, reader), `description`, `roles:` (pipeline handles; Phase 1 vocabulary: `study_id`), `levels:` (grouping name → key columns), and `columns:`. **Key declarations live in the top block alongside roles/levels**: a role or key entry names an existing column (`study_id: covidence_id`) or, where no single identifying column exists, combines columns — `study_id: {combine: [author, year], separator: "_"}` — concatenation only, built after standardisation; this exists solely to create study/merge keys, and joins cannot wait for the derive stage. Per column: `type` — **five prespecified types** (`text`, `integer`, `decimal`, `boolean`, `date`; no datetime in v1; **the type is declared, never inferred — the stage's purpose is prespecify-then-check**) — plus the parallel optional restrictions `values` (closed set: on text, and on integer/decimal as the alternative to `range`, e.g. non-sequential codes 1, 2, 9) and `range`/`units` (on numerics/date) — `values` and `range` mutually exclusive per column, spec-validated — `required`/`unique` booleans, `missing` codes (declared reactively via findings; only ""/whitespace are auto-missing), `constant_within_level`, `description`. *(Amended 2026-07-10, Phase 1 execution: `type` is required per column — the dictionary lists exactly the columns the user imports, checks, and uses; source columns not declared are surfaced informationally, never as findings, and are dropped from pipeline artifacts until declared.)* *(Review amendments, Liz 2026-07-09: `categorical` type removed — inferring storage from declared values contradicted prespecification; per-column `pattern` removed — join-time near-miss suggestions remain the key-drift net; composition moved from per-column fields into the key/role block.)* The purpose/semantics axis (id/ordinal/quantity, value labels) is deliberately absent — designed later beside its consumers (derive, module 2). Spec files are validated **at load, before any data is read**: field names are checked against the closed known set — a misspelling like `descrption:` errors with "did you mean `description`?" — and type-conditional rules are enforced (`range` on text → spec error, etc.). *(Amended 2026-07-11, Phase 1 execution: validation is schema-driven — `inst/schema/fields.yaml` is the single source of truth declaring every spec field's properties (shape, cardinality with scalar-for-list tolerance, domain, permitted types, exclusions, references, identity, defaults); checks are generated from properties, coded by scope — YF within field, YE within entry, YS within source, YX across sources — and within-source validation is standalone: one dictionary file validates completely alone, with the across-source step separate, composable, and data-free. Permission rule: boolean admits no constraint fields; `range` needs an ordered type; `values`/`units` otherwise free.)* Spec errors stop the run (specs must parse; only *data* problems become findings). `rev_draft_dictionary()` (v1, minimal: column names + draft types for the user to confirm + empty fields) generates skeletons from data files; codebook-document parsing stays v1.x. *(Amended 2026-07-12, Phase 1 execution amendment 7: `identifiers:` merged into `levels:` — one section maps each user-named level to what identifies it: a column name, `keys:` naming column(s), or `combine:` (+ optional `separator`, default `""`) building the **virtual column** named by the level; optional `within:` names the parent level — explicit nesting, cycles are spec errors, and a level's keys may reference another level's virtual column. Level names are always the user's own words; nothing is pipeline-reserved. In the package schema, fields are grouped under their kind (`kinds:` list; the appears_in property dissolved into the structure), so the same field name may carry kind-specific properties per kind.)*
-
-### 3.2 Canonical shape and levels
-
-- **Main input: a single denormalised table, one row per extracted estimate**, study-level characteristics repeated on each of a study's rows — matching how extraction actually happens in Excel. Exception preserved from real practice: multiple adjustment levels for a single estimate live within one row; selecting among them is derivation-layer logic.
-- **Declared column levels**: the dictionary may declare each column's level — estimate-, sample-, or study-level — with user-declared keys defining each level (a paper can report multiple samples; nesting is the user's, never assumed). Consistency checks are *generated from declarations*: values constant within their declared grouping. Repetition thereby becomes a free transcription-error check. No declared level, no check. *(2026-07-09: declared as top-level `levels:` (name → keys) + per-column `constant_within_level:`; a violation routes BOTH ways — transcription error (correction) or undeclared substructure (add a level key), since some studies reveal substudies only through usually-constant variables differing.)* *(Amended 2026-07-12, amendment 7: each level entry declares `keys:`/`combine:`/`within:`, replacing name → key-list mappings; `constant_within_level` unchanged.)* **Input contract (review amendment, Liz 2026-07-09): v1 ingests consensus rows only** — one extraction of record per row. How users declare and handle multi-reviewer row structures (per-reviewer rows, per-reviewer files, agreement workflows) is an explicitly deferred later decision (§8.2). Meanwhile, a reviewer column *can* be declared as an ordinary level, which surfaces disagreement as consistency findings if pre-consensus data is fed — adjudication stays human.
-- **Auxiliary inputs in their native shapes** (e.g. the RoB workbook, one study per column, kept because it is ergonomically right for scoring): each is its own declared table with its reader (§3.3) and its join (joins.yaml). *(2026-07-09: readers replace the earlier orientation/reshape declarations.)*
-- Multiple estimates per study are the natural case (rows); single-estimate reviews are the trivial special case.
-
-### 3.3 Assembly (readers + declared joins; no reshape grammar) *(rewritten 2026-07-09, Phase 1 planning — supersedes the earlier declarative-reshape design)*
-
-Shape-normalisation happens through **readers**, not a user-facing reshape grammar (investigation of real exports showed the grammar creeping toward the rejected mapping engine, while actual shapes are tool-specific patterns): each input in `specs/tables/<table>.yaml` names a shipped per-tool importer (`reader: covidence`), a parameterised generic csv/Excel reader, or a user-written function in the project's `readers.R` (documented contract: file in → canonical table out; quarantined-custom-code pattern mirroring Tier 3; recurring shapes promoted into shipped importers; the scaffolded template carries a fill-in-the-blanks AI-assistant prompt).
-
-**Joins stay in the pipeline** — the value is the validation users cannot safely replicate on unclean keys. `specs/joins.yaml` declares each join independently: **complete (composite where needed) key sets per side**, **granularity**, and **expected relationship** (`one-to-one`, `one-to-many`), enforced via dplyr's `relationship` argument. Non-unique declared keys, relationship violations, and unmatched rows (both directions, with **near-miss suggestions** — suggest-only, resolved via corrections, never auto-applied) are findings; legitimately-partial joins are acknowledged explicitly (`unmatched_ok: true`). The loud failure remains the *undeclared* many-to-many.
-
-**Guidance-vs-pipeline rule (general):** an operation belongs in the structured pipeline, declaratively, when it is (a) from an enumerable set, (b) parameterisable by declaration rather than judgment, (c) mechanically validatable. It belongs in guidance + the manual-corrections step when it requires human judgment about content. Reshapes (encapsulated in readers), joins, coercions, recodes: pipeline. Fixing a mistyped author name, adjudicating duplicates: corrections.
-
-Extraction-tool export formats (Covidence, DistillerSR, Excel forms) are a **named investigation item** so the reshaping vignette addresses real exports.
-
-### 3.4 The six stages
-
-*(Stages 1–3 amended 2026-07-09, Phase 1 planning: per-table validation before joins — every v1 check is per-table, and post-join validation would multiply study-level findings across estimate rows. Run order: per table, read → standardise → compose keys → apply corrections → validate everything; then joins (skipped only on key findings) → join findings; one consolidated report.)* *(Amended 2026-07-11, Phase 1 execution: **uniform stage contract** — every user-facing stage command always completes and always emits a report + certification through one shared machinery (stage vocabulary provisional, see §8.2: working model spec → load → correct → transform, each followed by a package check), written to `output/reports/` as `<stage>-<runstamp>` pairs (items xlsx + certificate txt); one certificate format with a stage line. Stage runners never abort on their own items — spec problems make a NOT CERTIFIED spec report exactly as findings make a NOT CERTIFIED check report; classed aborts remain for constructors called directly. A CERTIFIED spec report doubles as a timestamped prespecification artifact, supporting spec authoring as a standalone task before any data exists.)*
-
-1. **Read & join (assembly)** — readers produce canonical per-table frames (§3.3); after per-table standardisation, corrections, and validation, declared joins combine them. Join findings: undeclared many-to-many, non-unique keys at declared granularity, unmatched rows (near-miss hints).
-2. **Standardise (automated, dictionary-driven, deterministic; runs per table, pre-join)** — five closed, ordered, idempotent ops: lossless encoding normalisation (UTF-8/NFC, exotic whitespace, zero-width; **never** diacritic-stripping or transliteration — Müller survives to presentation); trim (leading/trailing only); missing standardisation (""/whitespace built-in; per-column declared codes); type coercion, with un-coercible values *left standing for validation to report* (a column with any failure stays text — never half-coerced, never silently nulled); safe declared-values canonicalisation (on text columns with a declared `values` set: identity up to case+trim against a declared value; no fuzzy matching). Counts logged per column; per-column named opt-outs; artifact written as `preprocessed-<table>` ("clean" is reserved for the certified artifact). Nothing hand-coded per column — generated from declarations.
-3. **Validate (per table)** — the full check catalogue (structure → types → values/range → declared-level consistency) on *post-standardisation* data, so findings are exactly the set requiring human judgment. **Always-run, always-write**: every check that can run always runs; the report is always complete; outputs are always written and carry certification status. Findings carry a **consequence**, not a severity (amendment 2026-07-09; rationale in the planning notes: severity conflated defect-description with permission): key findings → joins skipped; un-coercible → dependent checks on that column not run; every finding → not certifiable. **Certification is absolute — zero standing findings**; acceptance happens only by explicit declaration (`unmatched_ok: true` on a join), listed on the certificate. *(Amended 2026-07-10, Phase 1 execution: the name-only column acknowledgment is removed — undeclared source columns carry no consequence and are therefore not findings; the certificate carries them as an informational annex instead.)* *(Amended 2026-07-12, amendment 7d: certification is per-scope — a table certification certifies internal coherence and correctness without reference to other files; join-stage issues decertify the joined artifact only, with fixes routing back into tables as needed.)*
-4. **Corrections (manual, audited)** — a corrections file applied programmatically; replaces hard-coded patch lines with an auditable log. **Single table-scoped model (2026-07-09): every correction targets a named input table and applies pre-join**, where the value physically lives (`table` column defaults away for single-input reviews). Each correction: **predicate targeting** (any combination of column=value conditions; one or many rows, within or across studies), **expected match count** (or ≥1) and, for value replacements, **expected old value** — either mismatch fails loudly by correction (the data shifted underneath); mandatory `reason`. Followed by automatic re-validation. Raw files are **never hand-edited** (read-only by convention and code); the fix path is a correction entry or a fresh export committed as a new data version.
-5. **Derive** — the three-tier layer (§3.5), in declared order, each derivation documenting inputs/outputs for lineage.
-6. **Certify & hand off** — validation against the *derived* dictionary (user declares expectations for derived variables too), provenance stamping, data contract written to `output/`.
-
-### 3.5 Derivation: three tiers + policies as declarations
-
-**Tier 1 — declarative primitives** (closed set, pure spec, no R): recode/map, collapse categories, bin, rename, coalesce, conditional assignment, map-via-reference-table.
-
-**Tier 2 — built-in named derivations** (invoked declaratively; implemented and hard-tested by us): effect-size computations as **thin wrappers over metafor** (`escalc()`; `esc`/`effectsize` where gaps appear) — the wrapper is unavoidable glue (spec→function-call translation) plus our value-add (role-aware columns, missing-data policy, findings-style errors, provenance); **zero reimplemented statistics** — tests assert agreement with metafor, never with hand-derived values. Also: CI→SE conversions, parameterised presentation-string builders. **Admission criterion:** Tier 2 admits only derivations whose definition is stable across reviews; anything encoding a review's judgment enters as user-declared rules or custom code — never as package defaults. Coverage mapping of `escalc()` against the original pipeline's derivations: named investigation item.
-
-**Tier 3 — quarantined custom code**: a spec entry may point to a user-written function in the project's `derivations.R` (one documented template: data in → new column(s) out). Output provenance distinguishes built-in from custom derivations (transparency for the user's own reviewers). Recurring Tier-3 patterns across reviews get promoted into Tier 2 — dissolving the anticipate-everything burden.
-
-**Policies (review judgments) are declared, not defaulted.** Canonical instance — **direction alignment**: (i) extraction-level coding-direction column (mechanical); (ii) a user-authored **construct valence reference table** (construct → direction relative to a user-chosen target frame, e.g. assumed risk) — the researcher's meaning-decision externalised as a reviewable, citable artefact; (iii) mechanical composition (final flip = coding direction ⊕ valence ⊕ target frame) with a `direction_flipped` provenance flag. Constructs missing from the valence table fail loudly by name; the pipeline never guesses. Best-estimate selection: same pattern (user-declared preference rules). Both were hard-coded review-specific logic in the original pipeline; here they are user artefacts.
-
-### 3.6 Mappings and reference tables
-
-- **Collapse/recode maps are always derived-keyed sets** — `SCL: [SCL-90, HSC/SCL, SCL90R]` — one line per derived value (the many-to-one runs raw→derived; this reads as "my final categories and what composes each"). Free validation: no raw value in two sets (overlap → error); raw values in no set (coverage → error unless an explicit passthrough/other policy is declared).
-- **Annotations are always value-keyed attributes** (construct → valence): nothing merges, so the key direction differs by meaning. Two visually distinct shapes for two distinct operations is itself an aid against confusion.
-- **Inline by default; promote to a standalone reference table only when earned**: long (country→region), reused by multiple consumers (valence: direction alignment + module-2 groupings), or externally sourced/maintained (World Bank classifications). Both forms feed identical machinery (validation, coverage). **Open question (implementation planning):** representation of shared mappings — named in-spec definitions referenced by name (YAML-native) vs. external files; Liz's skepticism about external files logged.
-
-### 3.7 Findings & error reporting (user-facing quality bar)
-
-- **User vocabulary only** (their column names, their study IDs; roles as glosses).
-- **Counts and instances, never first-error-stops**; grouped by **consequence** (2026-07-09: consequence replaces severity — "join estimates↔rob skipped", "range check on mean_age not run", "not certifiable"), which is also the fix-flow ordering. Findings record schema: `code` (stable ID from the five check families Y/R/V/J/C), `consequence`, `table`, `variable`, `study_id` (where the role is declared), `rows` (numbered against the named `preprocessed-<table>` artifact), `message`, `fix_options`.
-- **Routing, not prescription**: every finding says *where to act* (corrections.csv vs dictionary vs assembly spec — mechanically determinable from the check type; the check-type→routing table is part of implementation planning), offering both routes where genuinely ambiguous, and never claims to know the correct value.
-- Spec errors get file-and-entry precision with did-you-mean suggestions.
-- **Automatic export to Excel** (`output/findings-<runstamp>.xlsx`, one row per finding) — where review teams actually triage; console print + data-frame access remain. (Adds `writexl` — zero-dependency; logged.)
-- **Message copy is tested** via testthat snapshot tests: wording regressions fail tests; phrasing is reviewable in PR diffs.
-
-### 3.8 Provenance & auditability
-
-- Corrections log with reasons (the hand-edit audit trail); derivation lineage (spec entry, tier, custom-code flags); per-run log (console events, machine-greppable, written to `output/`); validation reports persisted per run; every output stamped with package version + spec checksums.
-- **Intermediate outputs at each stage boundary** (`preprocessed-<table>` / assembled / derived, plus the certified clean artifact — naming per the 2026-07-09 amendments), on by default, off-switchable.
-- **Cross-run comparison:** scaffolded projects are **git repositories** (specs, corrections, and outputs committed — study-level data is small and non-sensitive) + a per-run **run summary** (row counts per stage, correction hits, derivation counts, findings counts) so diffs answer "what changed since last run". Stale corrections failing loudly is the third leg: data updates cannot silently invalidate hand-fixes.
-- Artefact checksums provide **staleness guards**: `rev_derive()` on an out-of-date cleaned snapshot warns loudly; `rev_process()` makes staleness impossible by construction.
-
----
-
-## 4. User workflow
-
-- **Step 0 — Install & scaffold (once):** `remotes::install_github(...)`; `revpiper::rev_project("my-review/")` creates `data/raw/`, `specs/` *(2026-07-09: `tables/<table>.yaml` per input + `joins.yaml`; plus derivations and reference tables in Phase 2 — as complete working examples wired to the bundled synthetic dataset)*, `readers.R` (custom-reader template with AI-assistant prompt block; `rev_draft_dictionary()` generates dictionary skeletons), `derivations.R` (Tier-3 template), `corrections.csv` (headers + example), `run.R`, `output/`, renv initialisation, git init with `.gitignore`. **The example project runs successfully the moment it is created**; users swap in their reality piece by piece.
-- **Step 1 — Describe (iterative):** drop extraction sheet(s) into `data/raw/`; edit dictionary + assembly declarations. Tight loop: `rev_check()` → read findings → fix spec or data → repeat.
-- **Step 2 — Clean, correct, derive (iterative, phased):** findings needing judgment become `corrections.csv` entries; `rev_check()` again until clean; then `rev_clean()` certifies and writes the clean dataset — the artefact eyeballed as a natural sign-off point. Then declare derivations; `rev_derive()` (stages 5–6) consumes the clean artefact. `rev_process()` composes all six stages — primarily for update/rerun consistency.
-- **How findings flow through check/clean** *(order amended 2026-07-09, §3.4)*: standardisation runs per table *before* validation on every run — deterministic, re-derived from the untouched raw file each time — so machine-fixable issues never appear as findings, only as log counts. Findings are always the post-standardisation, post-corrections residual: what still needs either a spec fix or a new corrections entry. **`rev_check()` = full dry-run diagnosis (per table: read → standardise → compose → correct → validate; then joins), writing nothing** — so it always reflects the user's corrections to date rather than re-reporting resolved findings. **`rev_clean()` = the same + written artifacts and the certificate (CERTIFIED / NOT CERTIFIED with findings and acknowledgments listed; outputs always written, always labelled).**
-- **Step 3 — Present (module 2, previewed):** a declarative output spec + `rev_render()`, consuming only `output/`'s data contract; processing and presentation rerun independently.
-- **Step 4 — Update (the payoff):** new search results → update raw file → `rev_process()`. Corrections re-apply (stale ones fail loudly by name); derivations re-run identically; run summary + git diff show exactly what changed; outputs regenerate.
-
-**Ergonomic commitments:** every user-facing function takes the project path (no working-directory magic); failures name file/column/row and route to the fix location in the user's vocabulary; `rev_check()` is always safe; `data/raw/` is never modified.
-
-**Capability calibration (accepted):** floor is baseline R (install, vignette, three-liner, edit templates), not zero-R. YAML risk mitigated by modify-don't-write templates, complete findings, AI-assist-friendly plain text; **codebook(Excel)→YAML generation is a v1.x roadmap item** (a natural AI-assistant task) if piloting demands it. Declaring keys/granularities is review methodology, not programming — the vignette's worked example carries it. **Usability pilot** (one basic-R colleague, observe where they stall) is an early roadmap item.
-
----
-
-## 5. Package internals
-
-- **File layout** (mirror-ruled; *2026-07-09: a provisional starting shape, not a commitment — binding rules are the mirror rule, topic-coherent files, the `utils-<domain>`/`import-standalone-*` conventions, and no user-facing "clean" naming before certification; reshuffling in PRs is free and expected*). Phase 1 seed: `spec-dictionary.R`, `spec-joins.R`, `read.R` (+ `read-<tool>.R` as importers accrue), `standardise.R`, `validate.R`, `join.R`, `findings.R`, `check.R`, `utils-messages.R`, vendored `import-standalone-*.R`. Phase 2 adds `correct.R`/`spec-corrections.R` (against the designed-in per-table apply seam), `derive-*.R`, `certify.R`, `project.R`, `process.R`.
-- **S3 classes** (few, purposeful, friendly `print()`): `rev_dictionary`, `rev_derivation_spec`, `rev_corrections` (parsed-and-validated specs; parse errors caught at load in spec-file vocabulary); `rev_findings` (printable summary, `as.data.frame()`, xlsx export); `rev_dataset` (tibble subclass carrying dictionary/lineage/checksums as attributes — behaves as a plain data frame if the extras are ignored; the data contract in object form).
-- **Error doctrine — three vocabularies for three audiences:** spec errors (point at spec file + entry); data errors (accumulate into `rev_findings`, user terms); internal errors (ours; the only tracebacks). All messages via **cli** (first logged aggregate-use dependency); entry-point validation via vendored standalone checkers.
-- **No config file, no global options, no environment magic** — a run's inputs are the project directory (specs) + the function call (paths, verbosity). The original `config.yaml`'s role is absorbed by specs + scaffold conventions.
-- **Logging:** cli console messages (suppressible) + plain-text per-run log in `output/`.
-
----
-
-## 6. Visualisation module — boundary commitments only
-
-- **Input boundary:** the data contract only; never raw files or upstream specs. Anything module 2 needs must arrive via the contract (the forcing function keeping the contract complete).
-- **Content preparation vs rendering split:** prepared, renderer-agnostic objects (select/group/order/format/compose) handed to dumb renderers — flextable→Word and Quarto-compatible emitters in v1, interactive widgets later. One prepared object, N renderers: the structural anti-duplication guarantee.
-- **Declarative output spec** (same grammar philosophy as derivations): which standard outputs (study-characteristics table, results/evidence table, forest-style display, RoB summary), columns, grouping, ordering, formatting, target formats. `rev_render()` executes; outputs regenerate independently.
-- **Citations:** study-level tables carry per-row citation *keys* resolved at document render time against the user's `.bib`. **Named investigation item (module-2 design):** current flextable/officer citation-field capabilities in Word vs Quarto-mediated rendering — the tool-power vs user-learning trade-off decided there; the content/rendering split keeps both routes open.
-- **Figures:** ggplot2, returned as modifiable objects with save helpers.
-- **Reserved now:** `prepare-*.R` / `render-*.R` namespace; output-spec slot in the scaffold; contract completeness discipline. Everything else stays open for module 2's own brainstorm.
-
----
-
-## 7. Testing strategy
-
-1. **Unit tests** (bulk; mirror rule): tiny inline tibbles; normal, edge (all-NA, single study, zero rows), and expected-failure paths asserting the *right finding* — snapshot tests on rendered messages (message copy is interface).
-2. **Integration tests on the bundled synthetic review**: `rev_project()` → specs → all six stages → expected shape/values/provenance. *(Fixture policy, Liz 2026-07-09: the Covidence example export in hand is dummy data and may seed shape-realistic reader fixtures — content is nonsense, so designed synthetic fixtures remain the default; the real family-comparison workbook is NEVER committed — it serves as a **local-only, skip-if-absent** fixture (the layer-3 mechanism), and a committed synthetic derivative of its structure is folded into Phase 3's designed synthetic review.)* The synthetic dataset is a designed artefact deliberately containing the awkward realities (transposed RoB sheet, multi-sample studies, multiple estimates per study, every cleaning class, ≥1 correction, every Tier-1 primitive, every Tier-2 derivation, a Tier-3 function). Triple duty: test fixture, scaffold example, vignette narrative — so it cannot rot.
-3. **Original-review validation fixture**: real study-level data with specs *we* author — the design's first dress rehearsal (expressiveness gaps surface before any outside user). Asserts agreement with reference outputs from the original Python pipeline (numeric tolerance for effect sizes; exact for counts/categories). Divergences individually adjudicated — where the old pipeline was wrong, the reference is corrected and documented. Lives in its own directory with a skip-if-absent guard (external contributors get a green suite without the data).
-4. **metafor agreement tests**: Tier-2 wrappers vs direct `escalc()` calls on identical inputs — enforcing zero-reimplemented-statistics.
-
-Infrastructure: testthat 3e, parallel, TDD, covr+Codecov measured-not-gated, full-matrix CI (Areas 3/5).
-
----
-
-## 8. Risks, open questions, roadmap
-
-### 8.1 Risks & mitigations
-
-1. **Spec language can't express real reviews** (existential): early dress rehearsal (test layer 3) + Tier-3 pressure valve; every gap found becomes a design fix pre-users.
-2. **YAML defeats the target user**: templates, findings quality, AI-assist; usability pilot; codebook→YAML as the v1.x response.
-3. **data-dict immaturity** (2026-young; Rust CLI): lean = adopt the format, R-native validation, CLI optional dev-side; worst case, own a fork of a sensible schema.
-4. **Derivation-catalogue creep**: admission criterion + promote-on-evidence.
-5. **Maintainer bandwidth (R-beginner maintainer)**: small exported API; CI vigilance; conventions doc making every future session consistent.
-
-### 8.2 Open questions (with owners)
+- **Date:** 2026-07-07; consolidated 2026-07-12. This document states the
+  current design once. Git history holds the evolution: the amendment trail
+  lives in the pre-consolidation spec (through commit 2e1acd2), the phase
+  plans, and dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md; the
+  consolidation audit is
+  dev/superpowers/plans/2026-07-12-spec-consolidation-extraction.md.
+- **Status:** consolidated per the 2026-07-12 brief; pending Liz's diff
+  review. All content restates decisions already signed off; the rewrite
+  adds none.
+- **Process:** produced through Socratic brainstorming
+  (superpowers:brainstorming); decisions made jointly and incrementally with
+  Liz, dated in §9. AI-assisted (Claude Code); auditable via this
+  repository's git history per TRIPOD-LLM disclosure practice.
+- **Companion documents:** dev/conventions.md is the single home for coding
+  rules (style, naming, testing, dependencies, git, single-source
+  principles, terminology). inst/schema/fields.yaml and
+  inst/schema/checks.yaml are the registries holding every spec-field
+  property and check instance. This spec points at those homes and never
+  mirrors them.
+- **Scope:** whole-project standards and architecture; the processing module
+  in detail. The visualisation module gets its own brainstorm and spec
+  later; only its boundary is fixed here (§3).
+
+## 1. Purpose & goals
+
+**revpiper** is an open-source R package that takes a systematic review team
+from *extracted data* to *manuscript-ready and supplementary outputs*,
+driven by user-authored specifications rather than user-written code. It is
+GitHub-installable from day one; CRAN is a possible later milestone, not a
+prerequisite. Exported functions carry the `rev_` prefix (naming rationale
+in §9).
+
+A scaffolding function (`rev_project()`) generates a ready-to-run project —
+data folders, complete working example specs wired to a bundled synthetic
+dataset, a three-line run script — so the user experience is "modify a
+working template" while all logic stays versioned, tested, and centrally
+fixable in the package. The scaffolded project is a git repository with renv
+initialised: each user's review is version-frozen, a reproducibility
+credential for systematic reviews.
+
+The existing Python/R pipeline (`original-repo`) is inspiration and
+requirements source, not code to preserve. It defines the tasks the new tool
+must achieve; the means may differ freely. Its raw data, transformed data,
+and final outputs serve as an end-to-end validation fixture (study-level,
+published-paper data, confirmed non-sensitive). Reproducing the original
+paper is explicitly not a goal.
+
+Three modules, built in order:
+
+1. **Processing module** (this spec, detailed): user files + data dictionary
+   in → assembled, cleaned, validated, corrected, derived, certified dataset
+   out.
+2. **Visualisation module, static** (own spec later): consumes the processed
+   dataset through one stable data contract; produces standard review
+   tables/figures with declarative control.
+3. **Interactive layer** (explicitly deferred): constrains module 2 only via
+   the shared content-preparation boundary.
+
+The boundary rule between them is an architecture invariant (§7): a single
+documented data contract — the processed dataset plus machine-readable
+metadata travelling together. Module 2 never reaches upstream of it; module
+1 knows nothing about presentation.
+
+## 2. Users & ways of working
+
+**Target users:** health-science researchers conducting standard reviews
+(intervention/exposure–outcome) with baseline R skills — can install
+packages, follow a vignette, run a short script, and edit well-templated
+plain-text specs. Explicitly not served in v1: zero-R users (the future
+interactive layer's audience) and umbrella/scoping reviews.
+
+**Collaborator situations** the design serves (recorded 2026-07-12): three
+reviews engage at the spec/dictionary design stage — two before data
+collection, where the dictionary is authored first and doubles as the
+extraction instrument's source of truth, and one retrofitting a completed
+collection for cleaning, derivation, and visualisation. For the pre-data
+collaborators, flexibility is explicit: the dictionary is not a lock-in;
+piloting and extraction changes are expected, and the spec evolves with the
+review.
+
+**The workflow:**
+
+- **Step 0 — install & scaffold (once):** `remotes::install_github(...)`;
+  `rev_project("my-review/")` creates `data/raw/`, `specs/`
+  (`tables/<table>.yaml` per input + `joins.yaml`; derivations and reference
+  tables from Phase 2 — all as complete working examples wired to the
+  bundled synthetic dataset), `readers.R` and `derivations.R` templates
+  (each with a fill-in-the-blanks AI-assistant prompt block),
+  `corrections.csv`, `run.R`, `output/`, renv initialisation, git init. The
+  example project runs successfully the moment it is created; users swap in
+  their reality piece by piece.
+- **Step 1 — describe (iterative):** drop extraction sheet(s) into
+  `data/raw/`; edit dictionaries and joins (`rev_draft_dictionary()`
+  generates skeletons). Tight loop: `rev_check()` → read findings → fix spec
+  or data → repeat. Specs can be authored and certified before any data
+  exists (§6, stage contract).
+- **Step 2 — clean, correct, derive (iterative):** findings needing judgment
+  become `corrections.csv` entries; `rev_check()` until clean; `rev_clean()`
+  certifies and writes the clean dataset — the natural sign-off point. Then
+  declare derivations; `rev_derive()` consumes the clean artefact.
+  `rev_process()` composes all stages, primarily for update/rerun
+  consistency.
+- **Step 3 — present (module 2, previewed):** a declarative output spec +
+  `rev_render()`, consuming only the data contract; processing and
+  presentation rerun independently.
+- **Step 4 — update (the payoff):** new search results → update the raw file
+  → `rev_process()`. Corrections re-apply (stale ones fail loudly by name);
+  derivations re-run identically; the run summary and git diff show exactly
+  what changed.
+
+`rev_check()` diagnoses without touching pipeline state: it always reflects
+the user's corrections to date, and its outputs are reports and diagnostics
+only (`output/reports/`, `output/diagnostics/` — §6), never pipeline
+artifacts or anything in `data/raw/`.
+
+**Ergonomic commitments:** every user-facing function takes the project path
+(no working-directory magic); failures name file/column/row and route to the
+fix location in the user's vocabulary; `rev_check()` is always safe;
+`data/raw/` is never modified.
+
+**Capability calibration (accepted):** the floor is baseline R, not zero-R.
+YAML risk is mitigated by modify-don't-write templates, complete findings,
+and AI-assist-friendly plain text; codebook(Excel)→YAML generation is a v1.x
+roadmap item if piloting demands it. Declaring keys and levels is review
+methodology, not programming — the vignette's worked example carries it. The
+v1 input contract is consensus rows only — one extraction of record per row;
+a reviewer column can be declared as an ordinary level, which surfaces
+disagreement as findings if pre-consensus data is fed, and adjudication
+stays human (multi-reviewer structures: §10).
+
+## 3. Scope & non-goals
+
+**v1 scope:** the processing module (spec machinery + six pipeline stages),
+the scaffold, the designed synthetic review, task-oriented vignettes, and
+the minimal dictionary draft generator (`rev_draft_dictionary()` is in v1 —
+needed for the Phase 4 dress rehearsal).
+
+**Explicitly out of scope for v1:** the interactive layer and dashboards;
+umbrella/scoping reviews; codebook-document→YAML parsing (the draft
+generator is in; document parsing stays v1.x); CRAN submission; pre-commit
+hooks; fledge-style NEWS automation.
+
+**Visualisation module — boundary commitments only:** input is the data
+contract, never raw files or upstream specs (the forcing function keeping
+the contract complete). Content preparation is split from rendering:
+prepared, renderer-agnostic objects handed to dumb renderers
+(flextable→Word and Quarto-compatible emitters in v1; interactive widgets
+later) — one prepared object, N renderers, the structural anti-duplication
+guarantee. A declarative output spec + `rev_render()` names the standard
+outputs (study-characteristics table, results/evidence table, forest-style
+display, RoB summary). Study-level tables carry per-row citation keys
+resolved at document render time against the user's `.bib`; figures are
+ggplot2 objects with save helpers. Reserved now: the `prepare-*.R` /
+`render-*.R` namespace and an output-spec slot in the scaffold. Everything
+else stays open for module 2's own brainstorm.
+
+**Roadmap** (each phase: spec → plan → TDD → review):
+
+- **Phase 0 — bootstrap:** DONE (merged 2026-07-08).
+- **Phase 1 — spec machinery + stages 1–3** (dictionaries, joins, readers,
+  standardise, validate, findings, `rev_check()`, draft generator). The
+  expressiveness risk burns down here. IN PROGRESS
+  (dev/superpowers/plans/2026-07-09-phase-1-implementation.md).
+- **Phase 2 — stages 4–6** (corrections engine, three-tier derive, metafor
+  wrappers, certify, provenance).
+- **Phase 3 — scaffold + synthetic review + vignettes** (`rev_project()`,
+  designed synthetic dataset, getting-started and prepare-your-data
+  vignettes, pkgdown live).
+- **Phase 4 — dress rehearsal** (original-review specs + validation fixture;
+  divergences adjudicated individually).
+- **Phase 5 — usability pilot; then the module-2 brainstorm.**
+
+**Risks & mitigations:**
+
+1. *Spec language can't express real reviews* (existential): early dress
+   rehearsal (test layer 3) + the Tier-3 pressure valve; every gap found
+   becomes a design fix pre-users.
+2. *YAML defeats the target user*: templates, findings quality, AI-assist;
+   usability pilot; codebook→YAML as the v1.x response.
+3. *data-dict immaturity*: own schema with aligned vocabulary (§5), no CLI
+   dependency; convergence review at data-dict 1.0.
+4. *Derivation-catalogue creep*: Tier-2 admission criterion +
+   promote-on-evidence.
+5. *Maintainer bandwidth (R-beginner maintainer)*: small exported API; CI
+   vigilance; conventions doc making every session consistent.
+
+## 4. Concepts & vocabulary
+
+The settled vocabulary — column, field, entry, section, kind, level,
+virtual column, property, check, problem, finding — is defined in
+dev/conventions.md (Terminology), together with the retired-words list
+("role", "identifier", "context", "block", "collection", "appears_in",
+"walker"). That section is the single home; this spec uses the terms without
+redefining them. The load-bearing distinctions:
+
+- **Problems vs findings:** spec defects are *problems* (reported at load,
+  in spec-file vocabulary); data defects are *findings* (accumulated,
+  routed, never aborting). Only internal bugs produce tracebacks.
+- **Consequence, not severity:** a finding states what it mechanically
+  prevents, never how bad it is (§6).
+- **Certification:** a stage report's status — CERTIFIED exactly when zero
+  standing items — with explicit, listed acknowledgments as the only pass.
+- **Scopes:** spec checks are coded by how much context they read — YF
+  (one field), YE (one entry), YS (one file), YX (across files); data-side
+  families are R (reading), V (per-table validation), J (joins), C
+  (corrections application).
+
+## 5. The spec stage
+
+### 5.1 Core concept
+
+The pipeline never demands prescribed column names. The user authors a data
+dictionary describing their own columns; everything downstream refers to
+columns via the user's names. What is prescribed is the canonical shape
+(§5.3) and the declarations each stage consumes. This is deliberately not a
+general mapping engine (rejected: unbounded structural variety): every
+declaration is flat, finite, and per-column or per-entry.
+
+revpiper owns its dictionary schema. data-dict was evaluated and not
+adopted (pre-1.0, closed to extension keys, Parquet-only validation); its
+vocabulary is reused where concepts overlap, its check-code/level
+architecture adopted, and a convergence review is logged for data-dict 1.0.
+
+### 5.2 Dictionaries
+
+One YAML file per input table (`specs/tables/<table>.yaml`) carrying:
+
+- `table` (the file's identity) and optional `description`;
+- `source:` — file, optional sheet, optional reader (§6, read stage);
+- `levels:` (§5.3);
+- `columns:` — one entry per column of interest.
+
+The dictionary lists exactly the columns the user imports, checks, and
+uses. Each column entry declares a required `type` — five prespecified
+types (text, integer, decimal, boolean, date; no datetime in v1); the type
+is declared, never inferred, because the stage's purpose is
+prespecify-then-check. Optional restrictions: `values` (closed set — on
+text, and on integer/decimal as the alternative to `range`, so
+non-sequential code sets are closed-checkable) and `range`/`units`;
+`values` and `range` are mutually exclusive per column. The permission rule:
+boolean admits no constraint fields; `range` needs an ordered type;
+`values`/`units` are otherwise free. Also per column: `required`/`unique`
+booleans, `missing` codes (declared reactively via findings; only
+""/whitespace are auto-missing), `constant_within_level` (§5.3),
+`description`. The purpose/semantics axis (id/ordinal/quantity, value
+labels) is deliberately absent — designed later beside its consumers
+(derive, module 2).
+
+Source columns not declared are surfaced informationally, never as
+findings, and are dropped from pipeline artifacts until declared (§6).
+
+`rev_draft_dictionary()` generates minimal skeletons from data files:
+column names + draft types for the user to confirm, empty fields —
+deliberately minimal; cleaning concerns do not belong in dictionary
+authoring.
+
+### 5.3 Canonical shape and levels
+
+The main input is a single denormalised table, one row per extracted
+estimate, study-level characteristics repeated on each of a study's rows —
+matching how extraction actually happens. Preserved exception: multiple
+adjustment levels for a single estimate live within one row; selecting
+among them is derivation-layer logic. Multiple estimates per study are the
+natural case; single-estimate reviews are the trivial special case.
+Auxiliary inputs (e.g. an RoB workbook) stay in their native shapes, each
+its own declared table with its reader and its join.
+
+`levels:` maps each user-named grouping of the data to what identifies it:
+a bare column name, `keys:` naming column(s), or `combine:` naming columns
+whose concatenation (optional `separator`, default `""`) builds a **virtual
+column** named by the level. Combined keys exist solely because joins
+cannot wait for the derive stage; they are concatenation only, built after
+standardisation. Optional `within:` names the parent level — nesting is
+explicit because that matches how users say it and makes the hierarchy
+itself checkable; nesting cycles are spec errors. A level's keys may
+reference another level's virtual column; forward references among sibling
+levels are legal. Level names are always the user's own words — nothing is
+pipeline-reserved, and level keys are never policed against a pipeline
+vocabulary (pipeline consumers that look up a conventional name report its
+absence informationally, never as a finding).
+
+Declared levels buy generated consistency checks: values declared
+`constant_within_level` must be constant within their grouping, so the
+canonical shape's repetition becomes a free transcription-error check. No
+declared level, no check. A violation routes BOTH ways — transcription
+error (a correction) or undeclared substructure (add a level key) — since
+some studies reveal substudies only through usually-constant variables
+differing.
+
+### 5.4 Joins
+
+`specs/joins.yaml` declares each combination independently; a missing file
+is a valid single-table project. Joins stay in the pipeline because the
+value is the validation users cannot safely replicate on unclean keys. Per
+join:
+
+- `adds: variables | observations` (required) — the join's declared type,
+  which sets the overlap expectation: `variables` is a mutating join, where
+  non-key column overlap becomes a data-side finding; `observations` is a
+  row append, where column mismatch becomes the data-side finding and the
+  keys are identity columns for cross-table collision checks. The words are
+  deliberately shape-neutral — a wide input's on-disk layout never changes
+  what a join *adds*; orientation is the reader's job (§6).
+- `left`/`right` — the two sides, resolved against the loaded tables.
+- `keys:` — complete (composite where needed) key sets, both sides covered;
+  key columns resolve against the side's declared plus virtual columns.
+- `relationship` — the full dplyr domain (one-to-one, one-to-many,
+  many-to-one, many-to-many), passed through to dplyr's `relationship`
+  enforcement; users never reorder a join to fit the vocabulary.
+- `unmatched_ok` — the explicit acknowledgment for legitimately-partial
+  joins.
+
+`relationship` and `unmatched_ok` are legal only when `adds: variables`,
+and requiredness applies only where a field is permitted. There are no
+wrappers: each spec row compiles to one dplyr join / bind_rows call with
+checks around it. There is no per-join granularity declaration — uniqueness
+expectations derive from `keys` + `relationship` (single home).
+
+### 5.5 Spec validation
+
+Spec files are validated at load, before any data is read, and spec errors
+stop the run — specs must parse; only data problems become findings. Every
+problem is reported at once (never first-error-stops), with file-and-entry
+precision and did-you-mean suggestions; a broken field reports its root
+cause once rather than cascading.
+
+Validation is schema-driven: `inst/schema/fields.yaml` declares every spec
+field's properties, and checks are generated from properties — one
+definition per check, instances declared in the schema (the model is §7.2;
+the field-by-field facts live only in the registry). Codes carry the scope
+prefixes of §4, and the full catalogue with message templates and fix
+routes is `inst/schema/checks.yaml`.
+
+Within-source validation is standalone: one dictionary file validates
+completely alone, with zero knowledge of other sources. Across-source
+validation (join references, table-name uniqueness) is a separate,
+composable, data-free step. This preserves the prespecification workflow —
+a dictionary can be authored, validated, and certified before any data
+exists, deliberately checking that `source.file` is declared, never that it
+exists (§6, stage contract).
+
+## 6. The pipeline stages
+
+### 6.1 Stage contract
+
+Every user-facing stage command always completes and always emits a report
+plus certification through one shared machinery: stage name, timestamp,
+items, status, acknowledgments, informational annex — written to
+`output/reports/` as `<stage>-<runstamp>.xlsx` (items) and
+`<stage>-<runstamp>-certificate.txt`, one certificate format with a stage
+line. Stage runners never abort on their own items: spec problems make a
+NOT CERTIFIED spec report exactly as findings make a NOT CERTIFIED check
+report; classed aborts remain for constructors called directly. A CERTIFIED
+spec report doubles as a timestamped prespecification artifact,
+registerable before data collection. Data diagnostics
+(`preprocessed-<table>.csv`) go under `output/diagnostics/`.
+
+Certification is absolute — zero standing findings — and per-scope: a table
+certification certifies internal coherence and correctness without
+reference to other files; join-stage issues decertify the joined artifact
+only, with fixes routing back into tables as needed. Acceptance happens
+only by explicit declaration (e.g. `unmatched_ok: true`), listed on the
+certificate.
+
+The user-facing stage vocabulary is provisional (working model: spec →
+load → correct → transform, each followed by a package check); resolution
+owners in §10.
+
+### 6.2 Run order and stages
+
+Per table: read → standardise → compose keys → apply corrections →
+validate; then joins (skipped only on key findings); one consolidated
+report. Every v1 check is per-table because post-join validation would
+multiply study-level findings across estimate rows.
+
+**Read.** Readers produce canonical per-table frames (rows = observations,
+columns = the declared variables); the join layer never sees orientation.
+Shape-normalisation happens through readers, not a user-facing reshape
+grammar (real export shapes are tool-specific patterns; a grammar crept
+toward the rejected mapping engine, and user R code is
+massively in-distribution for AI assistants): a shipped per-tool importer
+(v1 registry: `covidence` plus generic csv/excel), a parameterised generic
+reader, or a user-written function in the project's `readers.R` (documented
+contract: file in → canonical table out; sourced into an isolated
+environment; recurring shapes promoted into shipped importers). All raw
+ingestion is character — types exist only through declared coercion, so
+nothing is guessed before the dictionary speaks. Undeclared source columns
+are returned as an informational list, reported and carried on the
+certificate as an annex, and dropped from pipeline artifacts until
+declared.
+
+**Standardise** (automated, dictionary-driven, deterministic; re-derived
+from the untouched raw file each run). Five closed, ordered, idempotent
+ops: lossless encoding normalisation (UTF-8/NFC, exotic whitespace,
+zero-width; never diacritic-stripping or transliteration — Müller survives
+to presentation); trim (leading/trailing only); missing standardisation
+(""/whitespace built-in; per-column declared codes); type coercion —
+boolean accepts exactly TRUE/FALSE case-insensitively, date is strict ISO
+round-trip, and un-coercible values are left standing for validation to
+report (a column with any failure stays text — never half-coerced, never
+silently nulled); safe declared-values canonicalisation (identity up to
+case+trim against a declared value; no fuzzy matching). Counts logged per
+column; per-column named opt-outs; artifact written as
+`preprocessed-<table>` ("clean" is reserved for the certified artifact).
+Nothing hand-coded per column — everything generated from declarations.
+Machine-fixable issues therefore never appear as findings, only as log
+counts; findings are always the post-standardisation, post-corrections
+residual.
+
+**Validate** (per table). The full check catalogue on post-standardisation
+data, so findings are exactly the set requiring human judgment. Always-run,
+always-write: every check that can run always runs; the report is always
+complete. Findings carry a consequence, not a severity (severity conflated
+defect-description with permission; consequence describes, the user decides
+what to fix when): key findings → joins skipped; un-coercible → dependent
+checks on that column not run; every finding → not certifiable.
+
+**Join.** Declared joins execute with checks around them: non-unique keys,
+relationship violations, and unmatched rows in both directions — with
+near-miss suggestions (suggest-only, resolved via corrections, never
+auto-applied) as the key-drift net. The loud failure remains the
+*undeclared* many-to-many. Exact data-side semantics for declared
+many-to-many joins and observation appends are parked (§10).
+
+**Corrections** (manual, audited; engine lands in Phase 2 against a
+designed-in per-table seam). A corrections file applied programmatically —
+the auditable replacement for hard-coded patch lines. Every correction
+targets a named input table and applies pre-join, where the value
+physically lives (`table` defaults away for single-input reviews). Each
+entry: predicate targeting (column=value conditions), an expected match
+count and, for replacements, the expected old value — either mismatch fails
+loudly by correction (the data shifted underneath) — and a mandatory
+`reason`. Automatic re-validation follows. Raw files are never hand-edited
+(read-only by convention and code); the fix path is a correction entry or a
+fresh export committed as a new data version.
+
+**Derive** (Phase 2). Three tiers, in declared order, each derivation
+documenting inputs/outputs for lineage:
+
+- *Tier 1 — declarative primitives* (closed set, pure spec): recode/map,
+  collapse, bin, rename, coalesce, conditional assignment,
+  map-via-reference-table.
+- *Tier 2 — built-in named derivations*: effect-size computations as thin
+  wrappers over metafor's `escalc()` — zero reimplemented statistics; tests
+  assert agreement with metafor, never with hand-derived values. Admission
+  criterion: only derivations whose definition is stable across reviews;
+  anything encoding a review's judgment enters as user-declared rules or
+  custom code, never as package defaults.
+- *Tier 3 — quarantined custom code*: a spec entry pointing at a
+  user-written function in `derivations.R`; provenance distinguishes
+  built-in from custom. Recurring Tier-3 patterns get promoted into Tier 2.
+
+Policies (review judgments) are declared, not defaulted. Canonical
+instance — direction alignment: a mechanical coding-direction column, a
+user-authored construct-valence reference table (the researcher's
+meaning-decision externalised as a reviewable, citable artefact), and
+mechanical composition with a provenance flag. Constructs missing from the
+valence table fail loudly by name; the pipeline never guesses.
+Best-estimate selection follows the same pattern.
+
+Mappings come in two visually distinct shapes for two distinct operations:
+collapse/recode maps are always derived-keyed sets (one line per derived
+value; free validation — no raw value in two sets, no raw value in none
+unless a passthrough policy is declared), while annotations are always
+value-keyed attributes. Inline by default; promoted to a standalone
+reference table only when earned (long, reused, or externally maintained).
+Both forms feed identical machinery.
+
+**Certify & hand off.** Validation against the derived dictionary (the user
+declares expectations for derived variables too), provenance stamping, and
+the data contract written to `output/`.
+
+### 6.3 Findings
+
+- User vocabulary only: their column names, their study IDs.
+- Counts and instances, grouped by consequence — which is also the fix-flow
+  ordering.
+- Record schema: `code`, `consequence`, `table`, `variable`, `study_id`
+  (where an identifying study value is resolvable; the exact lookup is a
+  Phase 1 plan item), `rows` (numbered against the named
+  `preprocessed-<table>` artifact), `message`, `fix_options`.
+- Routing, not prescription: every finding says *where* to act
+  (corrections vs dictionary vs joins spec — mechanically determinable from
+  the check type), offers both routes where genuinely ambiguous, and never
+  claims to know the correct value.
+- Automatic export to Excel (one row per finding) — where review teams
+  actually triage; console print and data-frame access remain.
+- Message copy is interface: snapshot-tested, so wording regressions fail
+  tests and phrasing is reviewable in PR diffs.
+
+### 6.4 Provenance & auditability
+
+Corrections log with reasons; derivation lineage; per-run plain-text log in
+`output/`; reports persisted per run; every output stamped with package
+version + spec checksums. Intermediate outputs at each stage boundary, on
+by default, off-switchable. Cross-run comparison: scaffolded projects are
+git repositories (specs, corrections, outputs committed — study-level data
+is small and non-sensitive) plus a per-run run summary (row counts,
+correction hits, derivation and findings counts), so diffs answer "what
+changed since last run"; stale corrections failing loudly is the third leg.
+Artefact checksums are staleness guards: `rev_derive()` on an out-of-date
+snapshot warns loudly; `rev_process()` makes staleness impossible by
+construction.
+
+## 7. Architecture
+
+### 7.1 Invariants
+
+- **The data contract** (§1): module 2 consumes only the contract; module 1
+  knows nothing about presentation. Anything module 2 needs must arrive via
+  the contract.
+- **Guidance-vs-pipeline rule:** an operation belongs in the pipeline,
+  declaratively, when it is (a) from an enumerable set, (b) parameterisable
+  by declaration rather than judgment, (c) mechanically validatable. It
+  belongs in guidance + corrections when it requires human judgment about
+  content. Reshapes (in readers), joins, coercions, recodes: pipeline.
+  Fixing a mistyped author name, adjudicating duplicates: corrections.
+- **Single source of truth** (principles and processes in
+  dev/conventions.md): every fact has one authoritative home, preferably
+  data; code is generic over declared facts; registry-first for new
+  fact-families. In revpiper the registries are `inst/schema/fields.yaml`
+  and `inst/schema/checks.yaml`.
+- **Error doctrine — three vocabularies for three audiences:** spec errors
+  point at spec file + entry; data errors accumulate into findings in user
+  terms; internal errors are ours and the only tracebacks. All messages via
+  cli; entry-point validation via rlang's checkers.
+- **Functional core + light S3:** pure functions composable into stages; S3
+  for spec objects and results with validators and friendly `print()`
+  methods; no R6/S4 unless a specific need is argued; explicit data flow —
+  no globals, no hidden state; side effects quarantined at the
+  orchestration layer.
+- **No config file, no global options, no environment magic:** a run's
+  inputs are the project directory (specs) and the function call. The
+  original pipeline's config.yaml is absorbed by specs + scaffold
+  conventions.
+- **Prespecify-then-check** (§5): nothing inferred that the user can
+  declare; declared expectations checked against reality, with the
+  mismatch reported in the user's vocabulary.
+
+### 7.2 The schema grammar
+
+The package schema (`inst/schema/fields.yaml`) is the single source of
+truth for spec-field validation. Its model:
+
+- A closed `kinds:` list names the kinds of entry (file, source, column,
+  level, join, join_file). Fields are grouped under their kind — the
+  grouping *is* the statement of legality, and parse-time duplicate-key
+  failure polices field names at the right scope, so the same field name
+  may carry kind-specific properties per kind (level `keys` vs join `keys`:
+  same concept, same word). "kind" is provisional wording — internal-only,
+  cheap to rename (§10 pointer).
+- A `properties:` section defines the property vocabulary itself (meaning,
+  loading type, allowed values); loaders and conformance tests read it, so
+  property handling exists nowhere in code.
+- Checks are generated from properties: one definition per check, instances
+  declared in the schema, codes and message templates in
+  `inst/schema/checks.yaml` (registry entries keyed by code, so duplicates
+  fail at parse). Container fields declare what kind of entry they hold
+  (`contains`); a mapping with no contained kind has user-chosen keys —
+  data, not vocabulary.
+- Conditional permissions exist as two instances of one pattern
+  (`permitted_types` on column types, `permitted_adds` on join types); a
+  third occurrence forces the general mechanism (rule of three; the
+  candidate `permitted_when` generalisation is on the architecture-
+  discussion agenda held in the phase-1 plan).
+
+A deferred schema refactor is recorded as direction, not plan (§9): the
+vocabulary gaps found while building Task 5 (a mapping-of-entries container
+shape, scalar shorthand as a property, a one-of requirement, acyclic
+refers_to) would each replace custom code with schema rows.
+
+### 7.3 Package internals
+
+File layout is a provisional starting shape, never a commitment: the
+binding rules are the mirror rule, topic-coherent files, the
+`utils-<domain>.R` convention, and no user-facing "clean" naming before
+certification; reshuffling in PRs is free and expected. S3 classes are few
+and purposeful: `rev_dictionary`, `rev_findings`, `rev_report` exist;
+`rev_corrections`, `rev_derivation_spec`, and `rev_dataset` (a tibble
+subclass carrying dictionary/lineage/checksums as attributes — the data
+contract in object form) arrive with their phases.
+
+## 8. Quality & testing strategy
+
+Four test layers:
+
+1. **Unit tests** (bulk; mirror rule): tiny inline tibbles; normal, edge,
+   and expected-failure paths asserting the *right finding*; snapshot tests
+   on rendered messages.
+2. **Integration tests on the bundled synthetic review**: scaffold → specs
+   → all stages → expected shape/values/provenance. The synthetic dataset
+   is a designed artefact deliberately containing the awkward realities,
+   and does triple duty — test fixture, scaffold example, vignette
+   narrative — so it cannot rot.
+3. **Original-review validation fixture**: real study-level data with specs
+   we author — the design's first dress rehearsal, surfacing
+   expressiveness gaps before any outside user. Asserts agreement with the
+   original pipeline's outputs (numeric tolerance for effect sizes; exact
+   for counts); divergences individually adjudicated. Skip-if-absent guard.
+4. **metafor agreement tests**: Tier-2 wrappers vs direct `escalc()` calls
+   — enforcing zero-reimplemented-statistics.
+
+Schema validation gets two layers of its own: a property matrix generated
+from the schema (every property × every field, applies and does-not-apply)
+proves the logic by construction, and a small curated fixture set with
+snapshots guards wording and routing. A kitchen-sink "complete example"
+fixture was considered and dropped — the matrix, the good fixtures, and the
+boundary-legal tests carry positive coverage; do not resurrect it.
+
+Fixture policy: the Covidence example export is dummy data and may seed
+shape-realistic fixtures; the real family-comparison workbook is NEVER
+committed — it serves as a local-only, skip-if-absent fixture, with a
+committed synthetic derivative folded into Phase 3's designed synthetic
+review.
+
+Infrastructure: testthat 3e, parallel, TDD, covr+Codecov measured-not-
+gated, full-matrix CI (rules in dev/conventions.md). Message copy, spec
+reports, and certificates are the product's public voice: every new
+snapshot is read before acceptance.
+
+## 9. Decisions log
+
+One row per decision: date, decision, one-line rationale. Fuller rationale:
+git history (the pre-consolidation spec), the planning notes, and the
+phase-1 plan's amendment trail.
+
+| Date | Decision | Rationale |
+|---|---|---|
+| 2026-07-07 | Name `revpiper`, exports `rev_`-prefixed; repo renamed before first push | noun+r convention, review signal, no collisions; `synthr` rejected (synthesisr adjacency, "synth" = synthetic data in statistics) |
+| 2026-07-07 | Tidyverse style, Air formatter; lintr defaults + package checks | community standard; only maintained linter; deliberately stricter than tidyverse core given team composition |
+| 2026-07-07 | testthat 3e + TDD; coverage measured, never gated | hard gates invite assertion-free test theatre; TDD keeps real coverage high |
+| 2026-07-07 | roxygen2; R Markdown vignettes as primary docs; pkgdown site | Quarto would add a contributor dependency (revisited in module 2) |
+| 2026-07-07 | NEWS.md hand-curated per user-facing PR; no Conventional Commits | squash merges + GitHub release notes design away the automation payoff |
+| 2026-07-07 | r-lib CI workflows, full OS/R matrix, branch protection; format-check not format-suggest | maintained workflows; users skew Windows; format-suggest's `pull_request_target` privilege pattern declined (Phase 0) |
+| 2026-07-07 | Pre-push suite + CI backstop; no pre-commit hooks | friction vs a solo-plus-Claude team; CI stays authoritative regardless |
+| 2026-07-07 | Justify-each-dependency; depend / vendor / write; renv dev-only, CI unpinned | aggregate-use test; unpinned CI catches upstream drift early |
+| 2026-07-07 | renv required in scaffolded user projects | version-frozen reviews are a reproducibility credential |
+| 2026-07-07 | PR-only main, squash-merge, standard R versioning | PRs are the review gate over AI-produced work; one clean commit per task |
+| 2026-07-07 | MIT license | tidyverse default; maximises adoption; relicensing conviction needed before external PRs |
+| 2026-07-07 | R floor 4.2 (tidyverse window) | native pipe and `_` placeholder usable; no newer-than-floor features without logged justification |
+| 2026-07-07 | Mirror rule; `rev_` prefix; snake_case; first arg = data/path; c_/t_/r_ scheme not carried over | discoverability for weak-R users; the new data model is designed on its own merits |
+| 2026-07-07 | Functional core + light S3; rule of three (qualified); usethis-first | matches r-lib practice; R6 only where mutable state is essential |
+| 2026-07-08 | v1 input contract: consensus rows only | formal tools resolve discrepancies upstream; reviewer declarable as an ordinary level; adjudication stays human |
+| 2026-07-08 | Own dictionary schema; data-dict vocabulary reused; no CLI; convergence review at 1.0 | data-dict is pre-1.0, closed to extension keys, Parquet-only validation |
+| 2026-07-08 | Readers replace the reshape grammar; joins stay in the pipeline; one YAML per table + joins.yaml | real shapes are tool-specific patterns; the grammar crept toward the rejected mapping engine; join validation is the value users cannot replicate |
+| 2026-07-08 | Draft generator minimal; assisted authoring via templates + AI-prompt scaffolds | cleaning concerns don't belong in dictionary authoring; the surface awaits user consultation |
+| 2026-07-09 | Five types; `categorical` and per-column `pattern` removed; composition moved to the key block | inferred storage contradicted prespecification; join near-miss suggestions remain the key-drift net |
+| 2026-07-09 | Five standardisation ops, lossless encoding, `preprocessed-` naming | machine-fixable issues should never be findings; "clean" reserved for the certified artifact |
+| 2026-07-09 | Per-table validation before joins; single table-scoped corrections model | post-join validation multiplies study-level findings across estimate rows |
+| 2026-07-09 | Consequence replaces severity; certification absolute; always-run always-write | severity conflated defect-description with permission; consequence describes, the user decides |
+| 2026-07-09 | File layout provisional; fixture policy (dummy Covidence in, real workbook local-only) | layout has no structural meaning in R packages; identifiable review content stays private |
+| 2026-07-09 | `rev_check()` writes reports + diagnostics (supersedes "writes nothing") | findings' row numbers must reference an inspectable artifact; "always safe" preserved |
+| 2026-07-10 | CLAUDE.md relocated to .claude/ (pkgdown renders README+NEWS only) | pkgdown 2.2.0 has no exclusion config; relocation beats build wrappers (YAGNI) |
+| 2026-07-10 | Vendoring dropped; rlang floor 1.3.0; `%||%` the sole namespace import | upstream moved the needed checkers into rlang's exports; depend-first |
+| 2026-07-10 | Dictionary lists exactly the columns of interest; `type` required; undeclared columns informational | no consequence means no finding; list-and-drop keeps artifacts honest |
+| 2026-07-11 | Schema-driven validation: fields.yaml + generated checks + scope codes; standalone-source rule | one definition per check; single source of truth; prespecification needs files that validate alone |
+| 2026-07-11 | Uniform stage reporting; stage runners never abort; `output/reports/` layout | spec development must work standalone and leave a durable, registerable record |
+| 2026-07-11 | Single-source-of-truth invariant adopted (conventions) | recurring duplication was caught reactively; prevention became structural |
+| 2026-07-11 | Level/role keys are user-chosen, never policed; broad roles vision rejected | users reference their own column names directly for later purposes |
+| 2026-07-12 | `identifiers:` merged into `levels:`; explicit `within:` nesting; virtual columns | one concept, one section; explicit nesting matches how users say it and is checkable |
+| 2026-07-12 | Joins: required `adds:` type; `granularity` dropped; full dplyr relationship domain; per-column `shared:` rejected | the declared type carries the overlap expectation; uniqueness derives from keys + relationship (single home) |
+| 2026-07-12 | Schema restructure: fields grouped under `kinds:`; `requires` + `permitted_adds` properties; "kind" wording provisional | grouping states legality and polices duplicates at the right scope; same word for the same concept per kind |
+| 2026-07-12 | Certification is per-scope | a table certificate certifies internal coherence; join issues decertify only the joined artifact |
+| 2026-07-12 | Deferred schema refactor recorded as direction, not plan. Triggers: the architecture discussion / Phase 2 planning, and Task 14's structural review | the vocabulary gaps (container shape, scalar shorthand, one-of, acyclic refers_to, `permitted_when`) each replace custom code with schema rows — decided with the full check inventory in view |
+| 2026-07-12 | No architecture-review skill | considered and dropped as overengineering |
+| 2026-07-12 | Spec consolidated (this rewrite) | git holds the history; the document holds the present |
+
+## 10. Open questions (with owners)
 
 | Question | Owner | Status |
 |---|---|---|
-| data-dict: format-only vs CLI dependency | Module-1 implementation planning | **Resolved 2026-07-09** (§3.1: own schema, aligned vocabulary, no CLI; convergence review at data-dict 1.0) |
+| data-dict: format-only vs CLI dependency | Module-1 implementation planning | **Resolved 2026-07-09** (§5.1: own schema, aligned vocabulary, no CLI; convergence review at data-dict 1.0) |
 | Shared-mapping representation (named in-spec vs external files) | Module-1 implementation planning | Open — deferred to Phase 2 planning (derivation mappings; value→label maps deferred there too, 2026-07-09) |
-| Extraction-tool export formats (Covidence, DistillerSR) | Module-1 implementation planning | **Resolved 2026-07-09** (real-file investigation → readers design, §3.3; findings in the Phase 1 planning notes) |
+| Extraction-tool export formats (Covidence, DistillerSR) | Module-1 implementation planning | **Resolved 2026-07-09** (real-file investigation → readers design, §6.2; findings in the Phase 1 planning notes) |
 | `escalc()` coverage vs original pipeline's derivations | Module-1 implementation planning | Open — Phase 2 planning |
-| Check-type→routing table for findings | Module-1 implementation planning | **Structured 2026-07-09** (five code families + consequence model, §3.7); full enumeration = Phase 1 plan deliverable, **including a data-dict coverage mapping** — every data-dict S/M/D check marked adopted / adapted / N-A-with-reason, so nothing silently drops |
+| Check-type→routing table for findings | Module-1 implementation planning | **Structured 2026-07-09** (scope/family codes + consequence model, §4/§6); full enumeration incl. the data-dict coverage mapping delivered in the phase-1 plan |
 | Multi-reviewer row structures (declaration + handling; v1 = consensus rows only) | Later phase / user consultation | Open (deferred 2026-07-09) |
 | Citation rendering (flextable/officer vs Quarto-mediated) | Module-2 design | Open |
 | `revpiper` availability check; repo rename | First implementation step | **Resolved 2026-07-07** (Phase 0) |
 | Documentation templates per function type | Phase 1, with real functions | Open — lands during Phase 1 implementation |
 | Missing-codes-in-dictionary vs corrections split (UX) | Usability pilot / user consultation | Open (flagged 2026-07-09) |
 | Package split: data spec / data process / data vis as 2-3 packages (boundary discipline enforced now — spec machinery never reaches pipeline internals) | Later phase decision | Open (flagged 2026-07-11, amendment 4) |
-| User-facing stage model: spec → load (import) → correct (manual, non-algorithmic) → transform (derive), each followed by a package check; correct standalone vs folded; joins placement. Function/report/certificate renames (incl. user-facing `rev_*` verbs) expected to follow the naming decision — cheap pre-release, so resolve no later than Task 9 | Task 9 walkthrough (report naming); Phase 2 planning (full model) | Open (flagged 2026-07-11, amendment 5) |
+| User-facing stage model: spec → load (import) → correct (manual, non-algorithmic) → transform (derive), each followed by a package check; correct standalone vs folded; joins placement. Function/report/certificate renames (incl. user-facing `rev_*` verbs) expected to follow — cheap pre-release, so resolve no later than Task 9 | Task 9 walkthrough (report naming); Phase 2 planning (full model) | Open (flagged 2026-07-11, amendment 5) |
 | Joins declaring expected column overlap between sides (`shared:`); overlap semantics differ between same-variables merges and different-information merges | Task 5 walkthrough (Phase 1) | **Resolved 2026-07-12** (amendment 7: the join's declared type `adds: variables \| observations` sets the overlap expectation; per-column `shared:` rejected) |
 | Data-side J-check semantics for declared many-to-many joins (candidates: observed-vs-declared looseness nudge, row accounting on the join report) and for observation appends (column match with near-miss suggestions, key collisions); J-code assignments | Task 11 walkthrough (Phase 1) | Open (flagged 2026-07-12, amendment 7e) |
 | Certification granularity: certify table A while table B is broken? | Task 5 walkthrough (Phase 1) | **Resolved 2026-07-12** (amendment 7d: yes — table certifications certify internal coherence only, without reference to other files) |
 | R file organisation: review what lives in each per-topic R file vs a shared utils file, once enough code exists to see the seams | First pass at Task 14's audit; revisit at Phase 2 planning | Open (flagged 2026-07-11) |
 | Workflow ordering: within-source data checking + corrections vs across-source post-join checking + corrections; join spec may be authored upfront so sheets are set up compatibly; pipeline gating rules for partial processing (loading/processing one source before others are join-ready) — amendment 5 defers | Phase 2 planning (corrections engine) | Open (flagged 2026-07-11) |
+| Schema vocabulary and "kind" wording (the deferred refactor direction, §9 2026-07-12) | Architecture discussion (agenda in the phase-1 plan's Task 5-close blockquote); Task 14 structural review | Open (flagged 2026-07-12) |
 
-**Resolution mechanism:** when a phase begins, its owned questions become the first tasks of that phase's planning step (typically short investigations). Each resolution is committed back into this spec as an amendment via PR, so the spec remains the living, dated record of decisions.
-
-### 8.3 Explicitly out of scope for v1
-
-Interactive layer & dashboards; umbrella/scoping reviews; codebook-document→YAML parsing *(2026-07-09: split — the minimal header-draft generator `rev_draft_dictionary()` moved INTO v1, §3.1; document parsing stays out)*; CRAN submission; pre-commit hooks; fledge.
-
-### 8.4 Roadmap (each phase: spec → plan → TDD → review)
-
-- **Phase 0 — Bootstrap:** package skeleton via the usethis sequence; conventions doc (drafted from §2, doubling as repo CLAUDE.md source and Liz's standing template); CI green on a hello-world package. *Implementation prerequisites:* name availability check; sandbox network allowlisting for CRAN/Posit package mirrors (GitHub already allowed). *(Amended 2026-07-07: the original third prerequisite — "switch `origin` to HTTPS and verify an end-to-end `git push`" — predated the adopted option-a workflow and contradicted it: the sandbox never pushes; Liz fetches from the sandbox remote and pushes from the host.)*
-- **Phase 1 — Spec machinery + stages 1–3** (dictionary parsing/validation, assemble, clean, validate, findings). The expressiveness risk burns down here. *Phase 1 planning opens with its owned investigations — extraction-tool export formats (Covidence, DistillerSR; does reality export per-estimate rows or wide per-study sheets?) and the data-dict format-vs-CLI decision — before the stage-1 canonical-shape assumptions are finalised.*
-- **Phase 2 — Stages 4–6** (corrections, three-tier derive, metafor wrappers, certify, provenance).
-- **Phase 3 — Scaffold + synthetic review + vignettes** (`rev_project()`, designed synthetic dataset, getting-started + prepare-your-data vignettes, pkgdown live).
-- **Phase 4 — Dress rehearsal** (original-review specs + validation fixture; adjudicate divergences; fix gaps).
-- **Phase 5 — Usability pilot; then the module-2 (visualisation) brainstorm.**
-
----
+**Resolution mechanism:** when a phase begins, its owned questions become
+the first tasks of that phase's planning step (typically short
+investigations). Each resolution is committed back into this spec via PR,
+so the spec remains the living, dated record of decisions.
 
 ## Appendix: externally verified references consulted during design
 
-- Air formatter: posit-dev/air; tidyverse blog (Feb 2025, Jun 2025); usethis `use_air()`. Distribution: Positron-bundled, installer script, Homebrew, pixi/mise; not on CRAN (Rust binary).
-- Tidyverse practice: tidy tools manifesto; design.tidyverse.org; tidyverse CONTRIBUTING (per-PR NEWS bullets); tidyups 004 governance (squash-merge); `use_tidy_github_actions()`; style.tidyverse.org/news.html.
-- Repo inspections (July 2026 clones): tidyverse/ellmer, tidyverse/duckplyr, r-lib/usethis — air.toml universal; no `.lintr`; format-suggest workflows; `Config/testthat/parallel`; `utils-<domain>.R`; `import-standalone-*.R`; usethis AGENTS.md.
-- data-dict: github.com/tidyverse/data-dict (YAML spec + Rust CLI; validate-spec/meta/data ladder; agent skills).
-- Ecosystem: metafor/escalc; synthesisr, revtools, metagear (Lajeunesse 2016, Methods Ecol Evol), PRISMA2020, appraise; pharmaverse (metacore/metatools/admiral pattern — pattern adopted, packages not).
-- R versions: R 4.6.1 current (June 2026); native pipe/lambda R 4.1; `_` placeholder 4.2; extended placeholder 4.3; base `%||%` 4.4.
+- Air formatter: posit-dev/air; tidyverse blog (Feb 2025, Jun 2025);
+  usethis `use_air()`. Distribution: Positron-bundled, installer script,
+  Homebrew, pixi/mise; not on CRAN (Rust binary).
+- Tidyverse practice: tidy tools manifesto; design.tidyverse.org; tidyverse
+  CONTRIBUTING (per-PR NEWS bullets); tidyups 004 governance
+  (squash-merge); `use_tidy_github_actions()`; style.tidyverse.org/news.html.
+- Repo inspections (July 2026 clones): tidyverse/ellmer,
+  tidyverse/duckplyr, r-lib/usethis — air.toml universal; no `.lintr`;
+  format-suggest workflows; `Config/testthat/parallel`; `utils-<domain>.R`;
+  `import-standalone-*.R`; usethis AGENTS.md.
+- data-dict: github.com/tidyverse/data-dict (YAML spec + Rust CLI;
+  validate-spec/meta/data ladder; agent skills).
+- Ecosystem: metafor/escalc; synthesisr, revtools, metagear (Lajeunesse
+  2016, Methods Ecol Evol), PRISMA2020, appraise; pharmaverse
+  (metacore/metatools/admiral pattern — pattern adopted, packages not).
+- R versions: R 4.6.1 current (June 2026); native pipe/lambda R 4.1; `_`
+  placeholder 4.2; extended placeholder 4.3; base `%||%` 4.4.

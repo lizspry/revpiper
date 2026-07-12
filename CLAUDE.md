@@ -36,14 +36,16 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   (~/.claude/rules/preflight.md): run it in the executing sandbox before the
   first task; findings are fixed by plan amendment before execution.
 - Open questions resolve at their owning phase's planning step and are
-  committed back into the spec via PR (spec §8.2).
+  committed back into the spec via PR (spec §10, Open questions).
 
 ## Project status pointers
 - Superpowers specs/plans live in dev/superpowers/{specs,plans}/ —
   never write into docs/ (gitignored pkgdown output). This overrides
   the superpowers skills' default docs/superpowers/ location.
 - Design spec: dev/superpowers/specs/2026-07-07-revpiper-design.md
-  (amended through 2026-07-11 by Phase 1 execution amendments).
+  (consolidated 2026-07-12 per the spec-consolidation brief, pending
+  Liz's diff review; git history holds the amendment trail, audited in
+  dev/superpowers/plans/2026-07-12-spec-consolidation-extraction.md).
 - Active plan: dev/superpowers/plans/2026-07-09-phase-1-implementation.md —
   SIGNED OFF with execution amendments 1-7 (all signed; see its Status
   block). Executing on branch phase-1-core. DONE: Tasks 1, 2, 3, 3b, 4,

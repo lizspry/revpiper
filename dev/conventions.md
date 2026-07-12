@@ -1,8 +1,10 @@
 # Coding conventions (standing template)
 
-Origin: revpiper design spec §2 (dev/superpowers/specs/2026-07-07-revpiper-design.md),
-which holds the full rationale for every rule here. This file is the
-operational digest, reusable across projects.
+Origin: the revpiper design spec
+(dev/superpowers/specs/2026-07-07-revpiper-design.md), whose decisions log
+(§9) dates each rule with a one-line rationale; fuller rationale lives in
+git history. This file is the single home for the rules themselves,
+reusable across projects.
 
 Environment and sandbox operating rules live in CLAUDE.md (single
 source), not here — this document covers code conventions only.
@@ -11,7 +13,7 @@ source), not here — this document covers code conventions only.
 ## settled with Liz at the Task 4 review — five words, researcher-first)
 - Data tables have **columns** (synonym in prose: variables), which hold values.
 - A spec **file** (dictionary) has **sections** — its named top-level parts:
-  `source:`, `identifiers:`, `levels:`, `columns:`. Sections hold entries.
+  `source:`, `levels:`, `columns:`. Sections hold entries.
 - An **entry** is one item described by its **fields** (`key: value`
   pairs): a column with its fields, the source with its fields, a
   combination of columns with its fields — and the file itself, whose
