@@ -268,13 +268,38 @@ prespecify-then-check. Optional restrictions: `values` (closed set — on
 text, and on integer/decimal as the alternative to `range`, so
 non-sequential code sets are closed-checkable) and `range`/`units`;
 `values` and `range` are mutually exclusive per column. The permission rule:
-boolean admits no constraint fields; `range` needs an ordered type;
-`values`/`units` are otherwise free. Also per column: `required`/`unique`
+boolean admits no constraint fields; `range` needs an ordered type —
+the ordered types are integer, decimal, and date (determination
+recorded 2026-07-13, adversarial battery); `values`/`units` are
+otherwise free. Type tokens are exact and lowercase; near-misses get a
+did-you-mean (same determination). Also per column: `required`/`unique`
 booleans, `missing` codes (declared reactively via findings; only
 ""/whitespace are auto-missing), `constant_within_level` (§5.3),
 `description`. The purpose/semantics axis (id/ordinal/quantity, value
 labels) is deliberately absent — designed later beside its consumers
 (transform, module 2).
+
+Canonical shape (added 2026-07-13: in the adversarial battery all
+three spec-only readers guessed `columns:` as a name-keyed mapping —
+the spec must SHOW the form, not describe it). `columns:` is a list;
+each entry carries its `name:`. Quote YAML-coercible values (`"yes"`,
+`"007"`):
+
+```yaml
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: study_id
+    type: text
+    required: true
+  - name: effect_size
+    type: decimal
+    range: [-5, 5]
+  - name: rob_grade
+    type: integer
+    values: [1, 2, 5, 9]
+```
 
 Source columns not declared are surfaced informationally, never as
 findings, and are dropped from pipeline artifacts until declared (§6).
@@ -342,10 +367,36 @@ join:
   joins.
 
 `relationship` and `unmatched_ok` are legal only when `adds: variables`,
-and requiredness applies only where a field is permitted. There are no
+and requiredness applies only where a field is permitted — on a
+`variables` join, `relationship` IS required (determination recorded
+2026-07-13, adversarial battery). There are no
 wrappers: each spec row compiles to one dplyr join / bind_rows call with
 checks around it. There is no per-join granularity declaration — uniqueness
 expectations derive from `keys` + `relationship` (single home).
+
+Canonical shape (added 2026-07-13, same battery finding as §5.2 —
+two of three spec-only readers guessed the file's literal form wrong):
+a top-level `joins:` list; `keys:` is a mapping keyed by the two
+table names:
+
+```yaml
+joins:
+  - adds: variables
+    left: estimates
+    right: rob
+    keys:
+      estimates: [study_id]
+      rob: [study_id]
+    relationship: one-to-many
+    unmatched_ok: false
+```
+
+Selecting `file = "joins.yaml"` in `rev_spec_run()` runs the joins
+spec's form checks only; `left`/`right`/`keys` reference resolution
+needs the dictionaries and runs in the full-set modes (determination
+recorded 2026-07-13 — "within-file checks only" holds for joins too).
+`within:` on a level must name a declared level (reference-resolved,
+§5.3's nesting; same determinations batch).
 
 ### 5.5 Spec validation
 

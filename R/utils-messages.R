@@ -35,7 +35,12 @@ stop_spec <- function(problems) {
   )
   names(lines) <- rep("x", length(lines))
   cli::cli_abort(
-    c("Spec validation failed ({nrow(problems)} problem{?s}):", lines),
+    c(
+      "Spec validation failed ({nrow(problems)} problem{?s}):",
+      lines,
+      i = "Canonical spec examples ship with the package:
+           {.code system.file(\"extdata\", \"specs-example\", package = \"revpiper\")}"
+    ),
     class = "revpiper_spec_error",
     call = NULL,
     problems = problems
