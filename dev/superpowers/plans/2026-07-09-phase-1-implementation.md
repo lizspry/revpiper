@@ -1568,7 +1568,13 @@ VISIBLY (Liz's review 2026-07-13: no internal printing, no invisible()
 — auto-print renders the certificate via the registered method exactly
 when the call is unassigned; capture is the user opting into
 programmatic handling via is_certified(); composition benefit:
-rev_run() controls display by capturing). Loaded specs ride as an
+rev_run() controls display by capturing), and ALWAYS emits exactly one
+cli status line on the message stream — outcome + certificate path
+(e.g. "Spec step CERTIFIED — certificate written to <path>") — so the
+status is seen whatever the calling pattern (Liz 2026-07-13, the
+parsimony review: goal 1 = one cli call; both outcomes message, one
+rule; wording is a pointer, never a restatement of certificate
+content; snapshot-tested). Loaded specs ride as an
 attribute when certified; NOT CERTIFIED on
 problems, no abort. Deliberately checks that `source.file` is declared,
 never that it exists (prespecification workflow: the CERTIFIED spec report
