@@ -39,9 +39,13 @@ print.rev_report <- function(x, ...) {
   invisible(x)
 }
 
+# Where step reports and certificates live, relative to the project root:
+# the one home for this layout fact.
+output_reports_dir <- "output/reports"
+
 # Write the report workbook and its certificate beside it, named by stage
 # and runstamp. Returns both paths invisibly.
-export_report <- function(report, dir) {
+export_report <- function(report, dir = output_reports_dir) {
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   stem <- sprintf("%s-%s", report$stage, runstamp())
   paths <- c(

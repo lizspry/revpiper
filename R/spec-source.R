@@ -22,8 +22,7 @@ read_dictionary <- function(path) {
 # name. Returns the list named by table.
 read_dictionaries <- function(dir) {
   rlang::check_string(dir)
-  stop_missing_path("Dictionary directory", dir, dir.exists(dir))
-  files <- sort(list.files(dir, pattern = "\\.ya?ml$", full.names = TRUE))
+  files <- dictionary_files(dir)
   dicts <- name_by_table(lapply(files, read_dictionary))
   problems <- check_table_identity(names(dicts), files)
   if (nrow(problems) > 0) {
@@ -36,6 +35,13 @@ read_dictionaries <- function(dir) {
 # tables list is keyed.
 name_by_table <- function(dicts) {
   stats::setNames(dicts, vapply(dicts, \(d) d$table, character(1)))
+}
+
+# How the spec step enumerates dictionary files: the one home for the
+# glob, the ordering, and the missing-directory guard.
+dictionary_files <- function(dir) {
+  stop_missing_path("Dictionary directory", dir, dir.exists(dir))
+  sort(list.files(dir, pattern = "\\.ya?ml$", full.names = TRUE))
 }
 
 # Label a level entry: the one home for the phrase every level check uses.

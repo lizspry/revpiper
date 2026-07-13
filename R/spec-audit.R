@@ -21,14 +21,7 @@
 rev_spec_audit <- function(dir = "specs", joins = TRUE) {
   rlang::check_string(dir)
   rlang::check_bool(joins)
-  tables_dir <- spec_tables_dir(dir)
-  stop_missing_path("Dictionary directory", tables_dir, dir.exists(tables_dir))
-
-  files <- sort(list.files(
-    tables_dir,
-    pattern = "\\.ya?ml$",
-    full.names = TRUE
-  ))
+  files <- dictionary_files(spec_tables_dir(dir))
   audited <- lapply(files, \(f) audit_one(read_dictionary(f)))
   loaded <- !vapply(audited, \(a) is.null(a$value), logical(1))
   tables <- name_by_table(lapply(audited[loaded], \(a) a$value))
@@ -54,9 +47,13 @@ rev_spec_audit <- function(dir = "specs", joins = TRUE) {
     )
   )
   if (is_certified(report)) {
-    attr(report, "specs") <- list(tables = tables, joins = joins_audit$value)
+    attr(report, "specs") <- spec_set(
+      tables = tables,
+      joins = joins_audit$value
+    )
   }
-  announce_audit(report, export_report(report, output_reports_dir))
+  paths <- export_report(report)
+  announce_audit(report, paths)
   report
 }
 
@@ -77,6 +74,8 @@ announce_audit <- function(report, paths) {
 }
 
 # Run one spec-reading call for the audit: its value, or its problems.
+# expr arrives as an unevaluated promise forced inside tryCatch by design
+# — do not force it earlier, or the abort escapes the catch.
 audit_one <- function(expr) {
   tryCatch(
     list(value = expr, problems = no_problems()),
@@ -115,7 +114,3 @@ audit_joins <- function(dir, joins, tables) {
     disposition = "included"
   )
 }
-
-# Where step reports and certificates live, relative to the project root:
-# the one home for this layout fact (shared home when Phase 2 audits land).
-output_reports_dir <- "output/reports"
