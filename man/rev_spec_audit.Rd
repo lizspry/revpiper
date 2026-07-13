@@ -29,3 +29,13 @@ the outcome and the certificate's path. Data-free: it checks that
 sources are declared, never that data files exist, so a spec set
 certifies before any data is collected.
 }
+\examples{
+# the audit writes output/reports/ under the working directory, so
+# this example runs in a throwaway one
+specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
+owd <- setwd(tempdir())
+report <- rev_spec_audit(dir = specs_dir)
+report
+list.files("output/reports")
+setwd(owd)
+}

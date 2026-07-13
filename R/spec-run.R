@@ -19,6 +19,15 @@
 #' @return A list with one entry per spec kind: `tables` (named list of
 #'   `rev_dictionary` objects) and `joins` (the joins tibble; zero rows
 #'   when skipped or not selected).
+#' @examples
+#' specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
+#' specs <- rev_spec_run(specs_dir)
+#' names(specs$tables)
+#' specs$joins
+#'
+#' # one dictionary standalone, within-file checks only
+#' one <- rev_spec_run(specs_dir, file = "estimates.yaml")
+#' names(one$tables)
 #' @export
 rev_spec_run <- function(dir = "specs", file = NULL, joins = TRUE) {
   rlang::check_string(dir)

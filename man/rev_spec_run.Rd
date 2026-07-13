@@ -32,3 +32,13 @@ output: any spec problem aborts with the complete problem list;
 \code{rev_spec_audit()} turns the same problems into a report instead of an
 error.
 }
+\examples{
+specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
+specs <- rev_spec_run(specs_dir)
+names(specs$tables)
+specs$joins
+
+# one dictionary standalone, within-file checks only
+one <- rev_spec_run(specs_dir, file = "estimates.yaml")
+names(one$tables)
+}

@@ -17,6 +17,15 @@
 #' @return The `rev_report`, returned visibly — it auto-prints as the
 #'   certificate when the call is not assigned. When certified, the
 #'   loaded specs ride along as the `"specs"` attribute.
+#' @examples
+#' # the audit writes output/reports/ under the working directory, so
+#' # this example runs in a throwaway one
+#' specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
+#' owd <- setwd(tempdir())
+#' report <- rev_spec_audit(dir = specs_dir)
+#' report
+#' list.files("output/reports")
+#' setwd(owd)
 #' @export
 rev_spec_audit <- function(dir = "specs", joins = TRUE) {
   rlang::check_string(dir)
