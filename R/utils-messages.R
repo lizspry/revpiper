@@ -38,15 +38,21 @@ stop_spec <- function(problems) {
     c(
       "Spec validation failed ({nrow(problems)} problem{?s}):",
       lines,
-      i = "Canonical spec examples ship with the package:
-           {.code system.file(\"extdata\", \"specs-example\",
-           package = \"revpiper\")}"
+      spec_error_footer
     ),
     class = "revpiper_spec_error",
     call = NULL,
     problems = problems
   )
 }
+
+# Every spec-error abort ends with the same pointer (Liz, 2026-07-13):
+# the one home for the footer's wording.
+spec_error_footer <- c(
+  i = "Canonical spec examples ship with the package:
+       {.code system.file(\"extdata\", \"specs-example\",
+       package = \"revpiper\")}"
+)
 
 # Abort (spec-error class) when a required input path is absent; `what`
 # names the path's role in the message, `found` its existence test
@@ -56,7 +62,7 @@ stop_missing_path <- function(what, path, found = file.exists(path)) {
     return(invisible(NULL))
   }
   cli::cli_abort(
-    "{what} {.file {path}} does not exist.",
+    c("{what} {.file {path}} does not exist.", spec_error_footer),
     class = "revpiper_spec_error",
     call = NULL
   )

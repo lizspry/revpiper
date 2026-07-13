@@ -6,6 +6,7 @@
       Error:
       ! `joins` is TRUE but 'fixtures/specs-nojoins/joins.yaml' does not exist.
       i Set `joins = FALSE` to run a spec set without joins.
+      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
 
 # rev_spec_run() rejects a path where a filename is expected
 
@@ -15,4 +16,5 @@
       Error:
       ! `file` must be a filename, not a path.
       i Dictionary filenames resolve in 'fixtures/specs-good/tables'.
+      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
 

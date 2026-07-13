@@ -30,3 +30,13 @@ test_that("stop_spec reports every problem with file, entry, and code", {
   expect_error(stop_spec(p), class = "revpiper_spec_error")
   expect_snapshot(error = TRUE, stop_spec(p))
 })
+
+# The footer's promise must not go silently stale: system.file returns ""
+# for a missing path rather than erroring, so a rename of the packaged
+# examples would otherwise break the pointer without failing anything.
+test_that("the canonical examples the spec-error footer points to exist", {
+  path <- system.file("extdata", "specs-example", package = "revpiper")
+  expect_true(nzchar(path))
+  expect_true(file.exists(file.path(path, "joins.yaml")))
+  expect_gt(length(list.files(file.path(path, "tables"))), 0)
+})

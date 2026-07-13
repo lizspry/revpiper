@@ -24,6 +24,6 @@
       revpiper spec report
       Status: CERTIFIED
       Standing items: 0
-      Joins: included
-      Dictionaries: 2
+      first stage-specific annex line
+      second one, verbatim
 

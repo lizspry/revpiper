@@ -20,11 +20,14 @@ test_that("the certificate renders both statuses", {
   expect_snapshot(print(new_stage_report("spec", one_item())))
 })
 
+# The annex is caller-supplied text rendered verbatim: these lines are
+# deliberately fake — the real certificate content is composed by each
+# step's audit and snapshot-tested there (test-spec-audit.R).
 test_that("annex lines render verbatim after the standing count", {
   report <- new_stage_report(
     "spec",
     no_problems(),
-    annex = c("Joins: included", "Dictionaries: 2")
+    annex = c("first stage-specific annex line", "second one, verbatim")
   )
   expect_snapshot(print(report))
 })

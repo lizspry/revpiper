@@ -40,7 +40,8 @@ rev_spec_run <- function(dir = "specs", file = NULL, joins = TRUE) {
     cli::cli_abort(
       c(
         "{.arg file} must be a filename, not a path.",
-        i = "Dictionary filenames resolve in {.file {spec_tables_dir(dir)}}."
+        i = "Dictionary filenames resolve in {.file {spec_tables_dir(dir)}}.",
+        spec_error_footer
       ),
       class = "revpiper_spec_error",
       call = NULL
@@ -66,7 +67,8 @@ run_spec_set <- function(dir, joins) {
     cli::cli_abort(
       c(
         "{.arg joins} is TRUE but {.file {path}} does not exist.",
-        i = "Set {.code joins = FALSE} to run a spec set without joins."
+        i = "Set {.code joins = FALSE} to run a spec set without joins.",
+        spec_error_footer
       ),
       class = "revpiper_spec_error",
       call = NULL
