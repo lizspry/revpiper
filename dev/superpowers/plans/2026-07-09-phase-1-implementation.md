@@ -1582,10 +1582,17 @@ problems, no abort. Deliberately checks that `source.file` is declared,
 never that it exists (prespecification workflow: the CERTIFIED spec report
 is the registerable artifact).
 
-- [ ] **Steps 1–5:** TDD per old Task 12's spec-only half — good-spec
+- [x] **Steps 1–5:** TDD per old Task 12's spec-only half — good-spec
   fixture set → CERTIFIED snapshot + report files exist; bad-spec variant →
   completes NOT CERTIFIED, problems as items, files written, no error; a
   copy with data/raw/ deleted → still CERTIFIED (no data required).
+  (Done 2026-07-13, commits 19b6025 + 91f0326: rev_spec_audit() in
+  spec-audit.R; YX04 registered, catalogue row added, YX03's missing
+  row backfilled; the multi-file accumulation test uses two broken
+  dictionaries; certificate + status-line snapshots presented to Liz at
+  the check-in; simplify pass extracted dictionary_files(), reused
+  spec_set() for the specs attribute, moved output_reports_dir to
+  report.R as export_report()'s default.)
 
 ### Task 18: Phase 1 close-out (old Task 14, re-scoped to the spec step)
 

@@ -62,9 +62,13 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   schema restructure) + spec consolidation per the 2026-07-12 brief
   (diff signed off, Liz 2026-07-12) + amendment 9 implementation
   (rev_spec_run, commits 03d8d22/59aaa1d) + Task 15 (two-axis file
-  split, 1a0f5d2). NEXT, in order: (1) execute
-  Tasks 16-18 (spec report machinery, spec-step audit, Phase 1
-  close-out) under the walkthrough protocol; (2) the
+  split, 1a0f5d2) + Task 16 (report machinery, 87be99a/3d2dfbb;
+  spec-check.R renamed spec-generic.R 1aac084) + Task 17
+  (rev_spec_audit, 19b6025/91f0326; certificate + status-line wording
+  pending Liz's read-before-acceptance). NEXT, in order: (1) Task 18
+  (Phase 1 close-out: CLAUDE.md relocation, roxygen pass, pre-push
+  suite + structural reviews, handoff) under the walkthrough protocol —
+  includes settling the session-dependent lint-gate question; (2) the
   collaborator deliverable (academic-planning skill; Liz owns
   structure; framing in the plan's Task 5-close blockquote).
   m:m/append data-check semantics parked to the process phase (old
