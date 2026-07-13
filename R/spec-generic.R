@@ -96,14 +96,14 @@ run_contents_checks <- function(x, kind, file) {
           value,
           row$contains,
           file,
-          sprintf("%s section", row$field)
+          section_label(row$field)
         )
       )
     }
     if (row$shape == "list_of_mappings") {
       problems <- rbind(
         problems,
-        run_list_checks(value, row$contains, file)
+        run_list_checks(value, row$contains, file, section = row$field)
       )
     }
   }
@@ -112,7 +112,7 @@ run_contents_checks <- function(x, kind, file) {
 
 # Validate each mapping in a list as its kind, then police identity
 # across the list.
-run_list_checks <- function(entries, kind, file) {
+run_list_checks <- function(entries, kind, file, section) {
   if (!is_list_of_mappings(entries)) {
     return(no_problems()) # absence/shape already reported by the container
   }
@@ -125,7 +125,7 @@ run_list_checks <- function(entries, kind, file) {
       entry_label(ids[[i]], i, kind)
     )
   }))
-  rbind(problems, check_identity(ids, kind, file))
+  rbind(problems, check_identity(ids, kind, file, section))
 }
 
 # The entries' names where sound, else NA: an entry's name is the value of
@@ -144,6 +144,15 @@ entry_names <- function(entries, kind) {
 }
 
 # Label an entry by its identity when sound, else by position.
+# Label a section: the one home for the phrase, however the section is
+# reached (container recursion, list identity, level checks).
+section_label <- function(section) {
+  sprintf("%s section", section)
+}
+
+# The root mapping's entry label, shared by every top-level spec reader.
+root_entry_label <- "file entry"
+
 entry_label <- function(id, i, kind) {
   if (is.na(id)) {
     sprintf("%s entry %d", kind, i)
@@ -261,8 +270,7 @@ check_ordered <- function(entries, type, row, file, entry) {
 
 is_descending <- function(entries, type) {
   if (type == "date") {
-    as.Date(entries[[1]], format = "%Y-%m-%d") >
-      as.Date(entries[[2]], format = "%Y-%m-%d")
+    iso_date(entries[[1]]) > iso_date(entries[[2]])
   } else {
     entries[[1]] > entries[[2]]
   }
@@ -399,19 +407,26 @@ matches_type <- function(entries, type) {
   all(ok)
 }
 
+# The ISO date format: the one home for the spec's date syntax.
+iso_date_format <- "%Y-%m-%d"
+
+iso_date <- function(x) {
+  as.Date(x, format = iso_date_format)
+}
+
 # Strict ISO YYYY-MM-DD: must parse AND survive the round trip (decision 5).
 is_iso_date <- function(x) {
-  parsed <- as.Date(x, format = "%Y-%m-%d")
-  !is.na(parsed) && format(parsed, "%Y-%m-%d") == x
+  parsed <- iso_date(x)
+  !is.na(parsed) && format(parsed, iso_date_format) == x
 }
 
 # YS01: two sibling entries claim the same name
-check_identity <- function(ids, kind, file) {
+check_identity <- function(ids, kind, file, section) {
   dupes <- unique(ids[duplicated(ids) & !is.na(ids)])
   bind_problems(lapply(dupes, \(d) {
     flag_problem(
       file,
-      sprintf("%ss section", kind),
+      section_label(section),
       "YS01",
       kind = kind,
       name = d

@@ -48,7 +48,7 @@ rev_spec_audit <- function(dir = "specs", joins = TRUE) {
     items,
     annex = c(
       sprintf(
-        "Dictionary: %s — table '%s'",
+        "Dictionary: %s \u2014 table '%s'",
         basename(files[loaded]),
         names(tables)
       ),
@@ -71,13 +71,13 @@ rev_spec_audit <- function(dir = "specs", joins = TRUE) {
 announce_audit <- function(report, paths) {
   if (is_certified(report)) {
     cli::cli_alert_success(
-      "Spec step CERTIFIED — certificate written to
+      "Spec step CERTIFIED \u2014 certificate written to
        {.file {paths[[\"certificate\"]]}}."
     )
   } else {
     cli::cli_alert_danger(
-      "Spec step NOT CERTIFIED ({nrow(report$items)} standing problem{?s}) —
-       report written to {.file {paths[[\"report\"]]}}."
+      "Spec step NOT CERTIFIED ({nrow(report$items)} standing problem{?s})
+       \u2014 report written to {.file {paths[[\"report\"]]}}."
     )
   }
 }

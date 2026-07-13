@@ -22,7 +22,7 @@ read_joins <- function(path, dictionaries = NULL) {
   }
   raw <- yaml::read_yaml(path)
   problems <- rbind(
-    run_entry_checks(raw, "join_file", path, "file entry"),
+    run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),
     if (!is.null(dictionaries)) {
       resolve_join_references(raw, path, dictionaries)

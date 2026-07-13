@@ -6,7 +6,7 @@ read_dictionary <- function(path) {
   stop_missing_path("Dictionary file", path)
   raw <- yaml::read_yaml(path)
   problems <- rbind(
-    run_entry_checks(raw, "file", path, "file entry"),
+    run_entry_checks(raw, "file", path, root_entry_label),
     run_contents_checks(raw, "file", path),
     check_level_entries(raw, path),
     resolve_references(raw, path)
@@ -68,12 +68,12 @@ check_level_entries <- function(raw, file) {
       if (!any(c("keys", "combine") %in% names(value))) {
         battery <- rbind(
           battery,
-          flag_problem(file, "levels section", "YE06", level = level)
+          flag_problem(file, section_label("levels"), "YE06", level = level)
         )
       }
       return(battery)
     }
-    flag_problem(file, "levels section", "YE06", level = level)
+    flag_problem(file, section_label("levels"), "YE06", level = level)
   }))
   rbind(problems, check_level_nesting(raw$levels, file))
 }
@@ -115,7 +115,7 @@ check_level_nesting <- function(levels, file) {
   bind_problems(lapply(cycles, \(nodes) {
     flag_problem(
       file,
-      "levels section",
+      section_label("levels"),
       "YS04",
       cycle = paste0("'", c(nodes, nodes[[1]]), "'", collapse = " -> ")
     )

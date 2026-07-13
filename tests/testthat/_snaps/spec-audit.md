@@ -18,8 +18,8 @@
     Code
       print(rev_spec_audit())
     Message
-      x Spec step NOT CERTIFIED (1 standing problem) —
-      report written to 'output/reports/spec-<runstamp>.xlsx'.
+      x Spec step NOT CERTIFIED (1 standing problem)
+      — report written to 'output/reports/spec-<runstamp>.xlsx'.
     Output
       revpiper spec report
       Status: NOT CERTIFIED
