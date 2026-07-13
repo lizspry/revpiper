@@ -1,0 +1,11 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: study
+    type: text
+  - name: mean_age
+    type: decimal
+levels:
+  study:
+    combine: [study, mean_age]

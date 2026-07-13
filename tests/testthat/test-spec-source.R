@@ -318,3 +318,16 @@ test_that("a level nested within itself is a cycle", {
   d$levels <- list(study = list(keys = "study", within = "study"))
   expect_true("YS04" %in% codes_of(d))
 })
+
+# From the adversarial battery (lawyer-18) and Liz's ruling 2026-07-13:
+# a combine level registers a virtual column named by the level, so the
+# name may not collide with a declared column.
+test_that("a combine level may not collide with a declared column", {
+  expect_snapshot(
+    read_dictionary(bad_path("ys06-virtual-collision.yaml")),
+    error = TRUE
+  )
+  d <- minimal_dict()
+  d$levels <- list(study = list(combine = c("study", "mean_age")))
+  expect_identical(codes_of(d), "YS06")
+})

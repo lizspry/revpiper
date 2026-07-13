@@ -1,5 +1,11 @@
 # revpiper 0.0.0.9000
 
+* From the first adversarial spec-only test battery: an unparseable
+  spec file is now reported as a spec problem with the YAML parser's
+  message embedded, never a raw error (YS05); a `combine` level may not
+  collide with a declared column name (YS06); and every spec-validation
+  error points to the canonical examples shipped in
+  `system.file("extdata", "specs-example", package = "revpiper")`.
 * `rev_spec_audit()` audits the spec step: every dictionary is checked
   with problems gathered across all files, the joins spec is checked
   against them, and the result is a spec report plus certificate written

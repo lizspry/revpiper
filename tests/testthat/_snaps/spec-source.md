@@ -238,3 +238,13 @@
       x YS05 fixtures/specs-bad/ys05-unparseable.yaml / file entry: the file couldn't be processed as there is a YAML error: (fixtures/specs-bad/ys05-unparseable.yaml) Duplicate map key: 'type'
       i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
 
+# a combine level may not collide with a declared column
+
+    Code
+      read_dictionary(bad_path("ys06-virtual-collision.yaml"))
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS06 fixtures/specs-bad/ys06-virtual-collision.yaml / level 'study': the combine level 'study' would create a virtual column named like the declared column 'study'
+      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+

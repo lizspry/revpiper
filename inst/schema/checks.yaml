@@ -167,6 +167,14 @@ checks:
     params: [error]
     fix: the named file
     implemented: true
+  YS06:
+    scope: source
+    property: "custom: identity"
+    meaning: a combine level's virtual column collides with a declared column
+    message_template: "the combine level '{level}' would create a virtual column named like the declared column '{level}'"
+    params: [level]
+    fix: rename the level or the column
+    implemented: true
 
   # YX: cross-source checks (across files)
 

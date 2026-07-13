@@ -9,6 +9,7 @@ read_dictionary <- function(path) {
     run_entry_checks(raw, "file", path, root_entry_label),
     run_contents_checks(raw, "file", path),
     check_level_entries(raw, path),
+    check_virtual_collisions(raw, path),
     resolve_references(raw, path)
   )
   if (nrow(problems) > 0) {
@@ -230,6 +231,16 @@ declared_names <- function(raw, section) {
       "Internal error: no section named {.val {section}} declares names."
     )
   )
+}
+
+# YS06: a combine level registers a virtual column named by the level, so
+# the name may not collide with a declared column (Liz, 2026-07-13, from
+# the adversarial battery).
+check_virtual_collisions <- function(raw, file) {
+  collisions <- intersect(virtual_columns(raw), declared_columns(raw))
+  bind_problems(lapply(collisions, \(level) {
+    flag_problem(file, level_label(level), "YS06", level = level)
+  }))
 }
 
 # The virtual columns combine levels register, each named by its level.

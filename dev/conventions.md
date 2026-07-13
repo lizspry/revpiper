@@ -112,6 +112,23 @@ Closed decisions (this project):
 - testthat 3e, parallel. TDD: test first, watch it fail, minimal code,
   watch it pass, commit. Snapshot-test user-facing message wording.
 - Coverage measured (covr/Codecov), never gated. ~90% informal on core logic.
+- Close-out adversarial battery (standing practice, Liz 2026-07-13):
+  at each phase close-out, spec-only black-box test design by
+  fresh-context agents. The brief is the design spec's user-facing
+  sections plus exported docs ONLY — never implementation or existing
+  tests, because errors correlate: the author's code, tests, and even
+  generated matrices share one mind's blind spots, so the entire
+  artifact set gets independent review. Protocol: oracle-first
+  (expected outcome + clause citation committed before execution);
+  UNDETERMINED is a first-class verdict routing to spec amendment;
+  minimal pairs preferred; rotating lenses — naive user, language
+  lawyer, hostile input, QA professional, security (grow the roster) —
+  plus a completeness-critic pass mapping cases to spec clauses and
+  naming the untested; rounds repeat until one finds nothing new.
+  Execution is blind and mechanical; findings triage to bug / test gap
+  / spec ambiguity; no fixes during the run; adopted divergences
+  become regression tests. First run: 2026-07-13, spec step (54 cases;
+  YS05, YS06, canonical examples, six determinations).
 
 ## Documentation
 - roxygen2 for every export; comments say why, not what; internal helpers
