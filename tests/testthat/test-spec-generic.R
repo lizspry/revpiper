@@ -197,3 +197,28 @@ test_that("shape_phrase wording is grammatical for every shape x cardinality", {
     }
   })
 })
+
+# Adopted from the adversarial battery (hostile-08/09): unquoted yes/no
+# are YAML booleans, not text - the coercion must be caught, and the
+# quoted twin must pass.
+test_that("YAML type coercion inside values is caught by content typing", {
+  write_spec <- function(values_line) {
+    tmp <- tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "table: estimates",
+        "source:",
+        "  file: data/raw/estimates.csv",
+        "columns:",
+        "  - name: answer",
+        "    type: text",
+        paste0("    values: ", values_line)
+      ),
+      tmp
+    )
+    tmp
+  }
+  coerced <- spec_problems(read_dictionary(write_spec("[yes, no]")))
+  expect_identical(spec_codes(coerced), "YE05")
+  expect_null(spec_problems(read_dictionary(write_spec('["yes", "no"]'))))
+})

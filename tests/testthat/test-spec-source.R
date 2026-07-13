@@ -303,3 +303,18 @@ test_that("a file that does not parse aborts as a spec problem, not rawly", {
   problems <- spec_problems(read_dictionary(bad_path("ys05-unparseable.yaml")))
   expect_identical(spec_codes(problems), "YS05")
 })
+
+# Adopted from the adversarial battery (hostile-10): YAML reads an
+# unquoted 007 as a number; the table identity must be a single text
+# value.
+test_that("a non-text table identity is a shape problem", {
+  d <- set_field(minimal_dict(), "table", 7L)
+  expect_identical(codes_of(d), "YF02")
+})
+
+# Adopted from the adversarial battery (hostile-15): the smallest cycle.
+test_that("a level nested within itself is a cycle", {
+  d <- minimal_dict()
+  d$levels <- list(study = list(keys = "study", within = "study"))
+  expect_true("YS04" %in% codes_of(d))
+})

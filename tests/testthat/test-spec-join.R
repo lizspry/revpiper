@@ -228,3 +228,12 @@ test_that("read_joins() distinguishes no dictionaries from zero dictionaries", {
     "YX02"
   )
 })
+
+# Adopted from the adversarial battery (lawyer-16): the spec was silent,
+# the determination is recorded in spec 5.4 - relationship is required
+# on a variables join.
+test_that("relationship is required on a variables join", {
+  j <- minimal_join()
+  j$relationship <- NULL
+  expect_true("YE02" %in% join_codes_of(list(j)))
+})
