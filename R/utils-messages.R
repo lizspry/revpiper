@@ -46,7 +46,7 @@ stop_spec <- function(problems) {
   )
 }
 
-# Every spec-error abort ends with the same pointer (Liz, 2026-07-13):
+# Every spec-error abort ends with the same pointer (decision 2026-07-13):
 # the one home for the footer's wording.
 spec_error_footer <- c(
   i = "Canonical spec examples ship with the package:

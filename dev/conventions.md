@@ -133,6 +133,11 @@ Closed decisions (this project):
 ## Documentation
 - roxygen2 for every export; comments say why, not what; internal helpers
   get at most one line. NEWS.md bullet in every user-facing PR.
+- Named decision attributions ("Liz, date") live in dev/ documents
+  (specs, plans, notes, this file) only — never in code, tests, or
+  shipped files; code comments cite decisions by date alone
+  (rule 2026-07-13). DESCRIPTION's author/maintainer field is the one
+  deliberate exception (required package metadata).
 - Vignettes are the primary user docs; heavy content goes to
   vignettes/articles/ (website-only).
 

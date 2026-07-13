@@ -234,7 +234,7 @@ declared_names <- function(raw, section) {
 }
 
 # YS06: a combine level registers a virtual column named by the level, so
-# the name may not collide with a declared column (Liz, 2026-07-13, from
+# the name may not collide with a declared column (decision 2026-07-13, from
 # the adversarial battery).
 check_virtual_collisions <- function(raw, file) {
   collisions <- intersect(virtual_columns(raw), declared_columns(raw))

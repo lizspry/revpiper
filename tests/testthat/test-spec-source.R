@@ -319,7 +319,7 @@ test_that("a level nested within itself is a cycle", {
   expect_true("YS04" %in% codes_of(d))
 })
 
-# From the adversarial battery (lawyer-18) and Liz's ruling 2026-07-13:
+# From the adversarial battery (lawyer-18) and the 2026-07-13 ruling:
 # a combine level registers a virtual column named by the level, so the
 # name may not collide with a declared column.
 test_that("a combine level may not collide with a declared column", {
