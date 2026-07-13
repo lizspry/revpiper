@@ -39,7 +39,8 @@ stop_spec <- function(problems) {
       "Spec validation failed ({nrow(problems)} problem{?s}):",
       lines,
       i = "Canonical spec examples ship with the package:
-           {.code system.file(\"extdata\", \"specs-example\", package = \"revpiper\")}"
+           {.code system.file(\"extdata\", \"specs-example\",
+           package = \"revpiper\")}"
     ),
     class = "revpiper_spec_error",
     call = NULL,
