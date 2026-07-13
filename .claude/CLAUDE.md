@@ -30,6 +30,11 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
 - Raw data under any project's data/raw/ is read-only, always.
 - Every user-facing change adds a NEWS.md bullet in the same PR.
 
+## Explaining things to Liz
+- Short and plain (Liz, 2026-07-13). Lead with the one-sentence answer
+  in everyday words; skip jargon she hasn't used; a couple of sentences
+  beats paragraphs. She asks ("expand") when she wants the long version.
+
 ## Rhythm
 - Plan → get Liz's sign-off → pre-flight → implement in small reviewed steps.
   A signed-off plan is itself the trigger for the pre-flight check
