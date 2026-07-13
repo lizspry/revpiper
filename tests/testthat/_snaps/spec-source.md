@@ -206,3 +206,12 @@
       x YF03 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
       x YF05 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
 
+# a file that does not parse aborts as a spec problem, not rawly
+
+    Code
+      read_dictionary(bad_path("ys05-unparseable.yaml"))
+    Condition
+      Error:
+      ! Spec validation failed (1 problem):
+      x YS05 fixtures/specs-bad/ys05-unparseable.yaml / file entry: the file couldn't be processed as there is a YAML error: (fixtures/specs-bad/ys05-unparseable.yaml) Duplicate map key: 'type'
+

@@ -1,0 +1,7 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: study
+    type: integer
+    type: text

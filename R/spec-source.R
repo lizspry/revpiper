@@ -4,7 +4,7 @@
 read_dictionary <- function(path) {
   rlang::check_string(path)
   stop_missing_path("Dictionary file", path)
-  raw <- yaml::read_yaml(path)
+  raw <- parse_spec_yaml(path)
   problems <- rbind(
     run_entry_checks(raw, "file", path, root_entry_label),
     run_contents_checks(raw, "file", path),

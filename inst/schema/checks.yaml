@@ -159,6 +159,15 @@ checks:
     fix: levels section
     implemented: true
 
+  YS05:
+    scope: source
+    property: "custom: parseable"
+    meaning: the file is not parseable YAML
+    message_template: "the file couldn't be processed as there is a YAML error: {error}"
+    params: [error]
+    fix: the named file
+    implemented: true
+
   # YX: cross-source checks (across files)
 
   YX01:

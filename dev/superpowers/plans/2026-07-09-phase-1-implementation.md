@@ -499,6 +499,7 @@ schema properties in `inst/schema/fields.yaml`.
 | YS01 | `identity` (file scope) | duplicate column name within a table | columns block |
 | YS02 | `refers_to` (file scope) | unresolved within-file reference: role/level key → declared columns; `constant_within_level` → declared levels; did-you-mean | the named entry |
 | YS03 | *custom: environment* | declared `reader` neither shipped nor a function in readers.R | source block / readers.R |
+| YS05 | *custom: parseable* | the file is not parseable YAML (parser message embedded; from the 2026-07-13 adversarial battery, hostile-12) | the named file |
 
 #### YX — cross-source checks (across files; separate, composable, data-free set-level step)
 

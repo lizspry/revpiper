@@ -153,6 +153,24 @@ section_label <- function(section) {
 # The root mapping's entry label, shared by every top-level spec reader.
 root_entry_label <- "file entry"
 
+# Parse a spec file, converting YAML parser failures into the YS05
+# problem so no raw parser error ever reaches a user (error doctrine;
+# audits must always complete). Aborts with the problem: an unparseable
+# file has nothing further to validate.
+parse_spec_yaml <- function(path) {
+  tryCatch(
+    yaml::read_yaml(path),
+    error = function(e) {
+      stop_spec(flag_problem(
+        path,
+        root_entry_label,
+        "YS05",
+        error = conditionMessage(e)
+      ))
+    }
+  )
+}
+
 entry_label <- function(id, i, kind) {
   if (is.na(id)) {
     sprintf("%s entry %d", kind, i)

@@ -90,3 +90,17 @@ test_that("joins expected but absent is a standing item, not an error", {
   expect_match(format(report), "expected but absent", all = FALSE)
   expect_snapshot(as.data.frame(report$items[, c("code", "message")]))
 })
+
+test_that("the audit completes when a spec file does not parse", {
+  root <- spec_project("specs-good")
+  file.copy(
+    test_path("fixtures", "specs-bad", "ys05-unparseable.yaml"),
+    file.path(root, "specs", "tables")
+  )
+  old <- setwd(root)
+  on.exit(setwd(old))
+  report <- suppressMessages(rev_spec_audit())
+  expect_false(is_certified(report))
+  expect_true("YS05" %in% report$items$code)
+  expect_length(list.files("output/reports"), 2)
+})

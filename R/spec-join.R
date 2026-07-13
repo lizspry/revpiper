@@ -20,7 +20,7 @@ read_joins <- function(path, dictionaries = NULL) {
   if (!file.exists(path)) {
     return(no_joins())
   }
-  raw <- yaml::read_yaml(path)
+  raw <- parse_spec_yaml(path)
   problems <- rbind(
     run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),

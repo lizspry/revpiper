@@ -294,3 +294,12 @@ test_that("every problem in a broken dictionary is reported at once", {
     read_dictionary(bad_path("many-defects.yaml"))
   )
 })
+
+test_that("a file that does not parse aborts as a spec problem, not rawly", {
+  expect_snapshot(
+    read_dictionary(bad_path("ys05-unparseable.yaml")),
+    error = TRUE
+  )
+  problems <- spec_problems(read_dictionary(bad_path("ys05-unparseable.yaml")))
+  expect_identical(spec_codes(problems), "YS05")
+})
