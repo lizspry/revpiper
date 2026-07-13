@@ -506,6 +506,8 @@ schema properties in `inst/schema/fields.yaml`.
 |---|---|---|---|
 | YX01 | `identity` (set scope) | duplicate table name across `specs/tables/*.yaml` | the two files named |
 | YX02 | `refers_to` (set scope) | unresolved cross-source reference: join `left`/`right` → tables; `keys` → the side's key columns (combined keys count); `granularity` → a declared level of the "one" side; did-you-mean | joins.yaml entry |
+| YX03 | `custom: completeness` | a join's `keys` do not cover both sides (row present in checks.yaml since Task 5; catalogue row backfilled 2026-07-13) | joins.yaml entry |
+| YX04 | `custom: expected file` | an expected spec file is absent from the set (today's one instance: joins.yaml under `joins = TRUE`, Task 17 / amendment 9d) | add the file, or turn the expectation off (`joins = FALSE`) |
 
 Old→new mapping (amendment 4): Y001→YE01 · Y002→YF03 · Y003→YE04 · Y004/Y005/Y006→YE03 ·
 Y007→YF02+YE05 · Y008→YF05 · Y009→YS02+YE06 · Y010/Y011→YS02 · Y012→YS01 (+YE02/YF01

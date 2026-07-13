@@ -185,3 +185,11 @@ checks:
     params: [left, right]
     fix: joins.yaml entry
     implemented: true
+  YX04:
+    scope: cross-source
+    property: "custom: expected file"
+    meaning: an expected spec file is absent from the set
+    message_template: "expected spec file '{path}' does not exist; {hint}"
+    params: [path, hint]
+    fix: add the file, or audit with the expectation turned off
+    implemented: true
