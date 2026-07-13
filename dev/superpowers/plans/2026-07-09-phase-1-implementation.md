@@ -1563,8 +1563,13 @@ render its own unspecified-columns line).
 `joins` parameter and TRUE default per amendment 9d).
 Data-free: loads dictionaries + joins via the internal readers, catching their
 classed aborts through the `problems` condition field; ALWAYS completes —
-prints the spec report, writes it via `rev_export_report()`, returns it
-invisibly (loaded specs as attribute when certified); NOT CERTIFIED on
+writes the report via internal `export_report()` and returns it
+VISIBLY (Liz's review 2026-07-13: no internal printing, no invisible()
+— auto-print renders the certificate via the registered method exactly
+when the call is unassigned; capture is the user opting into
+programmatic handling via is_certified(); composition benefit:
+rev_run() controls display by capturing). Loaded specs ride as an
+attribute when certified; NOT CERTIFIED on
 problems, no abort. Deliberately checks that `source.file` is declared,
 never that it exists (prespecification workflow: the CERTIFIED spec report
 is the registerable artifact).
