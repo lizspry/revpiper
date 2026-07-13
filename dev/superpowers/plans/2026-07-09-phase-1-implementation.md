@@ -1596,17 +1596,30 @@ is the registerable artifact).
 
 ### Task 18: Phase 1 close-out (old Task 14, re-scoped to the spec step)
 
-- [ ] **Step 1:** CLAUDE.md relocation + `.Rbuildignore` + pkgdown
-  verification (old Task 14 Step 1, unchanged).
-- [ ] **Step 2:** roxygen pass for the spec-stage exports (runnable
+- [x] **Step 1:** CLAUDE.md relocation + `.Rbuildignore` + pkgdown
+  verification (old Task 14 Step 1, unchanged). (Done 2026-07-13,
+  3c1b23a: package_mds() verified empty.)
+- [x] **Step 2:** roxygen pass for the spec-stage exports (runnable
   examples on the spec fixtures); NEWS bullets re-scoped to the spec step
-  (authoring, checking, certification before data collection).
-- [ ] **Step 3:** full pre-push suite + the duplication/abstraction audit
+  (authoring, checking, certification before data collection). (Done
+  2026-07-13: examples run on inst/extdata/specs-example/.)
+- [x] **Step 3:** full pre-push suite + the duplication/abstraction audit
   and structural reviews (amendments 6 and 7h) scoped to spec-stage code;
   the full-inventory check-parsimony review moves to the process phase's
-  close-out.
-- [ ] **Step 4:** handoff — Liz fetches, pushes, opens the Phase 1 PR
-  (squash-merge; CI green gate).
+  close-out. (Done 2026-07-13: 381 tests green; check 0 errors /
+  0 warnings / 0 notes after Liz's two rulings — the five Phase 2-3
+  Imports removed 6ab0ce9, and object_usage_linter excluded for
+  tests/testthat (its runner-environment model makes test-side verdicts
+  session-dependent; all other linters keep covering tests) → zero
+  lints deterministically. Audit defects fixed (section_label,
+  root_entry_label, iso_date one-homes); structural notes for Phase 2
+  recorded in spec §10; non-ASCII portability warning fixed.)
+- [x] **Step 4:** handoff — Liz fetches, pushes, opens the Phase 1 PR
+  (squash-merge; CI green gate). (Sandbox side complete 2026-07-13;
+  commands in the check-in.)
+
+**PHASE 1 (spec step) COMPLETE on the sandbox side, 2026-07-13** —
+exports: rev_spec_run(), rev_spec_audit(); awaiting Liz's push + PR.
 
 ## Self-review (performed at authoring)
 

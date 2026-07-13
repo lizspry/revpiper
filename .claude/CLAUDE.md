@@ -64,11 +64,12 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   (rev_spec_run, commits 03d8d22/59aaa1d) + Task 15 (two-axis file
   split, 1a0f5d2) + Task 16 (report machinery, 87be99a/3d2dfbb;
   spec-check.R renamed spec-generic.R 1aac084) + Task 17
-  (rev_spec_audit, 19b6025/91f0326; certificate + status-line wording
-  pending Liz's read-before-acceptance). NEXT, in order: (1) Task 18
-  (Phase 1 close-out: CLAUDE.md relocation, roxygen pass, pre-push
-  suite + structural reviews, handoff) under the walkthrough protocol —
-  includes settling the session-dependent lint-gate question; (2) the
+  (rev_spec_audit, 19b6025/91f0326) + Task 18 (close-out: CLAUDE.md
+  relocated to .claude/, examples, audits, gates all clean — 381 tests,
+  0 lints, check 0/0/0; Imports re-cut and lint gate settled by Liz
+  2026-07-13). PHASE 1 COMPLETE sandbox-side. NEXT, in order: (1) Liz
+  pulls phase-1-core, pushes, opens the Phase 1 PR (squash-merge, CI
+  green gate); (2) the
   collaborator deliverable (academic-planning skill; Liz owns
   structure; framing in the plan's Task 5-close blockquote).
   m:m/append data-check semantics parked to the process phase (old
