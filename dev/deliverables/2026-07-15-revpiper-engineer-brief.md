@@ -14,12 +14,14 @@ Separate them. Mechanics become a deterministic pipeline; judgment is relocated 
 
 | Current practice | Failure mode | Step | Functions / artifacts |
 |---|---|---|---|
-| Extraction sheets in Excel | no schema; silent drift | **spec** | `rev_spec_audit()`, `rev_spec_run()`; dictionaries + joins in YAML; certified spec report |
-| Ad-hoc file wrangling | irreproducible imports | **load** (next phase) | readers + structural checks; load report |
-| Manual Stata cleaning; recodes in spreadsheets | untracked judgment; one-way scripts | **process** (next phase) | standardise → correct → validate → join; a corrections table as the audited override channel; certified clean dataset |
-| Hand-derived variables | copy-paste drift | **transform** (v2) | declared derivations checked against a derived dictionary |
-| Hand-built tables and figures | rework on every change | **present** (v3) | declarative output spec behind a hard data contract; prepared content objects feed N renderers — static publication outputs and interactive dashboards regenerate from the same specs |
+| Extraction sheets in Excel | no schema; silent drift | **spec** | `rev_spec_audit()`, `rev_spec_run()`; dictionaries + joins declared in YAML and checked data-free; certified spec report |
+| Ad-hoc file wrangling | irreproducible imports | **load** (next phase) | `rev_load_audit()`, `rev_load_run()`; readers + structural checks (files readable, sheets present, declared columns found); load report |
+| Manual Stata cleaning; recodes in spreadsheets | untracked judgment; one-way scripts | **process** (next phase) | `rev_process_audit()`, `rev_process_run()`; standardise → correct → validate → join; a corrections table as the audited override channel; certified clean dataset |
+| Hand-derived variables | copy-paste drift | **transform** (v2) | `rev_transform_audit()`, `rev_transform_run()`; derivations declared in mapping tables, applied mechanically, verified against the derived dictionary; certified derived dataset |
+| Hand-built tables and figures | rework on every change | **present** (v3) | `rev_present_audit()`, `rev_present_run()`; declarative output spec behind a hard data contract; prepared content objects feed N renderers — static publication outputs and interactive dashboards regenerate from the same specs |
 | Update = redo by hand | unaffordable reruns | **update** | `rev_run(through =)` — steps are prefixes of one deterministic run from the raw files, so nothing stale passes between them |
+
+Two table notes. Joins are declared and checked (data-free) at **spec** but *execute* at **process**, after each table has validated alone — running them earlier would multiply one study-level problem into findings across every joined estimate row. And function names beyond the spec step follow the settled `rev_<step>_<action>` grammar; exact spellings are confirmed at each phase's implementation walkthrough.
 
 ## Key decisions and rationale
 
@@ -37,9 +39,9 @@ Full decisions log: design spec §9.
 
 TDD throughout (~380 tests); lint gate; clean R CMD check; protected main, feature branches, PR review; releases mapped to pipeline steps (v1 = spec + load + process, v2 = transform, v3 = present). Phase 1 (spec certification) is complete and heading to PR; load and process are next. The headline risk is spec-language expressiveness against real reviews, burned down early by a dress rehearsal reproducing a completed review end to end against its published outputs.
 
-## Where you could contribute
+## Your involvement
 
-There is no predefined role and no expectation — engagement if and as it suits you. What could help most, if interested but with limited time, is advisory input: someone to help think through and pressure-test the big calls as the pipeline grows — architecture, package development and development process, product and code design. The door is open to hands-on work if it appeals. And there is a substantive draw: this project is a working instance of the central problem in applied agentic engineering — restructuring an expert human workflow into machine-checkable versus human-judgment steps, with deterministic verification and gated checkpoints — applied to a high-stakes scientific domain. For anyone interested in AI-enabled review workflows, it is hands-on insight into the methods and workflow restructuring they require.
+There is no predefined role and no expectation — engagement if and as it suits you, and simply staying in the loop (progress updates, no obligations) is a fully valid option. If more appeals: what could help most, with limited time, is advisory input — someone to help think through and pressure-test the big calls as the pipeline grows: architecture, package development and development process, product and code design. The door is open to hands-on work if it appeals. And there is a substantive draw: this project is a working instance of the central problem in applied agentic engineering — restructuring an expert human workflow into machine-checkable versus human-judgment steps, with deterministic verification and gated checkpoints — applied to a high-stakes scientific domain. For anyone interested in AI-enabled review workflows, it is hands-on insight into the methods and workflow restructuring they require.
 
 ---
 
