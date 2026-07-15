@@ -55,8 +55,11 @@ Three modules, built in order:
 2. **Visualisation module, static** (own spec later): consumes the processed
    dataset through one stable data contract; produces standard review
    tables/figures with declarative control.
-3. **Interactive layer** (explicitly deferred): constrains module 2 only via
-   the shared content-preparation boundary.
+3. **Interactive layer**: interactive, user-facing dashboards — generated
+   and updated from the same specs — are in scope for the present step's
+   release (v3; decision 2026-07-15, §9), with exact scope decided at the
+   module-2 brainstorm; constrains module 2 only via the shared
+   content-preparation boundary.
 
 The boundary rule between them is an architecture invariant (§7): a single
 documented data contract — the processed dataset plus machine-readable
@@ -68,8 +71,10 @@ metadata travelling together. Module 2 never reaches upstream of it; module
 **Target users:** health-science researchers conducting standard reviews
 (intervention/exposure–outcome) with baseline R skills — can install
 packages, follow a vignette, run a short script, and edit well-templated
-plain-text specs. Explicitly not served in v1: zero-R users (the future
-interactive layer's audience) and umbrella/scoping reviews.
+plain-text specs. Umbrella reviews are in scope (decision 2026-07-15, §9:
+a pilot review is an umbrella review). Explicitly not served in v1:
+zero-R users (the future interactive layer's audience) and scoping
+reviews.
 
 **Collaborator situations** the design serves (recorded 2026-07-12): three
 reviews engage at the spec/dictionary design stage — two before data
@@ -155,18 +160,20 @@ names; the R version numbers they ship under follow standard
 MAJOR.MINOR.PATCH practice, decided at release.)
 
 **Explicitly out of scope for v1:** the transform and present steps (v2 and
-v3); the interactive layer and dashboards; umbrella/scoping reviews;
-codebook-document→YAML parsing (the draft generator is in; document parsing
-stays v1.x); CRAN submission; pre-commit hooks; fledge-style NEWS
-automation.
+v3, which includes the interactive dashboards — decision 2026-07-15, §9);
+scoping reviews; codebook-document→YAML parsing (the draft generator is in;
+document parsing stays v1.x); CRAN submission; pre-commit hooks;
+fledge-style NEWS automation. Umbrella reviews are in scope from v1
+(decision 2026-07-15, §9).
 
 **Visualisation module — boundary commitments only:** input is the data
 contract, never raw files or upstream specs (the forcing function keeping
 the contract complete). Content preparation is split from rendering:
 prepared, renderer-agnostic objects handed to dumb renderers
-(flextable→Word and Quarto-compatible emitters in v1; interactive widgets
-later) — one prepared object, N renderers, the structural anti-duplication
-guarantee. A declarative output spec + `rev_render()` names the standard
+(flextable→Word and Quarto-compatible emitters; interactive dashboard
+renderers in scope for v3 — decision 2026-07-15, §9, exact scope at the
+module-2 brainstorm) — one prepared object, N renderers, the structural
+anti-duplication guarantee. A declarative output spec + `rev_render()` names the standard
 outputs (study-characteristics table, results/evidence table, forest-style
 display, RoB summary). Study-level tables carry per-row citation keys
 resolved at document render time against the user's `.bib`; figures are
@@ -782,6 +789,8 @@ phase-1 plan's amendment trail.
 | 2026-07-12 | Releases: v1 = spec + load + process; v2 = transform; v3 = vis. Phases re-cut one workflow unit each (Phase 1 = spec only); corrections + clean-certification move ahead of transform | phases mirroring steps keeps each deliverable contained and manageable; verify-and-correct is what makes v1 complete |
 | 2026-07-12 | Two-axis file naming: `spec-*` declaration surfaces vs `load-`/`process-`/`transform-*` execution; shared machinery unprefixed; spec-dictionary.R splits into spec-check.R + spec-source.R; spec-joins.R renamed spec-join.R | files map to discrete workflow units; the shared battery is the one named exception |
 | 2026-07-12 | Held architecture agenda closed: user-facing format passes the convolution check; "kind" wording kept; same-named-field divergence list kept (conformance test guards drift); schema vocabulary gaps + `permitted_when` stay deferred — triggers: the transform spec's kinds as the likely third permission instance, and phase close-out structural reviews | decide with evidence in view; build nothing speculatively |
+| 2026-07-15 | Interactive, user-facing dashboards in scope for the present step's release (v3), generated and updated from the same specs; exact scope at the module-2 brainstorm | auto-regenerating dashboards are a core appeal of the pipeline, especially for living reviews; supersedes the blanket interactive-layer deferral (recorded via the collaborator one-pagers review) |
+| 2026-07-15 | Umbrella reviews in scope from v1 | one pilot review is an umbrella review; data-model implications worked at the affected phases' planning |
 
 ## 10. Open questions (with owners)
 
@@ -816,6 +825,9 @@ phase-1 plan's amendment trail.
 | Output locking, and living-review freezes: a way to mark an output frozen ("don't overwrite unless I say so") — especially a certified-and-locked dataset; per-publication / per-living-review-update snapshots that keep the published dataset frozen while re-runs for the next update diff against it. Interacts with the provenance/audit-trail question above and with lumberjack's change tracking; mechanism candidate from the pointblank review: stable per-check/per-declaration hashes so reports diff across snapshots (their multiagent SHA1-keyed wide report) | Later phase / user consultation (Liz raises "we need to talk about locking at some point") | Open (flagged 2026-07-12, Liz) |
 | Phase 1 close-out structural notes (2026-07-13 reviews, for Phase 2 planning): the spec-step shared vocabulary (`spec_set()`, the layout helpers) lives in the run door and is imported by the audit — extract to a neutral spec-step home when the load step makes the door pattern plural; `is_certified()` and the certificate's Standing-items line must split standing vs acknowledged when acknowledgment cancellation lands; `audit_one()` generalises (error-class parameter) for reuse by later audits; the CERTIFIED/NOT CERTIFIED display words appear in both format.rev_report and the status line (accepted note); YS01 lacks a direct test in its own twin; abort taxonomy (Liz's question, 2026-07-13): content problems (stop_spec, carries $problems, audit-catchable) and usage errors (stop_missing_path, inline guards) share one condition class — split the classes so audits structurally cannot swallow usage errors; relatedly, run's joins-absent guard duplicates YX04's wording and could route through stop_spec (UX trade-off: formal problem list vs the warmer argument-centric sentence) | Phase 2 (load) planning | Open |
 | Importing externally generated data dictionaries into the spec format: REDCap (and similar EDC tools) auto-export an Excel/CSV dictionary that a converter could turn into spec YAML; its choice encodings (e.g. `1, No \| 2, Yes`) map to value labels, and its branching-logic column (format unverified; likely "show if fieldX = value") could seed conditional spec-data checks (cf. `permitted_when`, §9) | Later phase (spec importers); needs real REDCap exports from Liz to pin the formats | Open (flagged 2026-07-12, Liz) |
+| Corrections container format: CSV vs YAML (consistency with the other judgment artifacts) vs a tabular-but-not-CSV format. The engine semantics are settled (§6.2: declarative entries — predicate, expected match count, expected old value, mandatory reason — applied programmatically, mismatches fail loudly); open is only the file format. Liz's concern: users will double-click a .csv into Excel, which silently mangles values (dates, leading zeros, encodings) — ironic for a get-out-of-Excel tool. For CSV: corrections are naturally tabular, and the findings export (§6.3, one row per finding) makes a table the shortest triage→fix path. Mitigation candidates: strict schema + all-character read; a helper (`rev_add_correction()`-style) so the file is never hand-edited | Phase 3 (process) planning — corrections engine | Open (flagged 2026-07-15, Liz) |
+| Dashboard scope within the present step: which interactive outputs, rendering/hosting targets, and how dashboard specs extend the declarative output spec | Module-2 brainstorm | Open (flagged 2026-07-15) |
+| Umbrella-review implications for the data model (reviews-of-reviews structures: what the study unit is, how nested review/primary-study levels are declared) | Affected phases' planning, with the umbrella pilot review as the concrete case | Open (flagged 2026-07-15) |
 
 **Resolution mechanism:** when a phase begins, its owned questions become
 the first tasks of that phase's planning step (typically short

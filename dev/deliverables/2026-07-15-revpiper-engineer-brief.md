@@ -16,7 +16,7 @@ Separate them. Mechanics become a deterministic pipeline; judgment is relocated 
 |---|---|---|---|
 | Extraction sheets in Excel | no schema; silent drift | **spec** | `rev_spec_audit()`, `rev_spec_run()`; dictionaries + joins in YAML; certified spec report |
 | Ad-hoc file wrangling | irreproducible imports | **load** (next phase) | readers + structural checks; load report |
-| Manual Stata cleaning; recodes in spreadsheets | untracked judgment; one-way scripts | **process** (next phase) | standardise → correct → validate → join; `corrections.csv` as the audited override channel; certified clean dataset |
+| Manual Stata cleaning; recodes in spreadsheets | untracked judgment; one-way scripts | **process** (next phase) | standardise → correct → validate → join; a corrections table as the audited override channel; certified clean dataset |
 | Hand-derived variables | copy-paste drift | **transform** (v2) | declared derivations checked against a derived dictionary |
 | Hand-built tables and figures | rework on every change | **present** (v3) | declarative output spec behind a hard data contract; prepared content objects feed N renderers — static publication outputs and interactive dashboards regenerate from the same specs |
 | Update = redo by hand | unaffordable reruns | **update** | `rev_run(through =)` — steps are prefixes of one deterministic run from the raw files, so nothing stale passes between them |
