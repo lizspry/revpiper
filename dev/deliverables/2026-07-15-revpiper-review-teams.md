@@ -14,16 +14,26 @@ So what this stage of reviewing needs now is not AI. It is working infrastructur
 
 ## What you'll actually get
 
-One integrated pipeline, in one place. Your data flows from raw extracted input all the way to tables, figures, and dashboards inside a single project — no more carrying results by hand between an extraction sheet, a cleaning script, a recoding spreadsheet, and a document, and no more wondering which version of which file is current. Concretely: a ready-to-run review project, created for you by the tool, built around a small set of plain-text files you edit:
+One integrated pipeline, in one place. Your data flows from raw extracted input all the way to tables, figures, and dashboards inside a single project — no more carrying results by hand between an extraction sheet, a cleaning script, a recoding spreadsheet, and a document, and no more wondering which version of which file is current. The division of labour is the point, so here it is explicitly.
+
+**What you write** — your judgment, in a small set of plain-text files, and nothing else:
 
 - **Data dictionaries** — what each table and variable should be: names, types, valid values, units. If you engage before data collection, the dictionary doubles as the source of truth for your extraction instrument.
 - **A joins and mapping specification** — how your tables connect, and how the raw collected data maps to the derived variables you analyse and report.
 - **A corrections file** — the case-by-case cleaning calls no automated check can make, each recorded once, with its reason.
-- **A short run script** — the whole pipeline, a few lines.
+- **A short run script** — a few lines calling the package to run the steps: import, clean, derive, and present your data, to your specifications.
+
+**What you never write** — the package's job, all of it built and tested once, centrally:
+
+- validation of your specs themselves (so errors are caught before any data is touched);
+- automated cleaning and normalisation of the machine-fixable issues;
+- checking and reporting at every step, with each failure naming the file, column, row, and fix location;
+- certification of the specs and the cleaned dataset;
+- and all the machinery that generates your tables, figures, and dashboards to your specification — which outputs, in what order, with what variables and headers (exact scope to be confirmed against review needs and feasibility) — for written documents and interactively, regenerating automatically when your review updates.
+
+**What you can add** — if your review needs something the package doesn't cover: your own checks, or your own table or figure code, slotted in and recorded and versioned like everything else. Simple and functional at its core, flexible in its customisability.
 
 Nothing is locked in — this matters, so plainly: prespecifying your dictionary does not freeze it. You can update and edit the dictionary and specs at any time, as piloting, extraction changes, or new thinking demand; every change is version-controlled, so the record shows what changed and when, and the pipeline re-checks everything against the new version. The specification evolves with your review. Each step checks your files and data against it and produces a report; the spec step's certificate is a timestamped prespecification you can point to before data collection begins. (The certificate and a draft generator that writes a starter dictionary from your data are coming in the next releases.)
-
-And it is not a straitjacket in the other direction either: the tool is simple and functional at its core, flexible in its customisability. If your review needs a check we haven't built, or a table or figure laid out differently, you can add your own — recorded and versioned the same way as everything else. At the presentation end you will be able to specify which tables, figures, and dashboards you want, in what order, and with what variables and headers (exact scope to be confirmed against review needs and feasibility) — including interactive dashboards that regenerate automatically when your review updates, alongside the static outputs for publication.
 
 ## Where your time goes — and where it stops going
 
