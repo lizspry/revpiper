@@ -8,11 +8,11 @@ You know this workflow: extraction in an Excel sheet, cleaning in a long Stata d
 
 ## The turning point
 
-Living reviews — updated as new evidence arrives — are becoming the expectation, and they are more costly than standard reviews under current workflows; teams running them consistently call for technology to reduce the workload [1,2]. At the same time, AI tools are arriving fast, but the joint position of Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence, and the RAISE recommendations it endorses, require human oversight, with the synthesist accountable — including for the decision to use AI at all [3,4]. The teams best placed to use AI safely, when it becomes possible and reasonable, will be the ones whose workflows already state what correct looks like and check it automatically. That is the workflow this tool builds — and it pays for itself now, before any AI is involved.
+Living reviews — updated as new evidence arrives — are becoming the expectation, yet evidence synthesis remains time-intensive and heavily manual, typically taking months or years [1]. AI tools are arriving fast, but they concentrate on screening, extraction, and risk of bias, with almost none serving the update phase [2] — and the joint position of Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence, with the RAISE recommendations it endorses, requires human oversight, with the synthesist accountable — including for the decision to use AI at all [3,4]. The teams best placed to use AI safely, when it becomes possible and reasonable, will be the ones whose workflows already state what correct looks like and check it automatically. That is the workflow this tool builds — and it pays for itself now, before any AI is involved.
 
 ## What you'll actually get
 
-A ready-to-run review project, created for you by the tool, built around a small set of plain-text files you edit:
+One integrated pipeline, in one place. Your data flows from raw extracted input all the way to tables, figures, and dashboards inside a single project — no more carrying results by hand between an extraction sheet, a cleaning script, a recoding spreadsheet, and a document, and no more wondering which version of which file is current. Concretely: a ready-to-run review project, created for you by the tool, built around a small set of plain-text files you edit:
 
 - **Data dictionaries** — what each table and variable should be: names, types, valid values, units. If you engage before data collection, the dictionary doubles as the source of truth for your extraction instrument.
 - **A joins and mapping specification** — how your tables connect, and how the raw collected data maps to the derived variables you analyse and report.
@@ -45,7 +45,7 @@ Use it on your review as it develops, and tell us where it fights you. The desig
 
 **References**
 
-1. Elliott JH, et al. Living systematic reviews: an emerging opportunity to narrow the evidence-practice gap. *PLoS Medicine* (2014). doi:10.1371/journal.pmed.1001603
-2. Millard T, et al. Feasibility and acceptability of living systematic reviews: results from a mixed-methods evaluation. *Systematic Reviews* (2019). doi:10.1186/s13643-019-1248-5
+1. Sousa MSA, et al. The landscape of artificial intelligence tools and platforms for evidence synthesis: a scoping review. *Systematic Reviews* (2026). doi:10.1186/s13643-025-02842-y
+2. Song X, et al. The phases of living evidence synthesis using AI. *Journal of Medical Internet Research* (2026). doi:10.2196/76130
 3. Position statement on artificial intelligence (AI) use in evidence synthesis across Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence. *Campbell Systematic Reviews* (2025). doi:10.1002/cl2.70074
 4. Thomas J, Hair K, Noel-Storr A, et al. Responsible use of AI in evidence Synthesis (RAISE): recommendations for practice (version 3, updated 13 March 2026). OSF (2026). doi:10.17605/OSF.IO/FWAUD
