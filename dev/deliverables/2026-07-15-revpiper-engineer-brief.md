@@ -4,7 +4,7 @@
 
 ## The domain, in one paragraph
 
-A systematic review answers a health question by finding and synthesising every relevant study, under a predefined protocol: exhaustive search → screening → structured extraction of each study's data → synthesis (typically meta-analysis) → publication. A *living* review repeats the cycle as new evidence arrives. The data stage — extracted data through cleaned, analysable dataset to tables and figures — is, in engineering terms, an ETL pipeline currently executed by hand: spreadsheets as the database, linear scripts with no version control or tests, no idempotent rerun. Critically, judgment (what the data should be) and mechanics (making it so) are interleaved in the same artifacts, so nothing can be rerun without redoing the judgment.
+A systematic review answers a health question by finding and synthesising every relevant study, under a predefined protocol: exhaustive search → screening → structured extraction of each study's data → synthesis (typically meta-analysis) → publication. A *living* review repeats the cycle as new evidence arrives. The data stage — extracted data through cleaned, analysable dataset to tables and figures — is, in engineering terms, an ETL pipeline currently frequently executed manually: spreadsheets as the database, linear scripts without version control or tests, manual table and figure creation and/or formatting, no idempotent rerun. Critically, judgment (what the data should be) and mechanics (making it so) are interleaved in the same artifacts, so nothing can be rerun without redoing the judgment.
 
 ## The design move
 
@@ -39,7 +39,7 @@ TDD throughout (~380 tests); lint gate; clean R CMD check; protected main, featu
 
 ## Where you could contribute
 
-There is no predefined role and no expectation — engagement if and as it suits you. What would help most is senior advisory input: someone to think through and pressure-test the big calls as the pipeline grows — architecture, package development and development process, product and code design — the design review a solo developer cannot give themselves. The door is equally open to hands-on work wherever it appeals. And there is a substantive draw: this project is a working instance of the central problem in applied agentic engineering — restructuring an expert human workflow into machine-checkable versus human-judgment steps, with deterministic verification and gated checkpoints — applied to a high-stakes scientific domain. For anyone interested in AI-enabled review workflows, it is hands-on insight into the methods and workflow restructuring they require.
+There is no predefined role and no expectation — engagement if and as it suits you. What could help most, if interested but with limited time, is advisory input: someone to help think through and pressure-test the big calls as the pipeline grows — architecture, package development and development process, product and code design. The door is open to hands-on work if it appeals. And there is a substantive draw: this project is a working instance of the central problem in applied agentic engineering — restructuring an expert human workflow into machine-checkable versus human-judgment steps, with deterministic verification and gated checkpoints — applied to a high-stakes scientific domain. For anyone interested in AI-enabled review workflows, it is hands-on insight into the methods and workflow restructuring they require.
 
 ---
 

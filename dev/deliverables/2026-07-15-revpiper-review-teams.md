@@ -8,9 +8,9 @@ You know this workflow: extraction in an Excel sheet, cleaning in a long Stata d
 
 ## What's changing around reviews
 
-Two pressures are rising at once. Living reviews — updated as new evidence arrives — are becoming the expectation, while evidence synthesis remains time-intensive and heavily manual, typically taking months or years [1]. And the wave of AI tools now arriving will not rescue this part of the work: they concentrate on searching, screening, and extraction, with almost none serving the stage from extracted data onward, or updates [2]. Even where AI can help, its use is properly bounded — the joint position of Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence, with the RAISE recommendations it endorses, requires human oversight, with the synthesist accountable, including for the decision to use AI at all [3,4] — and our organisation does not yet have the infrastructure or training base for heavier AI use in any case.
+Two pressures are rising at once. Living reviews — updated as new evidence arrives — are becoming the expectation, while evidence synthesis remains time-intensive and heavily manual, typically taking months or years [1]. And the wave of AI tools now arriving will not rescue this part of the work: they concentrate primarily on searching, screening, and extraction, with almost none serving the stage from extracted data onward, or updates [2]. Even where AI can help, its use is properly bounded — the joint position of Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence, with the RAISE recommendations it endorses, requires human oversight, with the synthesist accountable, including for the decision to use AI at all [3,4] — and our organisation does not yet have the infrastructure or training base for agentic AI use in any case.
 
-So what this stage of reviewing needs now is not AI. It is working infrastructure: the process written down, checked automatically, and rerunnable. No existing tool provides that; it pays for itself immediately; and — as the second-last section explains — it is also exactly the foundation that safe AI use will later need.
+So what this stage of reviewing needs now is not AI. It is working infrastructure: the process written down, checked automatically, and rerunnable. No existing free, open-source tool provides that; it pays for itself immediately; and — as the second-last section explains — it is also exactly the foundation that safe AI use will later need.
 
 ## What you'll actually get
 
@@ -33,13 +33,13 @@ One integrated pipeline, in one place. Your data flows from raw extracted input 
 
 **What you can add** — if your review needs something the package doesn't cover: your own checks, or your own table or figure code, slotted in and recorded and versioned like everything else. Simple and functional at its core, flexible in its customisability.
 
-Nothing is locked in — this matters, so plainly: prespecifying your dictionary does not freeze it. You can update and edit the dictionary and specs at any time, as piloting, extraction changes, or new thinking demand; every change is version-controlled, so the record shows what changed and when, and the pipeline re-checks everything against the new version. The specification evolves with your review. Each step checks your files and data against it and produces a report; the spec step's certificate is a timestamped prespecification you can point to before data collection begins. (The certificate and a draft generator that writes a starter dictionary from your data are coming in the next releases.)
+Nothing is locked in: prespecifying your dictionary does not freeze it. You can update and edit the dictionary and specs at any time, as piloting, extraction changes, or new thinking demand; every change is version-controlled, so the record shows what changed and when, and the pipeline re-checks everything against the new version. The specification evolves with your review. Each step checks your files and data against it and produces a report; the spec step's certificate is a timestamped prespecification you can point to before data collection begins.
 
-## Where your time goes — and where it stops going
+## Where your time goes, and where it doesn't go
 
-Time in: authoring the dictionary up front; recording cleaning and mapping decisions as they arise; reading a short report at each checkpoint. Time out: no manual re-cleaning, no re-assembly, no hunting for where a number came from. Checks run in seconds, and every failure names the file, the column, the row, and where to fix it.
+Time in: authoring the dictionaries up front; recording cleaning decisions as they arise; reading a short report at each checkpoint. Time out: no manual re-cleaning, no re-assembly, no hunting for where a number came from. Checks run in seconds, and every failure names the file, the column, the row, and where to fix it.
 
-## The payoff when things change
+## The payoff when things change, rerunning your review
 
 New search results arrive. You drop the updated extraction file in and run. Every decision you recorded re-applies automatically — and any that no longer match the data flag themselves by name rather than failing silently. The report and the file history show exactly what changed. You review and decide; you do not redo.
 
