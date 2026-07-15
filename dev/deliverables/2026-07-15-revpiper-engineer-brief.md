@@ -18,7 +18,7 @@ Separate them. Mechanics become a deterministic pipeline; judgment is relocated 
 | Ad-hoc file wrangling | irreproducible imports | **load** (next phase) | readers + structural checks; load report |
 | Manual Stata cleaning; recodes in spreadsheets | untracked judgment; one-way scripts | **process** (next phase) | standardise → correct → validate → join; `corrections.csv` as the audited override channel; certified clean dataset |
 | Hand-derived variables | copy-paste drift | **transform** (v2) | declared derivations checked against a derived dictionary |
-| Hand-built tables and figures | rework on every change | **present** (v3) | declarative output spec behind a hard data contract |
+| Hand-built tables and figures | rework on every change | **present** (v3) | declarative output spec behind a hard data contract; prepared content objects feed N renderers — static publication outputs and interactive dashboards regenerate from the same specs |
 | Update = redo by hand | unaffordable reruns | **update** | `rev_run(through =)` — steps are prefixes of one deterministic run from the raw files, so nothing stale passes between them |
 
 ## Key decisions and rationale
@@ -30,7 +30,8 @@ Full decisions log: design spec §9.
 - **Declarative YAML specs, not user code.** Single source of truth; auditable; AI-assist-friendly plain text; matches the users' capability floor (baseline R, no software background).
 - **Own schema grammar, not an external data-dictionary standard.** The schema itself is data, held in single-source registries (`inst/schema/fields.yaml`, `checks.yaml`); avoids depending on an immature external standard while staying vocabulary-aligned for later convergence.
 - **Per-step audit/run pairs** (`rev_<step>_<action>` grammar). Each step is a standalone unit of work with its own verification, report and certificate, and fix surface; check commands never touch pipeline state.
-- **Deterministic core, AI at the edges.** The pipeline contains no AI. It is the verification harness that makes future AI contributions checkable — the structure that current evidence-synthesis governance (the Cochrane/Campbell/JBI/CEE position statement and the RAISE recommendations it endorses [1]) effectively requires, and that end-to-end LLM review prototypes [2] will need to land in before institutional adoption is defensible.
+- **User extension surfaces, same pattern.** Users are not restricted to the shipped behaviour: custom readers, derivations, checks, and output layouts are added as declared, versioned artifacts the pipeline executes — extensions live in judgment artifacts, not forks. Simple and functional at the core, flexible in its customisability.
+- **Deterministic core, AI at the edges.** The pipeline contains no AI. It is the verification harness that makes future AI contributions checkable — the structure that current evidence-synthesis governance (the Cochrane/Campbell/JBI/CEE position statement and the RAISE recommendations [1,2]) effectively requires, and that end-to-end LLM review prototypes [3] will need to land in before institutional adoption is defensible. The dependency also runs outward: the deterministic, verified functions are building blocks that can be integrated into or inform new AI-led review workflows, including collaborator-led ones.
 
 ## Engineering practice and status
 
@@ -47,4 +48,5 @@ No predefined role — this brief exists so you can gauge where you'd want in. L
 **References**
 
 1. Position statement on artificial intelligence (AI) use in evidence synthesis across Cochrane, the Campbell Collaboration, JBI, and the Collaboration for Environmental Evidence. *Campbell Systematic Reviews* (2025). doi:10.1002/cl2.70074
-2. Cao C, et al. Automation of systematic reviews with large language models (otto-SR). medRxiv preprint (2025). doi:10.1101/2025.06.13.25329541
+2. Thomas J, Hair K, Noel-Storr A, et al. Responsible use of AI in evidence Synthesis (RAISE): recommendations for practice (version 3, updated 13 March 2026). OSF (2026). doi:10.17605/OSF.IO/FWAUD
+3. Cao C, et al. Automation of systematic reviews with large language models (otto-SR). medRxiv preprint (2025). doi:10.1101/2025.06.13.25329541
