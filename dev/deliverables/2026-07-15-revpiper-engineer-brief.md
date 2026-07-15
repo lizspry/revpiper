@@ -39,7 +39,7 @@ TDD throughout (~380 tests); lint gate; clean R CMD check; protected main, featu
 
 ## Where you could contribute
 
-No predefined role — this brief exists so you can gauge where you'd want in. Live surfaces: architecture and code review; CI and tooling; schema and validation design; packaging and release practice; and the AI-integration layer as capabilities mature. On that last: this project is a working instance of the central problem in applied agentic engineering — restructuring an expert human workflow into machine-checkable versus human-judgment steps, with deterministic verification and gated checkpoints — applied to a high-stakes scientific domain.
+There is no predefined role and no expectation — engagement if and as it suits you. What would help most is senior advisory input: someone to think through and pressure-test the big calls as the pipeline grows — architecture, package development and development process, product and code design — the design review a solo developer cannot give themselves. The door is equally open to hands-on work wherever it appeals. And there is a substantive draw: this project is a working instance of the central problem in applied agentic engineering — restructuring an expert human workflow into machine-checkable versus human-judgment steps, with deterministic verification and gated checkpoints — applied to a high-stakes scientific domain. For anyone interested in AI-enabled review workflows, it is hands-on insight into the methods and workflow restructuring they require.
 
 ---
 
