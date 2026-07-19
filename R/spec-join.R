@@ -4,7 +4,8 @@
 # depends on it. A missing joins file is a valid single-table project and
 # returns the zero-row tibble. `dictionaries = NULL` runs within-file
 # checks only (no reference resolution), for single-file selection.
-# Returns a tibble, one row per declared join.
+# Returns list(value, problems): the joins tibble (one row per declared
+# join) exactly when zero problems stand, else NULL.
 read_joins <- function(
   path,
   dictionaries = NULL,
@@ -22,9 +23,13 @@ read_joins <- function(
     }
   }
   if (!file.exists(path)) {
-    return(no_joins())
+    return(list(value = no_joins(), problems = no_problems()))
   }
-  raw <- parse_spec_yaml(path)
+  parsed <- parse_spec_yaml(path)
+  if (is.null(parsed$raw)) {
+    return(list(value = NULL, problems = parsed$problems))
+  }
+  raw <- parsed$raw
   problems <- rbind(
     run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),
@@ -32,10 +37,10 @@ read_joins <- function(
       resolve_join_references(raw, path, dictionaries, failed_tables)
     }
   )
-  if (nrow(problems) > 0) {
-    stop_spec(problems)
-  }
-  new_joins(raw$joins)
+  list(
+    value = if (nrow(problems) == 0) new_joins(raw$joins) else NULL,
+    problems = problems
+  )
 }
 
 # The joins tibble: the one home for its shape.

@@ -49,7 +49,7 @@ test_that("rev_spec_run() rejects a path where a filename is expected", {
 })
 
 test_that("rev_spec_run() aborts with the problems of a broken dictionary", {
-  problems <- spec_problems(
+  problems <- thrown_problems(
     rev_spec_run(specs_path("specs-run-bad"), joins = FALSE)
   )
   expect_identical(spec_codes(problems), "YS01")

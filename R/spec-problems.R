@@ -26,6 +26,22 @@ new_problem <- function(
   )
 }
 
+# Zero-row problems table: the rbind seed guaranteeing a stable shape.
+no_problems <- function() {
+  new_problem(
+    character(0),
+    character(0),
+    character(0),
+    character(0),
+    suggestion = character(0),
+    related = character(0)
+  )
+}
+
+bind_problems <- function(problem_list) {
+  do.call(rbind, c(list(no_problems()), problem_list))
+}
+
 # Rule 1 of the related column (design 2026-07-19): a plain fact of
 # location, never causation. Rule 2 (set at flag time) wins where present.
 relate_same_entry <- function(problems) {

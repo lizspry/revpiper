@@ -146,14 +146,14 @@ test_that("a join key may be another table's virtual column", {
   dicts <- read_dictionaries(dir)
   j <- minimal_join()
   j$keys$estimates <- "study_key"
-  joins <- joins_from_list(list(j), dicts)
+  joins <- joins_from_list(list(j), dicts)$value
   expect_identical(joins$keys_left[[1]], "study_key")
 })
 
 # ---- Layer 2: parsing, defaults, and curated fixtures ----
 
 test_that("the good joins file parses into the tibble, defaults applied", {
-  joins <- read_joins(joins_path("joins.yaml"), good_dictionaries())
+  joins <- read_joins(joins_path("joins.yaml"), good_dictionaries())$value
   expect_identical(nrow(joins), 1L)
   expect_identical(joins$adds, "variables")
   expect_identical(joins$left, "estimates")
@@ -164,21 +164,21 @@ test_that("the good joins file parses into the tibble, defaults applied", {
   expect_false(joins$unmatched_ok)
   # the default: a join declaring no unmatched_ok gets FALSE
   j <- minimal_join()
-  expect_false(joins_from_list(list(j))$unmatched_ok)
+  expect_false(joins_from_list(list(j))$value$unmatched_ok)
 })
 
 test_that("an observations join parses; relationship and unmatched_ok are NA", {
   joins <- read_joins(
     joins_path("joins-observations.yaml"),
     good_dictionaries()
-  )
+  )$value
   expect_identical(joins$adds, "observations")
   expect_identical(joins$relationship, NA_character_)
   expect_identical(joins$unmatched_ok, NA)
 })
 
 test_that("a missing joins file is a valid single-table project: zero rows", {
-  joins <- read_joins("no/such/joins.yaml", good_dictionaries())
+  joins <- read_joins("no/such/joins.yaml", good_dictionaries())$value
   expect_identical(nrow(joins), 0L)
   expect_named(
     joins,
@@ -201,28 +201,26 @@ test_that("dictionaries must be rev_dictionary objects", {
   )
 })
 
-test_that("each single-defect joins file aborts naming its problem", {
+test_that("each single-defect joins file reports naming its problem", {
   dicts <- good_dictionaries()
   read_bad <- function(fixture) {
-    read_joins(bad_path(fixture), dicts)
+    p <- spec_problems(read_joins(bad_path(fixture), dicts))
+    as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
   }
 
-  expect_snapshot(error = TRUE, read_bad("joins-yx02-unknown-table.yaml"))
-  expect_snapshot(error = TRUE, read_bad("joins-yx02-unknown-key.yaml"))
-  expect_snapshot(error = TRUE, read_bad("joins-yx02-keys-non-side.yaml"))
-  expect_snapshot(error = TRUE, read_bad("joins-yx03-keys-missing-side.yaml"))
-  expect_snapshot(error = TRUE, read_bad("joins-yf03-bad-relationship.yaml"))
-  expect_snapshot(
-    error = TRUE,
-    read_bad("joins-ye08-relationship-on-observations.yaml")
-  )
+  expect_snapshot(read_bad("joins-yx02-unknown-table.yaml"))
+  expect_snapshot(read_bad("joins-yx02-unknown-key.yaml"))
+  expect_snapshot(read_bad("joins-yx02-keys-non-side.yaml"))
+  expect_snapshot(read_bad("joins-yx03-keys-missing-side.yaml"))
+  expect_snapshot(read_bad("joins-yf03-bad-relationship.yaml"))
+  expect_snapshot(read_bad("joins-ye08-relationship-on-observations.yaml"))
 })
 
 test_that("read_joins() distinguishes no dictionaries from zero dictionaries", {
   # NULL = within-file scope, references unchecked; an empty dictionary
   # set = resolve against nothing, every reference fails. Load-bearing.
   j <- minimal_join()
-  expect_null(spec_problems(joins_from_list(list(j), NULL)))
+  expect_identical(nrow(spec_problems(joins_from_list(list(j), NULL))), 0L)
   expect_identical(
     spec_codes(spec_problems(joins_from_list(list(j), list()))),
     "YX02"
@@ -244,13 +242,21 @@ test_that("a join side naming a failed file's table carries the cross-file relat
   dicts <- good_dictionaries()["rob"]
   path <- withr::local_tempfile(fileext = ".yaml")
   yaml::write_yaml(list(joins = list(minimal_join())), path)
-  e <- tryCatch(
-    read_joins(path, dicts, failed_tables = c(estimates = "estimates.yaml")),
-    revpiper_spec_error = identity
-  )
+  e <- read_joins(path, dicts, failed_tables = c(estimates = "estimates.yaml"))
   yx02 <- e$problems[e$problems$code == "YX02", ]
   expect_true("spec file estimates.yaml has standing errors" %in% yx02$related)
   # without the failed-tables knowledge: plain YX02, related NA
-  e2 <- tryCatch(read_joins(path, dicts), revpiper_spec_error = identity)
+  e2 <- read_joins(path, dicts)
   expect_true(all(is.na(e2$problems$related[e2$problems$code == "YX02"])))
+})
+
+test_that("read_joins returns value + problems, never throwing on spec problems", {
+  good <- joins_from_list(list(minimal_join()))
+  expect_s3_class(good$value, "tbl_df")
+  expect_identical(nrow(good$problems), 0L)
+  bad <- minimal_join()
+  bad$left <- "nope"
+  res <- joins_from_list(list(bad))
+  expect_null(res$value)
+  expect_gt(nrow(res$problems), 0)
 })

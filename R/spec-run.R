@@ -50,11 +50,19 @@ rev_spec_run <- function(dir = "specs", file = NULL, joins = TRUE) {
   if (file == spec_joins_file) {
     path <- spec_joins_path(dir)
     stop_missing_path("Spec file", path)
-    return(spec_set(joins = read_joins(path)))
+    res <- read_joins(path)
+    if (nrow(res$problems) > 0) {
+      stop_spec(res$problems)
+    }
+    return(spec_set(joins = res$value))
   }
   path <- file.path(spec_tables_dir(dir), file)
   stop_missing_path("Spec file", path)
-  spec_set(tables = name_by_table(list(read_dictionary(path))))
+  res <- read_dictionary(path)
+  if (nrow(res$problems) > 0) {
+    stop_spec(res$problems)
+  }
+  spec_set(tables = name_by_table(list(res$value)))
 }
 
 run_spec_set <- function(dir, joins) {
@@ -74,7 +82,11 @@ run_spec_set <- function(dir, joins) {
       call = NULL
     )
   }
-  spec_set(tables = tables, joins = read_joins(path, tables))
+  res <- read_joins(path, tables)
+  if (nrow(res$problems) > 0) {
+    stop_spec(res$problems)
+  }
+  spec_set(tables = tables, joins = res$value)
 }
 
 # The spec step's output: the one home for its shape.

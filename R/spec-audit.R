@@ -31,7 +31,7 @@ rev_spec_audit <- function(dir = "specs", joins = TRUE) {
   rlang::check_string(dir)
   rlang::check_bool(joins)
   files <- dictionary_files(spec_tables_dir(dir))
-  audited <- lapply(files, \(f) audit_one(read_dictionary(f)))
+  audited <- lapply(files, read_dictionary)
   loaded <- !vapply(audited, \(a) is.null(a$value), logical(1))
   tables <- name_by_table(lapply(audited[loaded], \(a) a$value))
   joins_audit <- audit_joins(dir, joins, tables)
@@ -82,16 +82,6 @@ announce_audit <- function(report, paths) {
   }
 }
 
-# Run one spec-reading call for the audit: its value, or its problems.
-# expr arrives as an unevaluated promise forced inside tryCatch by design
-# — do not force it earlier, or the abort escapes the catch.
-audit_one <- function(expr) {
-  tryCatch(
-    list(value = expr, problems = no_problems()),
-    revpiper_spec_error = \(e) list(value = NULL, problems = e$problems)
-  )
-}
-
 # The joins side of the audit: what loaded (zero-row when not), the
 # problems, and the disposition line the certificate always carries.
 audit_joins <- function(dir, joins, tables) {
@@ -116,7 +106,7 @@ audit_joins <- function(dir, joins, tables) {
       disposition = "expected but absent"
     ))
   }
-  audit <- audit_one(read_joins(path, tables))
+  audit <- read_joins(path, tables)
   list(
     value = audit$value %||% no_joins(),
     problems = audit$problems,

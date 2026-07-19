@@ -223,5 +223,8 @@ test_that("YAML type coercion inside values is caught by content typing", {
   }
   coerced <- spec_problems(read_dictionary(write_spec("[yes, no]")))
   expect_identical(spec_codes(coerced), "YE05")
-  expect_null(spec_problems(read_dictionary(write_spec('["yes", "no"]'))))
+  expect_identical(
+    nrow(spec_problems(read_dictionary(write_spec('["yes", "no"]')))),
+    0L
+  )
 })

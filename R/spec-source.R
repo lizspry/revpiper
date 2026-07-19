@@ -1,10 +1,16 @@
-# Parse one specs/tables/<table>.yaml into a rev_dictionary, collecting
-# every spec problem before aborting. Complete for a single source: one
-# file validates with zero knowledge of any other source.
+# Parse one specs/tables/<table>.yaml, collecting every spec problem.
+# Complete for a single source: one file validates with zero knowledge of
+# any other source. Returns list(value, problems): the rev_dictionary
+# exactly when zero problems stand, else NULL (problems are data, never
+# thrown — design 2026-07-19).
 read_dictionary <- function(path) {
   rlang::check_string(path)
   stop_missing_path("Dictionary file", path)
-  raw <- parse_spec_yaml(path)
+  parsed <- parse_spec_yaml(path)
+  if (is.null(parsed$raw)) {
+    return(list(value = NULL, problems = parsed$problems))
+  }
+  raw <- parsed$raw
   problems <- rbind(
     run_entry_checks(raw, "file", path, root_entry_label),
     run_contents_checks(raw, "file", path),
@@ -12,20 +18,25 @@ read_dictionary <- function(path) {
     check_virtual_collisions(raw, path),
     resolve_references(raw, path)
   )
-  if (nrow(problems) > 0) {
-    stop_spec(problems)
-  }
-  new_dictionary(raw, path)
+  list(
+    value = if (nrow(problems) == 0) new_dictionary(raw, path) else NULL,
+    problems = problems
+  )
 }
 
 # Load every dictionary in dir standalone via read_dictionary(), then run
 # the data-free set-level check: no two files may claim the same table
-# name. Returns the list named by table.
+# name. Returns the list named by table. Interim thrower for the run
+# path only (dies with Task 8; audit and the collector consume
+# read_dictionary directly).
 read_dictionaries <- function(dir) {
   rlang::check_string(dir)
   files <- dictionary_files(dir)
-  dicts <- name_by_table(lapply(files, read_dictionary))
-  problems <- check_table_identity(names(dicts), files)
+  read <- lapply(files, read_dictionary)
+  problems <- bind_problems(lapply(read, `[[`, "problems"))
+  loaded <- !vapply(read, \(r) is.null(r$value), logical(1))
+  dicts <- name_by_table(lapply(read[loaded], `[[`, "value"))
+  problems <- rbind(problems, check_table_identity(names(dicts), files[loaded]))
   if (nrow(problems) > 0) {
     stop_spec(problems)
   }

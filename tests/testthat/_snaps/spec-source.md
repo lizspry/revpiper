@@ -21,231 +21,230 @@
 
     Code
       read_bad("ye01-file-entry.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE01 fixtures/specs-bad/ye01-file-entry.yaml / file entry: unknown field 'descrption' (did you mean 'description'?)
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+             entry code                    message  suggestion related
+      1 file entry YE01 unknown field 'descrption' description    <NA>
 
 ---
 
     Code
       read_bad("ye02-missing-type.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE02 fixtures/specs-bad/ye02-missing-type.yaml / column 'extra_notes': missing required field 'type'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                       entry code                       message suggestion related
+      1 column 'extra_notes' YE02 missing required field 'type'       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ye03-range-on-text.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE03 fixtures/specs-bad/ye03-range-on-text.yaml / column 'notes_temp': 'range' is not allowed on type 'text'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                      entry code                               message suggestion
+      1 column 'notes_temp' YE03 'range' is not allowed on type 'text'       <NA>
+        related
+      1    <NA>
 
 ---
 
     Code
       read_bad("ye04-values-and-range.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE04 fixtures/specs-bad/ye04-values-and-range.yaml / column 'mean_age': 'range' and 'values' are mutually exclusive
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                    entry code                                     message suggestion
+      1 column 'mean_age' YE04 'range' and 'values' are mutually exclusive       <NA>
+        related
+      1    <NA>
 
 ---
 
     Code
       read_bad("ye05-mixed-values.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE05 fixtures/specs-bad/ye05-mixed-values.yaml / column 'rob_score': 'values' entries do not match declared type 'integer'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                     entry code                                               message
+      1 column 'rob_score' YE05 'values' entries do not match declared type 'integer'
+        suggestion related
+      1       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ye05-date-range-not-iso.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE05 fixtures/specs-bad/ye05-date-range-not-iso.yaml / column 'extraction_date': 'range' entries do not match declared type 'date'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                           entry code
+      1 column 'extraction_date' YE05
+                                                  message suggestion related
+      1 'range' entries do not match declared type 'date'       <NA>    <NA>
 
 ---
 
     Code
       read_bad("yf01-empty-field.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YF01 fixtures/specs-bad/yf01-empty-field.yaml / column 'mean_age': field 'range' is declared but has no value
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                    entry code                                    message suggestion
+      1 column 'mean_age' YF01 field 'range' is declared but has no value       <NA>
+        related
+      1    <NA>
 
 ---
 
     Code
       read_bad("yf02-name-list.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YF02 fixtures/specs-bad/yf02-name-list.yaml / column entry 1: field 'name' must be a single text value
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                 entry code                                  message suggestion
+      1 column entry 1 YF02 field 'name' must be a single text value       <NA>
+        related
+      1    <NA>
 
 ---
 
     Code
       read_bad("yf03-bad-type.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YF03 fixtures/specs-bad/yf03-bad-type.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                    entry code               message suggestion related
+      1 column 'mean_age' YF03 unknown type 'decmal'    decimal    <NA>
 
 ---
 
     Code
       read_bad("yf04-duplicate-values.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YF04 fixtures/specs-bad/yf04-duplicate-values.yaml / column 'design': field 'values' has duplicate entries: 'RCT'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                  entry code                                     message suggestion
+      1 column 'design' YF04 field 'values' has duplicate entries: 'RCT'       <NA>
+        related
+      1    <NA>
 
 ---
 
     Code
       read_bad("yf05-descending-range.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YF05 fixtures/specs-bad/yf05-descending-range.yaml / column 'mean_age': 'range' is descending (60 > 10)
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                    entry code                         message suggestion related
+      1 column 'mean_age' YF05 'range' is descending (60 > 10)       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ys01-duplicate-column.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS01 fixtures/specs-bad/ys01-duplicate-column.yaml / columns section: duplicate column name 'study'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                  entry code                       message suggestion related
+      1 columns section YS01 duplicate column name 'study'       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ye06-level-number.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE06 fixtures/specs-bad/ye06-level-number.yaml / levels section: level 'study_id' must be a column name or a mapping with 'keys' or 'combine'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                 entry code
+      1 levels section YE06
+                                                                             message
+      1 level 'study_id' must be a column name or a mapping with 'keys' or 'combine'
+        suggestion related
+      1       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ye07-separator-without-combine.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YE07 fixtures/specs-bad/ye07-separator-without-combine.yaml / level 'study': 'separator' requires 'combine'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                entry code                        message suggestion related
+      1 level 'study' YE07 'separator' requires 'combine'       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ys02-key-unknown-column.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS02 fixtures/specs-bad/ys02-key-unknown-column.yaml / level 'study': 'studyy' does not name one of the declared key columns (did you mean 'study'?)
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                entry code                                                message
+      1 level 'study' YS02 'studyy' does not name one of the declared key columns
+        suggestion related
+      1      study    <NA>
 
 ---
 
     Code
       read_bad("ys02-combine-part-unknown.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS02 fixtures/specs-bad/ys02-combine-part-unknown.yaml / level 'study_id': 'studdy' does not name one of the declared columns (did you mean 'study'?)
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                   entry code                                            message
+      1 level 'study_id' YS02 'studdy' does not name one of the declared columns
+        suggestion related
+      1      study    <NA>
 
 ---
 
     Code
       read_bad("ys02-cwl-unknown-level.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS02 fixtures/specs-bad/ys02-cwl-unknown-level.yaml / column 'mean_age': 'wave' does not name one of the declared levels
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                    entry code                                         message
+      1 column 'mean_age' YS02 'wave' does not name one of the declared levels
+        suggestion related
+      1       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ys02-within-unknown-level.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS02 fixtures/specs-bad/ys02-within-unknown-level.yaml / level 'substudy': 'study' does not name one of the declared levels
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                   entry code                                          message
+      1 level 'substudy' YS02 'study' does not name one of the declared levels
+        suggestion related
+      1       <NA>    <NA>
 
 ---
 
     Code
       read_bad("ys04-within-cycle.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS04 fixtures/specs-bad/ys04-within-cycle.yaml / levels section: level nesting is circular: 'study' -> 'substudy' -> 'study'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                 entry code
+      1 levels section YS04
+                                                            message suggestion
+      1 level nesting is circular: 'study' -> 'substudy' -> 'study'       <NA>
+        related
+      1    <NA>
 
 ---
 
     Code
       read_bad("yf04-duplicate-combine-parts.yaml")
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YF04 fixtures/specs-bad/yf04-duplicate-combine-parts.yaml / level 'study_id': field 'combine' has duplicate entries: 'study'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+    Output
+                   entry code                                        message
+      1 level 'study_id' YF04 field 'combine' has duplicate entries: 'study'
+        suggestion related
+      1       <NA>    <NA>
 
 # every problem in a broken dictionary is reported at once
 
     Code
-      read_dictionary(bad_path("many-defects.yaml"))
-    Condition
-      Error:
-      ! Spec validation failed (3 problems):
-      x YE01 fixtures/specs-bad/many-defects.yaml / file entry: unknown field 'descrption' (did you mean 'description'?)
-      x YF03 fixtures/specs-bad/many-defects.yaml / column 'mean_age': unknown type 'decmal' (did you mean 'decimal'?)
-      x YF05 fixtures/specs-bad/many-defects.yaml / column 'rob_score': 'range' is descending (9 > 1)
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+      as.data.frame(spec_problems(read_dictionary(bad_path("many-defects.yaml"))))
+    Output
+                                        file              entry code
+      1 fixtures/specs-bad/many-defects.yaml         file entry YE01
+      2 fixtures/specs-bad/many-defects.yaml  column 'mean_age' YF03
+      3 fixtures/specs-bad/many-defects.yaml column 'rob_score' YF05
+                              message  suggestion related
+      1    unknown field 'descrption' description    <NA>
+      2         unknown type 'decmal'     decimal    <NA>
+      3 'range' is descending (9 > 1)        <NA>    <NA>
 
-# a file that does not parse aborts as a spec problem, not rawly
+# a file that does not parse reports a spec problem, not rawly
 
     Code
-      read_dictionary(bad_path("ys05-unparseable.yaml"))
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS05 fixtures/specs-bad/ys05-unparseable.yaml / file entry: the file couldn't be processed as there is a YAML error: (fixtures/specs-bad/ys05-unparseable.yaml) Duplicate map key: 'type'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+      as.data.frame(problems)
+    Output
+                                            file      entry code
+      1 fixtures/specs-bad/ys05-unparseable.yaml file entry YS05
+                                                                                                                              message
+      1 the file couldn't be processed as there is a YAML error: (fixtures/specs-bad/ys05-unparseable.yaml) Duplicate map key: 'type'
+        suggestion related
+      1       <NA>    <NA>
 
 # a combine level may not collide with a declared column
 
     Code
-      read_dictionary(bad_path("ys06-virtual-collision.yaml"))
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YS06 fixtures/specs-bad/ys06-virtual-collision.yaml / level 'study': the combine level 'study' would create a virtual column named like the declared column 'study'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+      as.data.frame(spec_problems(read_dictionary(bad_path(
+        "ys06-virtual-collision.yaml"))))
+    Output
+                                                  file         entry code
+      1 fixtures/specs-bad/ys06-virtual-collision.yaml level 'study' YS06
+                                                                                               message
+      1 the combine level 'study' would create a virtual column named like the declared column 'study'
+        suggestion related
+      1       <NA>    <NA>
 
