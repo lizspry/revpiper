@@ -36,6 +36,6 @@
       
       Errors:
       entry            code   message                         suggestion   related
-      column entry 5   YE01   unknown field 'nam'             name         other error in this entry
-      column entry 5   YE02   missing required field 'name'                other error in this entry
+      column entry 5   YE01   unknown field 'nam'             name         another error sits in this entry — fixing it may clear this one
+      column entry 5   YE02   missing required field 'name'                another error sits in this entry — fixing it may clear this one
 

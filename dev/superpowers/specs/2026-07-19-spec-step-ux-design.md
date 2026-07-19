@@ -82,8 +82,8 @@ Status: NOT CERTIFIED (2 errors)
 
 Errors:
 entry           code   message                suggestion   related
-column entry 4  YE01   unknown field 'nam'    name         other error in this entry
-column entry 4  YE02   field 'name' missing                other error in this entry
+column entry 4  YE01   unknown field 'nam'    name         another error sits in this entry — fixing it may clear this one
+column entry 4  YE02   field 'name' missing                another error sits in this entry — fixing it may clear this one
 ```
 
 - An error spanning two files (e.g. YX01 duplicate table name) appears in
@@ -102,13 +102,17 @@ question):
    name lookup, and the pool it searched is *provably incomplete*:
    - within a file — the referred section contains entries whose own
      names cannot be read (`entry_names()` NA); related reads
-     `the columns section has entries whose names cannot be read`.
+     `a column entry's name cannot be read, so this search ran against
+     an incomplete list — fixing it may clear this one` (self-contained
+     wording, Liz 2026-07-19; phrases live in one home,
+     `related_phrases` in spec-problems.R).
      Errors that do not remove names from the pool (e.g. a bad range on
      a correctly named column) never trigger related — they cannot
      explain a failed reference.
    - across files — a join side names the table a failed spec file
      intended (its `table:` field, read from raw YAML; if unreadable, no
-     link); related reads `spec file estimates.yaml has standing errors`.
+     link); related reads `spec file estimates.yaml failed its checks,
+     so its table was not available to search`.
 
 **User-facing definition (verbatim in the help docs, signed off
 2026-07-19):**

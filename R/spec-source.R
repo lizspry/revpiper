@@ -134,7 +134,7 @@ resolve_references <- function(raw, file) {
       next
     }
     related_for <- if (pool_incomplete(raw, row$refers_to)) {
-      \(value) "the columns section has entries whose names cannot be read"
+      \(value) related_phrases$incomplete_columns
     }
     for (instance in reference_instances(raw, row$field)) {
       problems <- rbind(

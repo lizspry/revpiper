@@ -312,7 +312,7 @@ test_that("a failed reference beside nameless column entries carries related", {
   p <- problems_of(d)
   expect_identical(
     p[p$code == "YS02", ]$related,
-    "the columns section has entries whose names cannot be read"
+    related_phrases$incomplete_columns
   )
 
   # clean names: the same failed reference stands alone (typo territory)

@@ -51,7 +51,7 @@ test_that("relate_same_entry links co-located errors deterministically", {
   out <- relate_same_entry(p)
   expect_identical(
     out$related,
-    c("other error in this entry", "other error in this entry", NA)
+    c(related_phrases$same_entry, related_phrases$same_entry, NA)
   )
   # already-set related (rule 2 is more specific) is never overwritten
   p$related[1] <- "spec file b.yaml has standing errors"

@@ -16,7 +16,7 @@ test_that("rule 1 lands in the assembled records: nameless entry's pair linked",
   out <- collect_spec_step(file.path(root, "specs"))
   problems <- record(out, "estimates.yaml")$problems
   expect_setequal(problems$code, c("YE01", "YE02"))
-  expect_identical(unique(problems$related), "other error in this entry")
+  expect_identical(unique(problems$related), related_phrases$same_entry)
 })
 
 test_that("cross-file related reaches the joins record", {
@@ -25,7 +25,8 @@ test_that("cross-file related reaches the joins record", {
   out <- collect_spec_step(file.path(root, "specs"))
   joins_problems <- record(out, "joins.yaml")$problems
   expect_true(
-    "spec file estimates.yaml has standing errors" %in% joins_problems$related
+    sprintf(related_phrases$incomplete_file, "estimates.yaml") %in%
+      joins_problems$related
   )
 })
 
