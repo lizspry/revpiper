@@ -31,6 +31,11 @@
 #'   run against an incomplete list. Fix the broken declaration first;
 #'   this error may then disappear on its own.
 #'
+#' The note appears only when the broken declaration belongs to the very
+#' list that was searched: a nameless column entry depletes searches of
+#' the columns list, never of the levels list (whose names are the
+#' mapping keys and always readable).
+#'
 #' When `related` is empty, the error stands on its own as far as
 #' revpiper can tell — most often a typo or a genuine omission, and the
 #' `suggestion` column is the better guide.

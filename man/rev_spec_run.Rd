@@ -12,7 +12,9 @@ joins spec at \verb{<dir>/joins.yaml}.}
 
 \item{file}{A single spec filename to run standalone with within-file
 checks only: a dictionary filename resolved in \verb{<dir>/tables/}, or
-\code{"joins.yaml"}. A filename, never a path. Overrides \code{joins}.}
+\code{"joins.yaml"} (which returns empty \verb{$tables} beside the
+within-file-checked joins tibble). A filename, never a path — a
+path is rejected as a usage error. Overrides \code{joins}.}
 
 \item{joins}{Include the joins spec? \code{TRUE} (the default) makes an
 absent \verb{<dir>/joins.yaml} a standing error; \code{FALSE} runs without it.}
@@ -25,12 +27,15 @@ On failure, nothing is returned — the error halts the script, with
 the certification outcome riding on the condition as \verb{$outcome}.
 }
 \description{
-Performs, writes, and prints exactly what \code{\link[=rev_spec_audit]{rev_spec_audit()}} does —
-the same checks, the same per-file reports, the same console lines —
-then, when every file certifies, returns the validated spec set
-invisibly, ready for the next step. When any file does not certify,
-it raises one error after all checking has completed: nothing is
+Performs and writes exactly what \code{\link[=rev_spec_audit]{rev_spec_audit()}} does — the same
+checks, the same per-file reports — and prints the same per-file
+certification lines under its own banner. Then comes run's own final
+act: when every file certifies, the validated spec set is returned
+invisibly, ready for the next step; when any file does not certify,
+one error is raised after all checking has completed — nothing is
 returned, and no later pipeline step executes on an unsound spec.
+(The audit equivalence describes the whole-folder run; \verb{file =} is
+run's own standalone mode, which audit does not have.)
 }
 \section{Spec layout}{
 
@@ -55,6 +60,11 @@ or a spec file that failed its checks). The search was therefore
 run against an incomplete list. Fix the broken declaration first;
 this error may then disappear on its own.
 }
+
+The note appears only when the broken declaration belongs to the very
+list that was searched: a nameless column entry depletes searches of
+the columns list, never of the levels list (whose names are the
+mapping keys and always readable).
 
 When \code{related} is empty, the error stands on its own as far as
 revpiper can tell — most often a typo or a genuine omission, and the

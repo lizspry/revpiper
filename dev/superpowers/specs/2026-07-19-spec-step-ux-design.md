@@ -37,7 +37,10 @@ implementation, per the outward-docs-never-fork-the-design rule.
   object.** It returns certification information only.
 - **Run performs, writes, and prints exactly what audit does — literally
   the same commands** (same checks, same per-file reports including the
-  certified reports on success, same console lines). It always completes
+  certified reports on success; the console shows the same per-file
+  certification lines under the verb's own banner, run adding its
+  final-act lines — wording sharpened 2026-07-19, battery finding: the
+  earlier "same console lines" overclaimed). It always completes
   all checking first (no first-file abort). It differs only in its final
   act: on success it returns the spec set invisibly; on any failure it
   raises one clear error — nothing returned, no later pipeline step
@@ -132,6 +135,11 @@ question):
 >   spec file that failed its checks). The search was therefore run
 >   against an incomplete list. Fix the broken declaration first; this
 >   error may then disappear on its own.
+>
+> The note appears only when the broken declaration belongs to the very
+> list that was searched: a nameless column entry depletes searches of
+> the columns list, never of the levels list (whose names are the
+> mapping keys and always readable).
 >
 > When `related` is empty, the error stands on its own as far as
 > revpiper can tell — most often a typo or a genuine omission, and the
