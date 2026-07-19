@@ -44,3 +44,27 @@
         suggestion related
       1       <NA>    <NA>
 
+# joins = FALSE is stated wherever the summary appears (review)
+
+    Code
+      out <- rev_spec_audit("specs", joins = FALSE)
+    Message
+      revpiper spec audit: SUCCESS
+      v all input files CERTIFIED (2 of 2 files certified)
+      v estimates.yaml — CERTIFIED
+      v rob.yaml — CERTIFIED
+      v reports written to output/reports/spec-<runstamp>/
+      i joins excluded (joins = FALSE) and therefore not audited/run
+
+---
+
+    Code
+      print(out)
+    Output
+      revpiper spec audit: SUCCESS
+      ✔ all input files CERTIFIED (2 of 2 files certified)
+      ✔ estimates.yaml — CERTIFIED
+      ✔ rob.yaml — CERTIFIED
+      ✔ reports written to output/reports/spec-<runstamp>/
+      ℹ joins excluded (joins = FALSE) and therefore not audited/run
+

@@ -6,7 +6,7 @@
 # then a summary of the file's own contents when certified, or its error
 # table when not. The header says "report" — audit and run write the
 # identical file (Liz, 2026-07-19).
-format_file_report <- function(record) {
+format_file_report <- function(record, joins_excluded = FALSE) {
   n <- nrow(record$problems)
   status <- if (record$certified) {
     "Status: CERTIFIED"
@@ -22,7 +22,8 @@ format_file_report <- function(record) {
       "Errors: none."
     } else {
       c("Errors:", format_problem_table(record$problems))
-    }
+    },
+    if (joins_excluded) c("", joins_excluded_line)
   )
 }
 
@@ -100,7 +101,13 @@ export_spec_reports <- function(outcome, dir = output_reports_dir) {
       }
       path <- file.path(run_dir, rel)
       dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-      writeLines(format_file_report(record), path)
+      writeLines(
+        format_file_report(
+          record,
+          joins_excluded = isTRUE(outcome$joins_excluded)
+        ),
+        path
+      )
       path
     },
     character(1)
@@ -108,6 +115,10 @@ export_spec_reports <- function(outcome, dir = output_reports_dir) {
   names(files) <- vapply(outcome$files, `[[`, character(1), "name")
   invisible(list(dir = run_dir, files = files))
 }
+
+# The joins disposition, stated wherever the summary appears (Liz,
+# 2026-07-19: an excluded joins spec must never read as certified).
+joins_excluded_line <- "joins excluded (joins = FALSE) and therefore not audited/run"
 
 # The console/print lines, from one source (design mocks, signed off
 # 2026-07-19): the overall line first, one certification line per file
@@ -159,7 +170,14 @@ report_lines <- function(outcome) {
   written <- if (outcome$certified) {
     sprintf("reports written to %s/", paths$dir)
   }
-  list(overall = overall, per_file = per_file, ok = ok, written = written)
+  excluded <- if (isTRUE(outcome$joins_excluded)) joins_excluded_line
+  list(
+    overall = overall,
+    per_file = per_file,
+    ok = ok,
+    written = written,
+    excluded = excluded
+  )
 }
 
 announce_spec <- function(outcome) {
@@ -178,6 +196,9 @@ announce_spec <- function(outcome) {
   if (!is.null(lines$written)) {
     cli::cli_alert_success(lines$written)
   }
+  if (!is.null(lines$excluded)) {
+    cli::cli_alert_info(lines$excluded)
+  }
 }
 
 # print() repeats exactly what the call announced, glyphs included.
@@ -188,7 +209,8 @@ format.rev_report <- function(x, ...) {
     lines$overall[[1]],
     if (length(lines$overall) > 1) paste("\u2714", lines$overall[-1]),
     paste(ifelse(lines$ok, "\u2714", "\u2716"), lines$per_file),
-    if (!is.null(lines$written)) paste("\u2714", lines$written)
+    if (!is.null(lines$written)) paste("\u2714", lines$written),
+    if (!is.null(lines$excluded)) paste("\u2139", lines$excluded)
   )
 }
 
@@ -202,7 +224,11 @@ print.rev_report <- function(x, ...) {
 # for this layout fact.
 output_reports_dir <- "output/reports"
 
-# The runstamp format: the one home for report folder naming's time part.
+# The runstamp format: the one home for report folder naming's time
+# part. Whole-second resolution is an accepted limitation (Liz,
+# 2026-07-19, re-affirmed after review challenge): use is human-paced,
+# and a same-second audit+run of the same spec set writes byte-identical
+# reports.
 runstamp <- function() {
   format(Sys.time(), "%Y%m%d-%H%M%S")
 }

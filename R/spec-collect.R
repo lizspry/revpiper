@@ -40,7 +40,7 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
   if (joins) {
     records <- c(records, list(collect_joins(dir, tables, failed_tables)))
   }
-  new_outcome(records)
+  new_outcome(records, joins_excluded = !joins)
 }
 
 # One record per input spec file: certification is per file, rule 1 of
@@ -59,7 +59,7 @@ new_record <- function(name, kind, problems, value) {
 # The outcome owns the certification rule: every record certified. The
 # spec set exists exactly when the whole step certified — audit strips
 # it before returning; run hands it onward.
-new_outcome <- function(records) {
+new_outcome <- function(records, joins_excluded = FALSE) {
   certified <- all(vapply(records, `[[`, logical(1), "certified"))
   specs <- NULL
   if (certified) {
@@ -76,6 +76,7 @@ new_outcome <- function(records) {
       verb = NA_character_,
       files = records,
       certified = certified,
+      joins_excluded = joins_excluded,
       specs = specs
     ),
     class = "rev_report"

@@ -49,3 +49,17 @@ test_that("the audit is data-free: certifies before any data exists", {
   out <- suppressMessages(rev_spec_audit("specs"))
   expect_true(out$certified)
 })
+
+test_that("joins = FALSE is stated wherever the summary appears (review)", {
+  root <- spec_project("specs-good")
+  withr::local_dir(root)
+  expect_snapshot(
+    out <- rev_spec_audit("specs", joins = FALSE),
+    transform = scrub_runstamp
+  )
+  report <- readLines(out$paths$files[["estimates.yaml"]])
+  expect_true(
+    "joins excluded (joins = FALSE) and therefore not audited/run" %in% report
+  )
+  expect_snapshot(print(out), transform = scrub_runstamp)
+})
