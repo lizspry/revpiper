@@ -36,6 +36,7 @@ read_joins <- function(
     run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),
     check_join_sides(raw, path),
+    check_join_coverage(raw, path),
     if (!is.null(dictionaries)) {
       resolve_join_references(raw, path, dictionaries, failed_tables)
     }
@@ -120,7 +121,39 @@ check_join_sides <- function(raw, file) {
   }))
 }
 
-# YX02/YX03: across-source resolution — sides against the loaded tables,
+# YE10: keys must cover both sides — recoded from YX03 (Liz,
+# 2026-07-19): by the deletion test its verdict reads only the entry,
+# so it belongs to the entry series and fires in standalone joins mode
+# too (the old cross-source placement wrongly prevented that).
+check_join_coverage <- function(raw, file) {
+  if (!is_list_of_mappings(raw$joins)) {
+    return(no_problems())
+  }
+  bind_problems(lapply(seq_along(raw$joins), \(i) {
+    join <- raw$joins[[i]]
+    sides <- unlist(Filter(is_string, list(join$left, join$right)))
+    if (length(sides) != 2 || !is_mapping(join$keys)) {
+      return(no_problems())
+    }
+    covered <- vapply(
+      sides,
+      \(side) length(unlist(join$keys[[side]])) > 0,
+      logical(1)
+    )
+    if (all(covered)) {
+      return(no_problems())
+    }
+    flag_problem(
+      file,
+      entry_label(NA_character_, i, "join"),
+      "YE10",
+      left = join$left,
+      right = join$right
+    )
+  }))
+}
+
+# YX02: across-source resolution — sides against the loaded tables,
 # keys' own names against the join's sides, key columns against the named
 # side's key pool (declared plus virtual columns). Every pool resolves
 # through check_reference (YS02's engine, cross-source code). Only
@@ -185,19 +218,6 @@ resolve_join_references <- function(
           file,
           entry,
           code = "YX02"
-        )
-      )
-    }
-    covered <- vapply(sides, \(side) length(key_values[[side]]) > 0, logical(1))
-    if (length(sides) == 2 && !all(covered)) {
-      problems <- rbind(
-        problems,
-        flag_problem(
-          file,
-          entry,
-          "YX03",
-          left = join$left,
-          right = join$right
         )
       )
     }

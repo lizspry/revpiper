@@ -134,6 +134,14 @@ checks:
     params: [table]
     fix: relate two different tables, or remove the join
     implemented: true
+  YE10:
+    scope: entry
+    property: "custom: completeness"
+    meaning: a join's keys do not cover both sides
+    message_template: "keys must name both sides ('{left}' and '{right}')"
+    params: [left, right]
+    fix: joins.yaml entry
+    implemented: true
   YS01:
     scope: source
     property: identity
@@ -200,14 +208,6 @@ checks:
     meaning: a cross-source reference does not resolve (join tables, key columns)
     message_template: "'{value}' does not resolve against {section}"
     params: [value, section]
-    fix: joins.yaml entry
-    implemented: true
-  YX03:
-    scope: cross-source
-    property: "custom: completeness"
-    meaning: a join's keys do not cover both sides
-    message_template: "keys must name both sides ('{left}' and '{right}')"
-    params: [left, right]
     fix: joins.yaml entry
     implemented: true
   YX04:

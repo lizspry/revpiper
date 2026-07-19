@@ -33,10 +33,10 @@
 ---
 
     Code
-      read_bad("joins-yx03-keys-missing-side.yaml")
+      read_bad("joins-ye10-keys-missing-side.yaml")
     Output
                entry code                                           message
-      1 join entry 1 YX03 keys must name both sides ('estimates' and 'rob')
+      1 join entry 1 YE10 keys must name both sides ('estimates' and 'rob')
         suggestion related
       1       <NA>    <NA>
 

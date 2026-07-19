@@ -99,10 +99,11 @@ test_that("YX02: sides resolve against tables, keys against the side's pool", {
   expect_identical(join_codes_of(list(j)), "YX02")
 })
 
-test_that("YX03: keys must cover both sides", {
+test_that("YE10: keys must cover both sides, dictionaries or not", {
   j <- minimal_join()
   j$keys$rob <- NULL
-  expect_identical(join_codes_of(list(j)), "YX03")
+  expect_identical(join_codes_of(list(j)), "YE10")
+  expect_true("YE10" %in% spec_problems(joins_from_list(list(j), NULL))$code)
 })
 
 test_that("a join key may be another table's virtual column", {
@@ -196,7 +197,7 @@ test_that("each single-defect joins file reports naming its problem", {
   expect_snapshot(read_bad("joins-yx02-unknown-table.yaml"))
   expect_snapshot(read_bad("joins-yx02-unknown-key.yaml"))
   expect_snapshot(read_bad("joins-yx02-keys-non-side.yaml"))
-  expect_snapshot(read_bad("joins-yx03-keys-missing-side.yaml"))
+  expect_snapshot(read_bad("joins-ye10-keys-missing-side.yaml"))
   expect_snapshot(read_bad("joins-yf03-bad-relationship.yaml"))
   expect_snapshot(read_bad("joins-ye08-relationship-on-observations.yaml"))
 })
