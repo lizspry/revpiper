@@ -1086,13 +1086,18 @@ structure is understood and deliberate, not inherited:
   reword, or justify at the walkthrough). Update .claude/CLAUDE.md status
   pointers (spec-step-ux branch state, next steps).
 
-- [ ] **Step 3b: Adversarial pass (option 3, Liz 2026-07-19).** Build
-  the blind pack (rendered ?rev_spec_run / ?rev_spec_audit, design
-  governing rule + mocks, example specs) at
-  dev/adversarial/spec-step-blind-pack-2026-07.md and commit it. Dispatch
-  a TOOLLESS agent on a different model with the pack in-prompt; run its
-  predicted-outcome cases against the package; triage disagreements with
-  Liz (bug / spec ambiguity / docs bug); survivors become fixtures.
+- [ ] **Step 3b: Adversarial battery over the new surface** — per the
+  STANDING protocol (conventions.md §Testing, adopted 2026-07-13, first
+  run 54 cases) with the 2026-07-19 upgrades: blind pack (rendered
+  ?rev_spec_run / ?rev_spec_audit, design governing rule + mocks,
+  example specs — no source, no tests) committed at
+  dev/adversarial/spec-step-blind-pack-2026-07.md; TOOLLESS
+  different-model agents, pack in-prompt; oracle-first (expected outcome
+  + clause citation before execution); rotating lenses (naive user,
+  language lawyer, hostile input, QA); UNDETERMINED routes to spec
+  amendment; triage with Liz (bug / test gap / spec ambiguity / docs
+  bug); no fixes during the run; adopted divergences become regression
+  fixtures.
 
 - [ ] **Step 4: Pre-push suite** (dev/conventions.md, run all):
   `air format .`; `Rscript -e 'pkgload::load_all(quiet = TRUE); lintr::lint_package()'`
