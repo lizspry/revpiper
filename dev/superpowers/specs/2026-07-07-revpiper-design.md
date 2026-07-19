@@ -289,8 +289,10 @@ labels) is deliberately absent — designed later beside its consumers
 The `table:` field is the identity; the filename is convention only,
 never policed (Liz, 2026-07-13, from the battery: users' naming varies
 and some divergence is expected). Transparency instead of policing:
-the audit certificate names every dictionary by BOTH filename and
-table — a mismatch is visible where the user signs off. A combine
+each dictionary's per-file report carries BOTH the filename (its
+header and report name) and the table (its summary) — a mismatch is
+visible where the user signs off (per-file reports per the 2026-07-19
+amendment). A combine
 level's virtual column may NOT collide with a declared column name
 (YS06; Liz, same date).
 
@@ -415,11 +417,14 @@ recorded 2026-07-13 — "within-file checks only" holds for joins too).
 
 ### 5.5 Spec validation
 
-Spec files are validated at load, before any data is read, and spec errors
-stop the run — specs must parse; only data problems become findings. Every
-problem is reported at once (never first-error-stops), with file-and-entry
-precision and did-you-mean suggestions; a broken field reports its root
-cause once rather than cascading.
+Spec files are validated before any data is read. Spec problems are
+data — accumulated per file and reported in the per-file reports (§6.1)
+— and an unsound spec set halts the run AFTER all checking completes:
+run returns nothing, so no later step executes; only data problems
+become findings. Every problem is reported at once (never
+first-error-stops), with file-and-entry precision, did-you-mean
+suggestions, and the deterministic `related` column; a broken field
+reports its root cause once rather than cascading.
 
 Validation is schema-driven: `inst/schema/fields.yaml` declares every spec
 field's properties, and checks are generated from properties — one
@@ -440,16 +445,31 @@ exists (§6, stage contract).
 
 ### 6.1 Stage contract
 
-Every user-facing stage command always completes and always emits a report
-plus certification through one shared machinery: stage name, timestamp,
-items, status, acknowledgments, informational annex — written to
-`output/reports/` as `<stage>-<runstamp>.xlsx` (items) and
-`<stage>-<runstamp>-certificate.txt`, one certificate format with a stage
-line. Stage runners never abort on their own items: spec problems make a
-NOT CERTIFIED spec report exactly as findings make a NOT CERTIFIED check
-report; classed aborts remain for constructors called directly. A CERTIFIED
-spec report doubles as a timestamped prespecification artifact,
-registerable before data collection. Data diagnostics
+Every user-facing step command always completes its checking and always
+emits certification through one shared machinery (amended 2026-07-19,
+spec-step UX design, signed off — supersedes the xlsx-plus-certificate
+format): one plain-text report **per input spec file**, written to a
+fresh per-run folder `output/reports/<step>-<runstamp>/<file>.txt` — a
+summary of the file's own contents when it certifies (a dictionary's
+report never describes joins; joins.yaml has its own report), its error
+table when it does not (columns entry / code / message / suggestion /
+related, headers plain, aligned per contents). The deterministic
+`related` column records checked facts only — same entry, or provably
+incomplete search — never guessed causes; its phrases are
+self-contained and live in one home. Certification is per file and
+overall; the console states each file's certification and points at the
+log of any file that failed, never restating report content. Audit and
+run perform, write, and print identically (one shared spine); they
+differ only in the final act — audit returns certification information
+only (never a usable spec object); run returns the validated spec set
+invisibly on success and, on any failure, raises one classed error
+AFTER all checking completes: nothing returned, no later step executes.
+Spec problems are data end-to-end (readers return value + problems and
+never throw); classed aborts remain for usage errors only. A fully
+CERTIFIED per-file report set doubles as a timestamped prespecification
+artifact, registerable before data collection. Later steps follow the
+same per-file pattern with their own item kinds (findings,
+acknowledgments — Phase 2). Data diagnostics
 (`preprocessed-<table>.csv`) go under `output/diagnostics/`.
 
 Certification is absolute — zero standing findings — and per-scope: a table
@@ -575,7 +595,7 @@ Both forms feed identical machinery.
 derived dictionary (the user declares expectations for derived variables
 too — the transform stage's own prespecification), provenance stamping, and
 the data contract written to `output/`. In v1, the process step's
-clean-certification is the terminal certificate.
+clean-certification is the terminal certification.
 
 ### 6.3 Findings
 
@@ -791,6 +811,7 @@ phase-1 plan's amendment trail.
 | 2026-07-12 | Held architecture agenda closed: user-facing format passes the convolution check; "kind" wording kept; same-named-field divergence list kept (conformance test guards drift); schema vocabulary gaps + `permitted_when` stay deferred — triggers: the transform spec's kinds as the likely third permission instance, and phase close-out structural reviews | decide with evidence in view; build nothing speculatively |
 | 2026-07-15 | Interactive, user-facing dashboards in scope for the present step's release (v3), generated and updated from the same specs; exact scope at the module-2 brainstorm | auto-regenerating dashboards are a core appeal of the pipeline, especially for living reviews; supersedes the blanket interactive-layer deferral (recorded via the collaborator one-pagers review) |
 | 2026-07-15 | Umbrella reviews in scope from v1 | one pilot review is an umbrella review; data-model implications worked at the affected phases' planning |
+| 2026-07-19 | Spec-step UX redesign (design doc 2026-07-19-spec-step-ux-design.md, signed off): per-file plain-text reports in per-run folders replace the xlsx workbook + certificate (writexl dropped); deterministic `related` column (same entry / provably incomplete search; self-contained phrases in one home); audit/run share one spine, run halts only after complete checking; readers return value + problems (stop_spec, audit_one, read_dictionaries deleted; spec problems never thrown); usage-error footer points at ?rev_spec_run; withr test idiom; adversarial-battery upgrades (different model, toolless, committed blind pack) | Liz's error-testing session found the old output opaque, cascade-noisy, and the run/audit split unexplainable; problems-as-data makes the audit contract structural |
 
 ## 10. Open questions (with owners)
 
@@ -823,7 +844,7 @@ phase-1 plan's amendment trail.
 | `yaml12` (Posit, Rust-based, CRAN v0.1.0 verified 2026-07-13) as a replacement spec parser: YAML 1.2 drops the 1.1 boolean coercions (unquoted yes/no — the battery's hostile-08 trap and the "Norway problem"), erasing a class of hand-authoring mistakes; all parsing already routes through parse_spec_yaml(), so the swap is one site. Hold for maturity (v0.1.0) and because it flips edge-case behaviour current tests pin | Phase 2 (load) planning, alongside the eyeball-report scan | Open (flagged 2026-07-13, Liz) |
 | Candidate dependencies to evaluate (flagged 2026-07-12, Liz; investigate against the depend/vendor/write-it rule when their phases arrive): the `validate` package as a source of additional data-check options (process phase); `lumberjack` for tracking changes to data through the pipeline (process phase — corrections engine; also relevant to post-certification change tracking) | Phase 3 (process) planning | Open |
 | Output locking, and living-review freezes: a way to mark an output frozen ("don't overwrite unless I say so") — especially a certified-and-locked dataset; per-publication / per-living-review-update snapshots that keep the published dataset frozen while re-runs for the next update diff against it. Interacts with the provenance/audit-trail question above and with lumberjack's change tracking; mechanism candidate from the pointblank review: stable per-check/per-declaration hashes so reports diff across snapshots (their multiagent SHA1-keyed wide report) | Later phase / user consultation (Liz raises "we need to talk about locking at some point") | Open (flagged 2026-07-12, Liz) |
-| Phase 1 close-out structural notes (2026-07-13 reviews, for Phase 2 planning): the spec-step shared vocabulary (`spec_set()`, the layout helpers) lives in the run door and is imported by the audit — extract to a neutral spec-step home when the load step makes the door pattern plural; `is_certified()` and the certificate's Standing-items line must split standing vs acknowledged when acknowledgment cancellation lands; `audit_one()` generalises (error-class parameter) for reuse by later audits; the CERTIFIED/NOT CERTIFIED display words appear in both format.rev_report and the status line (accepted note); YS01 lacks a direct test in its own twin; abort taxonomy (Liz's question, 2026-07-13): content problems (stop_spec, carries $problems, audit-catchable) and usage errors (stop_missing_path, inline guards) share one condition class — split the classes so audits structurally cannot swallow usage errors; relatedly, run's joins-absent guard duplicates YX04's wording and could route through stop_spec (UX trade-off: formal problem list vs the warmer argument-centric sentence) | Phase 2 (load) planning | Open |
+| Phase 1 close-out structural notes (2026-07-13 reviews, for Phase 2 planning): 2026-07-19 update — most items resolved by the spec-step UX branch: spec_set()/layout helpers extracted to the neutral spec-collect.R; audit_one and stop_spec deleted outright (spec problems are data, never thrown — the abort-taxonomy split is moot: only usage errors abort); is_certified retired (certification derives per record); the CERTIFIED/NOT CERTIFIED display renders from one source (report_lines); run's joins-absent guard now IS the YX04 record. Still open: YS01 lacks a direct test in its own twin; standing-vs-acknowledged split arrives with acknowledgment cancellation (Phase 2) | Phase 2 (load) planning | Open |
 | Importing externally generated data dictionaries into the spec format: REDCap (and similar EDC tools) auto-export an Excel/CSV dictionary that a converter could turn into spec YAML; its choice encodings (e.g. `1, No \| 2, Yes`) map to value labels, and its branching-logic column (format unverified; likely "show if fieldX = value") could seed conditional spec-data checks (cf. `permitted_when`, §9) | Later phase (spec importers); needs real REDCap exports from Liz to pin the formats | Open (flagged 2026-07-12, Liz) |
 | Corrections container format: CSV vs YAML (consistency with the other judgment artifacts) vs a tabular-but-not-CSV format. The engine semantics are settled (§6.2: declarative entries — predicate, expected match count, expected old value, mandatory reason — applied programmatically, mismatches fail loudly); open is only the file format. Liz's concern: users will double-click a .csv into Excel, which silently mangles values (dates, leading zeros, encodings) — ironic for a get-out-of-Excel tool. For CSV: corrections are naturally tabular, and the findings export (§6.3, one row per finding) makes a table the shortest triage→fix path. Mitigation candidates: strict schema + all-character read; a helper (`rev_add_correction()`-style) so the file is never hand-edited | Phase 3 (process) planning — corrections engine | Open (flagged 2026-07-15, Liz) |
 | Dashboard scope within the present step: which interactive outputs, rendering/hosting targets, and how dashboard specs extend the declarative output spec | Module-2 brainstorm | Open (flagged 2026-07-15) |
