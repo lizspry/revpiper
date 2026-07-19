@@ -158,3 +158,16 @@ check_table_identity <- function(tables, files) {
     )
   }))
 }
+
+# The shared spine: exactly what both audit and run do, once (design
+# 2026-07-19: run performs, writes, and prints exactly what audit does,
+# differing only in its final act).
+spec_step <- function(dir, joins, file = NULL, verb) {
+  rlang::check_string(dir)
+  rlang::check_bool(joins)
+  outcome <- collect_spec_step(dir, joins, file)
+  outcome$verb <- verb
+  outcome$paths <- export_spec_reports(outcome)
+  announce_spec(outcome)
+  outcome
+}

@@ -25,5 +25,4 @@ Imports:
     cli,
     rlang (>= 1.3.0),
     tibble,
-    writexl,
     yaml

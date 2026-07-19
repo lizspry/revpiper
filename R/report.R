@@ -1,43 +1,6 @@
-# Stage report + certification machinery, generic over steps. Nothing here
-# is exported: each step's audit constructs, prints, and writes its report.
-# The spec stage's items are the problems tibble; the findings item schema
-# and acknowledgment cancellation arrive with the load step (Phase 2).
-
-# A step's report. `annex` is pre-rendered certificate lines the step's
-# audit supplies (e.g. the joins disposition); the formatter appends them
-# verbatim and knows nothing about any stage.
-new_stage_report <- function(stage, items, annex = character(0)) {
-  structure(
-    list(stage = stage, items = items, annex = annex),
-    class = "rev_report"
-  )
-}
-
-# The certification rule, in one place: zero items stand.
-is_certified <- function(report) {
-  nrow(report$items) == 0
-}
-
-# The certificate text: the one home for its wording. The printed
-# certificate and the exported .txt are this same text.
-#' @export
-format.rev_report <- function(x, ...) {
-  c(
-    sprintf("revpiper %s report", x$stage),
-    sprintf(
-      "Status: %s",
-      if (is_certified(x)) "CERTIFIED" else "NOT CERTIFIED"
-    ),
-    sprintf("Standing items: %d", nrow(x$items)),
-    x$annex
-  )
-}
-
-#' @export
-print.rev_report <- function(x, ...) {
-  writeLines(format(x))
-  invisible(x)
-}
+# Rendering and writing for the spec-step outcome: the per-file report
+# text, the console/print lines (one source, so they never drift), and
+# the per-run export. Nothing here is exported except the S3 methods.
 
 # One plain-text report per input spec file (design 2026-07-19): status,
 # then a summary of the file's own contents when certified, or its error
@@ -51,7 +14,7 @@ format_file_report <- function(record) {
     sprintf("Status: NOT CERTIFIED (%d error%s)", n, if (n == 1) "" else "s")
   }
   c(
-    sprintf("revpiper spec report — %s", record$name),
+    sprintf("revpiper spec report \u2014 %s", record$name),
     status,
     "",
     if (record$certified) c(format_summary(record), ""),
@@ -73,7 +36,7 @@ format_summary <- function(record) {
       sprintf("Joins: %d", nrow(joins)),
       if (nrow(joins) > 0) {
         sprintf(
-          "  %s <-> %s — adds %s",
+          "  %s <-> %s \u2014 adds %s",
           joins$left,
           joins$right,
           joins$adds
@@ -87,7 +50,7 @@ format_summary <- function(record) {
       sprintf("Table:   %s", d$table),
       sprintf("Source:  %s", d$source$file),
       sprintf(
-        "Columns: %d — %s",
+        "Columns: %d \u2014 %s",
         nrow(d$columns),
         paste(d$columns$name, collapse = ", ")
       ),
@@ -138,25 +101,97 @@ export_spec_reports <- function(outcome, dir = output_reports_dir) {
   invisible(list(dir = run_dir, files = files))
 }
 
-# Where step reports and certificates live, relative to the project root:
-# the one home for this layout fact.
-output_reports_dir <- "output/reports"
-
-# Write the report workbook and its certificate beside it, named by stage
-# and runstamp. Returns both paths invisibly.
-export_report <- function(report, dir = output_reports_dir) {
-  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  stem <- sprintf("%s-%s", report$stage, runstamp())
-  paths <- c(
-    report = file.path(dir, sprintf("%s.xlsx", stem)),
-    certificate = file.path(dir, sprintf("%s-certificate.txt", stem))
+# The console/print lines, from one source (design mocks, signed off
+# 2026-07-19): the overall line first, one certification line per file
+# with a pointer to the log of any file that failed, the reports-written
+# line on success. The final acts (run's spec-set line, run's abort) are
+# the callers' own.
+report_lines <- function(outcome) {
+  paths <- outcome$paths
+  n <- length(outcome$files)
+  ok <- vapply(outcome$files, `[[`, logical(1), "certified")
+  overall <- if (outcome$certified) {
+    c(
+      sprintf("revpiper spec %s: SUCCESS", outcome$verb),
+      sprintf(
+        "all input files CERTIFIED (%d of %d files certified)",
+        sum(ok),
+        n
+      )
+    )
+  } else {
+    sprintf(
+      "revpiper spec %s: NOT CERTIFIED (%d of %d files certified)",
+      outcome$verb,
+      sum(ok),
+      n
+    )
+  }
+  per_file <- vapply(
+    outcome$files,
+    \(record) {
+      if (record$certified) {
+        sprintf("%s \u2014 CERTIFIED", record$name)
+      } else {
+        n_err <- nrow(record$problems)
+        sprintf(
+          "%s \u2014 NOT CERTIFIED (%d error%s) \u2014 see %s",
+          record$name,
+          n_err,
+          if (n_err == 1) "" else "s",
+          paths$files[[record$name]]
+        )
+      }
+    },
+    character(1)
   )
-  writexl::write_xlsx(list(items = report$items), paths[["report"]])
-  writeLines(format(report), paths[["certificate"]])
-  invisible(paths)
+  written <- if (outcome$certified) {
+    sprintf("reports written to %s/", paths$dir)
+  }
+  list(overall = overall, per_file = per_file, ok = ok, written = written)
 }
 
-# The runstamp format: the one home for report file naming's time part.
+announce_spec <- function(outcome) {
+  lines <- report_lines(outcome)
+  cli::cli_text(lines$overall[[1]])
+  for (extra in lines$overall[-1]) {
+    cli::cli_alert_success(extra)
+  }
+  for (i in seq_along(lines$per_file)) {
+    if (lines$ok[[i]]) {
+      cli::cli_alert_success(lines$per_file[[i]])
+    } else {
+      cli::cli_alert_danger(lines$per_file[[i]])
+    }
+  }
+  if (!is.null(lines$written)) {
+    cli::cli_alert_success(lines$written)
+  }
+}
+
+# print() repeats exactly what the call announced, glyphs included.
+#' @export
+format.rev_report <- function(x, ...) {
+  lines <- report_lines(x)
+  c(
+    lines$overall[[1]],
+    if (length(lines$overall) > 1) paste("\u2714", lines$overall[-1]),
+    paste(ifelse(lines$ok, "\u2714", "\u2716"), lines$per_file),
+    if (!is.null(lines$written)) paste("\u2714", lines$written)
+  )
+}
+
+#' @export
+print.rev_report <- function(x, ...) {
+  writeLines(format(x))
+  invisible(x)
+}
+
+# Where step reports live, relative to the project root: the one home
+# for this layout fact.
+output_reports_dir <- "output/reports"
+
+# The runstamp format: the one home for report folder naming's time part.
 runstamp <- function() {
   format(Sys.time(), "%Y%m%d-%H%M%S")
 }

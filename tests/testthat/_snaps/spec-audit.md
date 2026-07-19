@@ -1,40 +1,46 @@
-# the certified audit: status line and certificate
+# audit prints per-file certification, returns invisibly, specs stripped
 
     Code
-      print(rev_spec_audit())
+      out <- rev_spec_audit("specs")
     Message
-      v Spec step CERTIFIED — certificate written to
-      'output/reports/spec-<runstamp>-certificate.txt'.
-    Output
-      revpiper spec report
-      Status: CERTIFIED
-      Standing items: 0
-      Dictionary: estimates.yaml — table 'estimates'
-      Dictionary: rob.yaml — table 'rob'
-      Joins: included
+      revpiper spec audit: NOT CERTIFIED (1 of 3 files certified)
+      x estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-<runstamp>/estimates.txt
+      v rob.yaml — CERTIFIED
+      x joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-<runstamp>/joins.txt
 
-# the not-certified audit: status line and certificate
+# audit success: reports written, specs still not returned
 
     Code
-      print(rev_spec_audit())
+      out <- rev_spec_audit("specs")
     Message
-      x Spec step NOT CERTIFIED (1 standing problem)
-      — report written to 'output/reports/spec-<runstamp>.xlsx'.
-    Output
-      revpiper spec report
-      Status: NOT CERTIFIED
-      Standing items: 1
-      Dictionary: estimates.yaml — table 'estimates'
-      Dictionary: rob.yaml — table 'rob'
-      Joins: included
+      revpiper spec audit: SUCCESS
+      v all input files CERTIFIED (3 of 3 files certified)
+      v estimates.yaml — CERTIFIED
+      v rob.yaml — CERTIFIED
+      v joins.yaml — CERTIFIED
+      v reports written to output/reports/spec-<runstamp>/
 
-# joins expected but absent is a standing item, not an error
+# printing the returned outcome repeats the console lines
 
     Code
-      as.data.frame(report$items[, c("code", "message")])
+      print(out)
     Output
-        code
-      1 YX04
-                                                                                                      message
-      1 expected spec file 'specs/joins.yaml' does not exist; set joins = FALSE to audit without a joins spec
+      revpiper spec audit: SUCCESS
+      ✔ all input files CERTIFIED (3 of 3 files certified)
+      ✔ estimates.yaml — CERTIFIED
+      ✔ rob.yaml — CERTIFIED
+      ✔ joins.yaml — CERTIFIED
+      ✔ reports written to output/reports/spec-<runstamp>/
+
+# an expected-but-absent joins spec decertifies via YX04
+
+    Code
+      as.data.frame(record(out, "joins.yaml")$problems)
+    Output
+                    file    entry code
+      1 specs/joins.yaml spec set YX04
+                                                                                                                  message
+      1 expected spec file 'specs/joins.yaml' does not exist; set joins = FALSE to run the spec step without a joins spec
+        suggestion related
+      1       <NA>    <NA>
 

@@ -11,31 +11,62 @@ rev_spec_audit(dir = "specs", joins = TRUE)
 joins spec at \verb{<dir>/joins.yaml}.}
 
 \item{joins}{Expect the joins spec? \code{TRUE} (the default) makes an
-absent \verb{<dir>/joins.yaml} a standing item; \code{FALSE} audits without it.}
+absent \verb{<dir>/joins.yaml} a standing error; \code{FALSE} audits without
+it.}
 }
 \value{
-The \code{rev_report}, returned visibly — it auto-prints as the
-certificate when the call is not assigned. When certified, the
-loaded specs ride along as the \code{"specs"} attribute.
+Certification information only, invisibly (the same lines
+were just printed; \code{print()} the result to see them again): the
+per-file records (\verb{$files}), the overall \verb{$certified}, and the
+report paths (\verb{$paths}). Never the spec set — \code{rev_spec_run()} is
+the function that hands the validated specs onward.
 }
 \description{
-Checks the project's spec set and reports — it never errors on spec
-problems. Every table dictionary is validated standalone with problems
-accumulated across all files, then the set-identity check runs over the
-dictionaries that loaded, then the joins spec is validated against
-them. All problems become report items; the report and its certificate
-are always written under \verb{output/reports/}, and one status line states
-the outcome and the certificate's path. Data-free: it checks that
-sources are declared, never that data files exist, so a spec set
-certifies before any data is collected.
+Checks every spec file and reports, per file — it never errors on
+spec problems, and never returns a usable spec object. Every table
+dictionary is checked standalone with problems accumulated across all
+files, the across-dictionary identity check runs over the
+dictionaries that loaded, and (with \code{joins = TRUE}) the joins spec is
+checked against them. One plain-text report per input spec file is
+written to a fresh run folder under \verb{output/reports/} — a summary of
+the file's contents when it certifies, its error log when it does not
+— and the console states each file's certification with a pointer to
+the log of any file that failed. Data-free: it checks that sources
+are declared, never that data files exist, so a spec set certifies
+before any data is collected.
 }
+\details{
+\code{rev_spec_run()} performs, writes, and prints exactly what this audit
+does, then hands the validated spec set to the next step; the audit
+is the check-only member of the pair.
+}
+\section{The related column}{
+
+The \code{related} column never guesses causes. It records one of two
+checkable facts:
+\itemize{
+\item \strong{Same entry:} this error sits in the same entry as at least one
+other error. Fixing that one entry and re-running may clear several
+errors at once.
+\item \strong{Incomplete search:} this error says a name couldn't be found (a
+column, a table) — and the place that should have declared that
+name is itself broken (a column entry whose own name can't be read,
+or a spec file that failed its checks). The search was therefore
+run against an incomplete list. Fix the broken declaration first;
+this error may then disappear on its own.
+}
+
+When \code{related} is empty, the error stands on its own as far as
+revpiper can tell — most often a typo or a genuine omission, and the
+\code{suggestion} column is the better guide.
+}
+
 \examples{
 # the audit writes output/reports/ under the working directory, so
 # this example runs in a throwaway one
 specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
 owd <- setwd(tempdir())
-report <- rev_spec_audit(dir = specs_dir)
-report
-list.files("output/reports")
+rev_spec_audit(dir = specs_dir)
+list.files("output/reports", recursive = TRUE)
 setwd(owd)
 }
