@@ -98,15 +98,37 @@ spelling-distance heuristic (that stays in `suggestion`, phrased as a
 question):
 
 1. **Same entry:** the error sits in an entry that has other errors.
-2. **References an entry/file with errors:** the error arose resolving a
-   reference to something that itself has standing errors — e.g.
-   `'estimates' does not resolve — its spec file estimates.yaml has
-   standing errors` (the intended table name read directly from the failed
-   file's raw YAML; if unreadable, no link is asserted).
+2. **Incomplete search** (amended 2026-07-19, Liz): the error is a failed
+   name lookup, and the pool it searched is *provably incomplete*:
+   - within a file — the referred section contains entries whose own
+     names cannot be read (`entry_names()` NA); related reads
+     `the columns section has entries whose names cannot be read`.
+     Errors that do not remove names from the pool (e.g. a bad range on
+     a correctly named column) never trigger related — they cannot
+     explain a failed reference.
+   - across files — a join side names the table a failed spec file
+     intended (its `table:` field, read from raw YAML; if unreadable, no
+     link); related reads `spec file estimates.yaml has standing errors`.
 
-The implementation plan enumerates every reference route eligible for
-rule 2 (joins sides/keys, level references, `constant_within_level`, …)
-and states each route's trigger precisely.
+**User-facing definition (verbatim in the help docs, signed off
+2026-07-19):**
+
+> The `related` column never guesses causes. It records one of two
+> checkable facts:
+>
+> - **Same entry:** this error sits in the same entry as at least one
+>   other error. Fixing that one entry and re-running may clear several
+>   errors at once.
+> - **Incomplete search:** this error says a name couldn't be found (a
+>   column, a table) — and the place that should have declared that name
+>   is itself broken (a column entry whose own name can't be read, or a
+>   spec file that failed its checks). The search was therefore run
+>   against an incomplete list. Fix the broken declaration first; this
+>   error may then disappear on its own.
+>
+> When `related` is empty, the error stands on its own as far as
+> revpiper can tell — most often a typo or a genuine omission, and the
+> `suggestion` column is the better guide.
 
 ## Console output (no duplication with the files)
 

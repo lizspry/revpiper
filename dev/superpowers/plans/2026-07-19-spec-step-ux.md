@@ -199,70 +199,57 @@ relate_same_entry <- function(problems) {
 
 - [ ] **Step 5: Commit** — `related rule 1: same-entry co-location`
 
-### Task 3: Rule 2 within a file — references into a troubled section
+### Task 3: Rule 2 within a file — references into a provably incomplete pool
 
 **Files:**
 - Modify: `R/spec-generic.R` (check_reference), `R/spec-source.R`
-  (read_dictionary, resolve_references)
+  (resolve_references, pool_incomplete)
 - Test: `tests/testthat/test-spec-source.R`
 
 **Interfaces:**
 - Consumes: `flag_problem(..., related =)` from Task 1.
 - Produces: `check_reference(values, declared, section, file, entry,
-  code = "YS02", troubled = NA_character_, troubled_pool = character(0))`.
-  `troubled` (single string or NA): the related text when the declared
-  pool's section has standing errors. `troubled_pool` (named chr:
-  value -> related text): per-value links, used by Task 4.
-  `resolve_references(raw, file, prior)` gains the prior-problems arg.
-  `section_troubled(prior, section)` returns the related phrase or NA.
+  code = "YS02", related_for = NULL)` — `related_for` is a function from
+  a failed value to its related text (or NULL); the ONE seam both rules-2
+  routes share (Task 4 passes its own closure).
+  `pool_incomplete(raw, section)` in spec-source.R.
 
-Trigger (exact): a YS02 fires AND the section it resolves against already
-has >= 1 problem in the same file. Section attribution is by the
-codebase's single-home entry-label phrases: `columns` is troubled when any
-prior entry starts with `"column "`; `levels` when any starts with
-`"level "` or equals `section_label("levels")`; `"key columns"` when
-either is troubled (its pool is columns + combine levels). The related
-phrase is `sprintf("the %s section has standing errors", section)` with
-the same `section` string the check already receives.
+Trigger (exact, amended 2026-07-19 with Liz): a reference fails AND the
+pool it resolved against is PROVABLY INCOMPLETE — the referred section
+contains entries whose identity could not be read (`entry_names()` NA).
+Only column entries can go nameless (level names are mapping keys, always
+readable), so within-file related fires only for column-referring pools
+(`columns`, `key columns`), with the verbatim phrase
+`"the columns section has entries whose names cannot be read"`.
+Errors that do not remove names from the pool (e.g. a bad range on a
+correctly named column) never trigger related — they cannot explain a
+failed reference. No label parsing, no prior-problems threading:
+the trigger reads the raw spec data.
 
-- [ ] **Step 1: Write the failing test** (fixture-based, following
-  test-spec-source.R's existing helper pattern for writing temp specs)
+- [ ] **Step 1: Write the failing test** (test-spec-source.R, using the
+  suite's `minimal_dict()` / `problems_of()` idiom)
 
 ```r
-test_that("YS02 into a troubled section carries related; clean section does not", {
-  # columns entry 2 is broken (name misspelled 'nam'); levels references
-  # a column name that cannot resolve -> related states the section fact
-  path <- write_spec_fixture(list(
-    table = "t1", source = list(file = "d.csv"),
-    levels = list(study = "study_id"),
-    columns = list(
-      list(name = "id", type = "text"),
-      list(nam = "study_id", type = "text")
-    )
-  ))
-  e <- tryCatch(read_dictionary(path), revpiper_spec_error = identity)
-  ys02 <- e$problems[e$problems$code == "YS02", ]
-  expect_identical(nrow(ys02), 1L)
-  expect_identical(ys02$related, "the columns section has standing errors")
+test_that("a failed reference beside nameless column entries carries related", {
+  d <- minimal_dict()
+  d$levels <- list(study = "studyx") # fails to resolve
+  d$columns[[2]] <- list(nam = "site", type = "text") # nameless entry
+  p <- problems_of(d)
+  expect_identical(
+    p[p$code == "YS02", ]$related,
+    "the columns section has entries whose names cannot be read"
+  )
 
-  # same reference failure with a CLEAN columns section: related stays NA
-  path2 <- write_spec_fixture(list(
-    table = "t2", source = list(file = "d.csv"),
-    levels = list(study = "study_idx"),
-    columns = list(list(name = "study_id", type = "text"))
-  ))
-  e2 <- tryCatch(read_dictionary(path2), revpiper_spec_error = identity)
-  ys02b <- e2$problems[e2$problems$code == "YS02", ]
-  expect_identical(ys02b$related, NA_character_)
+  # clean names: the same failed reference stands alone (typo territory)
+  d2 <- minimal_dict()
+  d2$levels <- list(study = "studyx")
+  p2 <- problems_of(d2)
+  expect_identical(p2[p2$code == "YS02", ]$related, NA_character_)
 })
 ```
 
-(If no `write_spec_fixture()` helper exists in helper-spec.R, add one that
-`yaml::write_yaml()`s the list to `withr::local_tempfile(fileext = ".yaml")`
-— follow the file's existing fixture idiom; do not duplicate an existing
-helper.)
-
-- [ ] **Step 2: Run to verify failure** — related is NA in case 1.
+- [ ] **Step 2: Run to verify failure** — `devtools::test(filter =
+  "spec-source")`; expected: related is NA in the first case.
 
 - [ ] **Step 3: Implement**
 
@@ -270,66 +257,59 @@ helper.)
 
 ```r
 check_reference <- function(
-  values, declared, section, file, entry,
-  code = "YS02", troubled = NA_character_, troubled_pool = character(0)
+  values,
+  declared,
+  section,
+  file,
+  entry,
+  code = "YS02",
+  related_for = NULL
 ) {
   bad <- setdiff(values, declared)
   bind_problems(lapply(bad, \(v) {
-    related <- if (v %in% names(troubled_pool)) {
-      troubled_pool[[v]]
-    } else if (!is.na(troubled)) {
-      troubled
-    } else {
-      NULL
-    }
     flag_problem(
-      file, entry, code,
-      value = v, section = section,
+      file,
+      entry,
+      code,
+      value = v,
+      section = section,
       suggestion = suggest_name(v, declared),
-      related = related
+      related = if (!is.null(related_for)) related_for(v)
     )
   }))
 }
 ```
 
-`section_troubled()` and the `resolve_references()` rewiring in
-`R/spec-source.R`:
+In `R/spec-source.R`, beside resolve_references:
 
 ```r
-# Whether a referred-to section already has standing problems, by the
-# single-home entry-label phrases (entry_label / section_label).
-section_troubled <- function(prior, section) {
-  starts <- function(p) any(startsWith(prior$entry, p))
-  hit <- switch(
-    section,
-    columns = starts("column "),
-    levels = starts("level ") || any(prior$entry == section_label("levels")),
-    "key columns" = starts("column ") || starts("level ") ||
-      any(prior$entry == section_label("levels"))
-  )
-  if (hit) sprintf("the %s section has standing errors", section) else NA_character_
+# Whether a referred-to section's name pool is provably incomplete: it
+# contains entries whose identity could not be read. Level names are
+# mapping keys (always readable), so only column entries can go nameless.
+pool_incomplete <- function(raw, section) {
+  if (!section %in% c("columns", "key columns")) {
+    return(FALSE)
+  }
+  is_list_of_mappings(raw$columns) &&
+    anyNA(entry_names(raw$columns, "column"))
 }
 ```
 
-In `resolve_references(raw, file, prior)`: compute
-`troubled <- section_troubled(prior, row$refers_to)` per referring row and
-pass `troubled = troubled` into its `check_reference()` call. In
-`read_dictionary()`, split the one `rbind` so references run last and see
-the prior problems:
+In `resolve_references()`, per referring row compute the closure and pass
+it through (read_dictionary is untouched — the trigger reads raw, not
+prior problems):
 
 ```r
-problems <- rbind(
-  run_entry_checks(raw, "file", path, root_entry_label),
-  run_contents_checks(raw, "file", path),
-  check_level_entries(raw, path),
-  check_virtual_collisions(raw, path)
-)
-problems <- rbind(problems, resolve_references(raw, path, problems))
+related_for <- if (pool_incomplete(raw, row$refers_to)) {
+  \(value) "the columns section has entries whose names cannot be read"
+}
+# ... check_reference(instance$values, known, row$refers_to, file,
+#                     instance$entry, related_for = related_for)
 ```
 
 - [ ] **Step 4: Run to verify pass**, then full suite.
 
-- [ ] **Step 5: Commit** — `related rule 2 (within-file): references into a troubled section`
+- [ ] **Step 5: Commit** — `related rule 2 (within-file): references into a provably incomplete pool`
 
 ### Task 4: Rule 2 across files — joins referencing a failed dictionary
 
@@ -338,7 +318,7 @@ problems <- rbind(problems, resolve_references(raw, path, problems))
 - Test: `tests/testthat/test-spec-join.R`
 
 **Interfaces:**
-- Consumes: `check_reference(..., troubled_pool =)` from Task 3.
+- Consumes: `check_reference(..., related_for =)` from Task 3.
 - Produces: `read_joins(path, dictionaries = NULL, failed_tables =
   character(0))` and `resolve_join_references(raw, file, dictionaries,
   failed_tables)`. `failed_tables` is a named chr vector: intended table
@@ -382,13 +362,14 @@ idiom, done inline because this call needs the `failed_tables` argument.)
   resolution, build the per-value pool:
 
 ```r
-pool <- stats::setNames(
-  sprintf("spec file %s has standing errors", failed_tables),
-  names(failed_tables)
-)
+related_for <- function(v) {
+  if (v %in% names(failed_tables)) {
+    sprintf("spec file %s has standing errors", failed_tables[[v]])
+  }
+}
 problems <- check_reference(
   sides, tables, "the loaded tables", file, entry,
-  code = "YX02", troubled_pool = pool
+  code = "YX02", related_for = related_for
 )
 ```
 
@@ -982,7 +963,12 @@ machinery deferred from Task 6.
   the spec step"; describe per-file reports, the per-run folder, the
   certification-information-only return (explicitly: never the spec set —
   run is the function that hands the spec set onward); example runs in
-  `tempdir()` exactly as the current example does. `devtools::document()`.
+  `tempdir()` exactly as the current example does. MUST include the
+  related-column definition as a named section, verbatim from the design
+  doc's "User-facing definition" block (signed off by Liz 2026-07-19),
+  via `@section The related column:` — rev_spec_run inherits it with
+  `@inheritSection rev_spec_audit The related column` (Task 8).
+  `devtools::document()`.
 
 - [ ] **Step 5: Run to verify pass**, full suite.
 
