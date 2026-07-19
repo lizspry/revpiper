@@ -1104,10 +1104,21 @@ structure is understood and deliberate, not inherited:
   (expect 0 lints); `Rscript -e 'devtools::test()'` (expect 0 failures);
   `Rscript -e 'devtools::check()'` (expect 0 errors / 0 warnings / 0 notes).
 
-- [ ] **Step 5: Structural review** (amendment 7h/8e: at phase close-out)
-  — read the final diff whole; run the pre-commit duplication pass and
-  /simplify on the branch diff per the binding protocol; fixes reviewed
-  jointly with Liz.
+- [ ] **Step 5: Two-tier review (scope settled with Liz, 2026-07-19).**
+  Tier 1, diff-scoped: /code-review (correctness) and /simplify
+  (quality) over the full branch diff. Tier 2, repo-wide structural
+  audit: every R/ and tests/ file read as one system and audited
+  AGAINST conventions.md SECTION BY SECTION — Terminology (retired
+  words grep), Style & formatting, Naming, Linting, Testing (layers,
+  invariants, snapshot gates), Documentation, Dependencies, Design,
+  the Single-source-of-truth inventory item by item (plus any new
+  single-home fact this branch created), Git — and against the design
+  spec and .claude/CLAUDE.md for code-vs-docs consistency. Findings
+  triaged with Liz: small-and-in-scope fixed in-branch with
+  walkthrough; real-but-out-of-scope logged explicitly, never silently
+  absorbed. A principle worth checking that conventions.md does not
+  record is itself a finding: proposed to Liz as a conventions
+  addition.
 
 - [ ] **Step 6: Commit** — `Spec amendment + NEWS: per-file report machinery, run/audit contract` —
   then hand to Liz: fetch, review PR (deliverable + amendment together),
