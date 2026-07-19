@@ -21,6 +21,14 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   Ubuntu apt repository as the sole R.)
 - This sandbox NEVER pushes to GitHub. Commit locally on a feature
   branch; Liz fetches via the sandbox remote, pushes, and opens the PR.
+  Host-side commands: `git fetch sandbox-<name>` (note the `sandbox-`
+  prefix; `<name>` = this sandbox's $SANDBOX_VM_ID), then
+  `git checkout <branch>`.
+- Outward-facing documents never fork the design: a deliverable that
+  changes scope or design carries a spec-amendment commit in the same
+  branch, so the PR review signs off both together. (Adopted 2026-07-15,
+  one-pagers session — dashboards/umbrella scope changes briefly lived
+  only in deliverables.)
 - Git author and committer must be "claude" <liz.spry+claude@gmail.com>
   (set by claude-config settings; verify with `git var GIT_AUTHOR_IDENT`
   at session start and before each commit).
@@ -34,6 +42,10 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
 - Short and plain (Liz, 2026-07-13). Lead with the one-sentence answer
   in everyday words; skip jargon she hasn't used; a couple of sentences
   beats paragraphs. She asks ("expand") when she wants the long version.
+- Outward-facing documents: avoid absolutes; Liz consistently softens
+  claims to defensible phrasing (her 2026-07-15 edits: "frequently",
+  "primarily", "free, open-source"). Don't deploy an explanation before
+  its referents are introduced; make divisions of labour explicit.
 
 ## Rhythm
 - Plan → get Liz's sign-off → pre-flight → implement in small reviewed steps.
@@ -72,11 +84,20 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   (rev_spec_audit, 19b6025/91f0326) + Task 18 (close-out: CLAUDE.md
   relocated to .claude/, examples, audits, gates all clean — 381 tests,
   0 lints, check 0/0/0; Imports re-cut and lint gate settled by Liz
-  2026-07-13). PHASE 1 COMPLETE sandbox-side. NEXT, in order: (1) Liz
-  pulls phase-1-core, pushes, opens the Phase 1 PR (squash-merge, CI
-  green gate); (2) the
-  collaborator deliverable (academic-planning skill; Liz owns
-  structure; framing in the plan's Task 5-close blockquote).
+  2026-07-13). PHASE 1 COMPLETE sandbox-side. The collaborator
+  deliverable (Task 5-close item 2) is DELIVERED on branch
+  collab-onepagers (2026-07-15/16, ~13 commits, planned via
+  academic-planning): three docs in dev/deliverables/ — shared project
+  one-pager, review-team one-pager (substantially the Task 5-close
+  deliverable, Markdown per Liz), engineer brief — plus the RAISE 2026
+  PDFs, cited/cited.bib (citation-tracking rule; all claims verified via
+  paperclip), and a spec amendment (dashboards in scope for v3, umbrella
+  reviews in scope from v1, §10 corrections-container-format question
+  for Phase 3). NEXT, in order: (1) Liz pulls phase-1-core, pushes,
+  opens the Phase 1 PR (squash-merge, CI green gate); (2) Liz reviews
+  the collab-onepagers PR — that review is the sign-off for the
+  deliverables AND the spec amendment together; (3) Phase 2 (load)
+  planning.
   m:m/append data-check semantics parked to the process phase (old
   Task 11); structural reviews at each phase's close-out (amendment
   7h/8e).

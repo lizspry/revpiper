@@ -1120,7 +1120,11 @@ source file `data/raw/rob.csv`, columns `study_id` (text, required) +
 > not a lock-in — piloting and extraction changes are expected and allowed;
 > the spec evolves with the review. Invite engagement and refinement.
 > Describe (not demo) the certificate and draft generator as coming.
-> Quarto source; AI-use disclosure statement; seeds the Phase 3 vignette.
+> Quarto source; AI-use disclosure statement; seeds the Phase 3 vignette
+> [stale label — vignettes are Phase 4 under amendment 8's phase re-cut;
+> noted 2026-07-15. Delivered as the review-team one-pager,
+> dev/deliverables/2026-07-15-revpiper-review-teams.md, in Markdown per
+> Liz's 2026-07-15 instruction].
 
 > **Tasks 6–13 below MOVED out of Phase 1 by execution amendment 8** —
 > old 6, 7, 13 and the findings half of 9 to Phase 2 (load); old 8, 10, 11
