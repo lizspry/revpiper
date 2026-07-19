@@ -213,6 +213,38 @@ revpiper: inst/schema/fields.yaml and checks.yaml.)
   on merge. Squash-merge. Plain imperative commit messages.
 - Version: MAJOR.MINOR.PATCH(.9000 dev). NEWS heading per release.
 
+## Testing
+
+Structure (settled at the 2026-07-19 test-structure review; where each
+kind of new test belongs):
+- Layer 1 — unit tests of building blocks (problem schema, registry).
+  test-schema.R holds the suite invariants: every implemented check code
+  appears in a snapshot; no snapshot uses an unregistered code.
+- Layer 2 — check matrices: one minimal valid spec (minimal_dict /
+  minimal_join), one mutation per test, expected code stated BY HAND.
+  Coverage may derive from the schema (gap alarms); verdicts never do.
+- Layer 3 — single-defect fixture batteries (fixtures/specs-bad/), one
+  broken file per defect, snapshot-tested: the browsable gallery of every
+  user-visible error.
+- Layer 4 — assembly and the exported surface (collector semantics,
+  report rendering, audit/run end-to-end via spec_project copies).
+- Helpers shared by 2+ files live in helper*.R; single-file helpers stay
+  file-local. withr for fixtures/state (see Style & formatting).
+- Snapshots are review gates: a diff is read by a human against the
+  signed-off design before snapshot_accept; never bulk-accepted.
+- Principle: green tests mean "consistent with the reviewed design",
+  never "correct". User error-testing rounds and adversarial passes are
+  part of the quality system, not evidence of its failure.
+- Adversarial stage (adopted Liz, 2026-07-19; standing at each phase's
+  close-out): a blind pack (help docs, design promises, examples — no
+  source, no tests) is committed under dev/adversarial/ and given to an
+  independent, TOOLLESS agent (isolation by construction: materials in
+  the prompt, no file access) — a different model than wrote the code —
+  which designs breaking cases with predicted outcomes. Disagreements
+  triage to: implementation bug / spec ambiguity (Liz's call) / docs
+  bug. Survivors become permanent fixtures. The committed pack lets Liz
+  run the same exercise against external models at will.
+
 ## Pre-push suite (run locally before every push; CI is the backstop)
     air format .
     Rscript -e 'pkgload::load_all(quiet = TRUE); lintr::lint_package()'

@@ -1086,6 +1086,14 @@ structure is understood and deliberate, not inherited:
   reword, or justify at the walkthrough). Update .claude/CLAUDE.md status
   pointers (spec-step-ux branch state, next steps).
 
+- [ ] **Step 3b: Adversarial pass (option 3, Liz 2026-07-19).** Build
+  the blind pack (rendered ?rev_spec_run / ?rev_spec_audit, design
+  governing rule + mocks, example specs) at
+  dev/adversarial/spec-step-blind-pack-2026-07.md and commit it. Dispatch
+  a TOOLLESS agent on a different model with the pack in-prompt; run its
+  predicted-outcome cases against the package; triage disagreements with
+  Liz (bug / spec ambiguity / docs bug); survivors become fixtures.
+
 - [ ] **Step 4: Pre-push suite** (dev/conventions.md, run all):
   `air format .`; `Rscript -e 'pkgload::load_all(quiet = TRUE); lintr::lint_package()'`
   (expect 0 lints); `Rscript -e 'devtools::test()'` (expect 0 failures);
