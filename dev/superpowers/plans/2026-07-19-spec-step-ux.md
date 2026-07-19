@@ -1025,6 +1025,25 @@ construction; nothing is predecided except the questions:
 - [ ] **Step 3: Apply, run full suite, update design doc wording if
   changed, commit** — `related wording: reviewed strings, single home`.
 
+### Task 9c: test-structure review with Liz (added 2026-07-19, Liz)
+
+A guided walkthrough of the suite as it stands after this branch, so its
+structure is understood and deliberate, not inherited:
+
+- [ ] **Step 1: Map the layers.** Walk through, with examples from the
+  live suite: unit tests of constructors/helpers; the per-check matrix
+  tests (one battery per code, driven from minimal_dict/minimal_join
+  mutations); the single-defect fixture batteries and what their
+  snapshots showcase; snapshot mechanics (_snaps/, when a diff is
+  reviewed vs accepted, the every-code-snapshotted invariant in
+  test-schema.R); the integration tests over audit/run; helper inventory
+  (helper.R vs helper-spec.R, the withr idiom) and the fixtures/ folders.
+- [ ] **Step 2: Liz's questions answered against real files**; any
+  structural decisions she takes (renames, splits, conventions) recorded.
+- [ ] **Step 3: Record the settled description** as a short Testing
+  section in dev/conventions.md (structure + where new tests of each
+  kind belong), committed for sign-off in the PR.
+
 ### Task 10: Spec amendment, NEWS, close-out gates
 
 **Files:**
