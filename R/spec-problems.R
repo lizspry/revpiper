@@ -52,12 +52,12 @@ relate_same_entry <- function(problems) {
   problems
 }
 
-# Every spec-error abort ends with the same pointer (decision 2026-07-13):
-# the one home for the footer's wording.
+# Every usage-error abort ends with the same pointer (reworded per the
+# 2026-07-19 UX design): the one home for the footer's wording. Spec
+# problems carry no footer — they are report rows, not errors.
 spec_error_footer <- c(
-  i = "Canonical spec examples ship with the package:
-       {.code system.file(\"extdata\", \"specs-example\",
-       package = \"revpiper\")}"
+  i = "See {.code ?rev_spec_run} for the expected spec layout,
+       with correctly formatted examples."
 )
 
 # Abort (spec-error class) when a required input path is absent; `what`

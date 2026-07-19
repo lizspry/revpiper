@@ -5,7 +5,7 @@
     Condition
       Error:
       ! Dictionary file 'no/such/dictionary.yaml' does not exist.
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+      i See `?rev_spec_run` for the expected spec layout, with correctly formatted examples.
 
 # each single-defect dictionary aborts naming its problem
 

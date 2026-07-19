@@ -10,10 +10,11 @@ test_that("suggest_name finds near misses and refuses far ones", {
   )
 })
 
-# The footer's promise must not go silently stale: system.file returns ""
-# for a missing path rather than erroring, so a rename of the packaged
-# examples would otherwise break the pointer without failing anything.
-test_that("the canonical examples the spec-error footer points to exist", {
+# The docs' promise must not go silently stale: the footer points to
+# ?rev_spec_run, whose Spec layout section points to the packaged
+# examples; system.file returns "" for a missing path rather than
+# erroring, so a rename would otherwise break the chain silently.
+test_that("the packaged examples the help docs point to exist", {
   path <- system.file("extdata", "specs-example", package = "revpiper")
   expect_true(nzchar(path))
   expect_true(file.exists(file.path(path, "joins.yaml")))
