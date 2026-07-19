@@ -61,9 +61,7 @@ report_text <- function(report_dir, name) {
 }
 
 with_work_dir <- function(work_dir, code) {
-  old <- setwd(work_dir)
-  on.exit(setwd(old), add = TRUE)
-  force(code)
+  withr::with_dir(work_dir, code)
 }
 
 test_that("missing joins is a standing error by default but not when joins is FALSE", {
@@ -268,7 +266,11 @@ test_that("same-entry and incomplete-search related text appear only when promis
     expect_match(estimates_report_a, "unknown field 'nam'")
     expect_match(estimates_report_a, "missing required field 'name'")
     expect_match(estimates_report_a, "another error sits in this entry")
-    expect_match(estimates_report_a, "incomplete list")
+    # The searched pool here is the LEVELS list, whose names are mapping
+    # keys and can never be depleted by a broken column entry — so the
+    # incomplete-search note must NOT appear (external-battery finding,
+    # 2026-07-19: the docs gained their scoping sentence from this case).
+    expect_no_match(estimates_report_a, "incomplete list")
   })
 
   root_b <- new_spec_sandbox()
