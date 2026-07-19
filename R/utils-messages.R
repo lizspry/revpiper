@@ -26,6 +26,16 @@ new_problem <- function(
   )
 }
 
+# Rule 1 of the related column (design 2026-07-19): a plain fact of
+# location, never causation. Rule 2 (set at flag time) wins where present.
+relate_same_entry <- function(problems) {
+  key <- paste(problems$file, problems$entry, sep = "\r")
+  shared <- key %in% key[duplicated(key)]
+  fill <- shared & is.na(problems$related)
+  problems$related[fill] <- "other error in this entry"
+  problems
+}
+
 # Throw once, listing every accumulated problem with its fix route.
 stop_spec <- function(problems) {
   hint <- ifelse(
