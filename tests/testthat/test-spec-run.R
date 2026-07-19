@@ -1,56 +1,58 @@
-specs_path <- function(dir) {
-  test_path("fixtures", dir)
-}
-
-test_that("rev_spec_run() reads the whole spec set with joins by default", {
-  specs <- rev_spec_run(specs_path("specs-good"))
+test_that("run success: audit-identical output plus final acts; spec set invisible", {
+  root <- spec_project("specs-good")
+  withr::local_dir(root)
+  expect_snapshot(specs <- rev_spec_run("specs"), transform = scrub_runstamp)
   expect_named(specs, c("tables", "joins"))
   expect_named(specs$tables, c("estimates", "rob"))
-  for (dict in specs$tables) {
-    expect_s3_class(dict, "rev_dictionary")
-  }
-  expect_gt(nrow(specs$joins), 0)
+  expect_s3_class(specs$tables[[1]], "rev_dictionary")
+  expect_identical(nrow(specs$joins), 1L)
+  expect_invisible(suppressMessages(rev_spec_run("specs")))
+  written <- list.files("output/reports", recursive = TRUE)
+  expect_true(length(written) >= 3) # run writes everything audit writes
 })
 
-test_that("rev_spec_run(joins = FALSE) skips an available joins spec", {
-  specs <- rev_spec_run(specs_path("specs-good"), joins = FALSE)
-  expect_named(specs$tables, c("estimates", "rob"))
-  expect_identical(nrow(specs$joins), 0L)
-})
-
-test_that("rev_spec_run(joins = TRUE) errors when no joins spec exists", {
+test_that("run failure: all checking completes, reports written, then one abort", {
+  root <- spec_project("specs-good")
+  break_file(root, "estimates.yaml")
+  withr::local_dir(root)
   expect_snapshot(
-    rev_spec_run(specs_path("specs-nojoins")),
-    error = TRUE
+    error = TRUE,
+    rev_spec_run("specs"),
+    transform = scrub_runstamp
   )
+  written <- list.files("output/reports", recursive = TRUE)
+  expect_setequal(
+    basename(written),
+    c("estimates.txt", "rob.txt", "joins.txt")
+  )
+  e <- tryCatch(
+    suppressMessages(rev_spec_run("specs")),
+    revpiper_spec_error = identity
+  )
+  expect_match(conditionMessage(e), "not certified and not returned")
+  expect_s3_class(e$outcome, "rev_report")
+  expect_false(e$outcome$certified)
 })
 
-test_that("rev_spec_run(file =) runs one dictionary standalone", {
-  specs <- rev_spec_run(specs_path("specs-good"), file = "estimates.yaml")
-  expect_named(specs, c("tables", "joins"))
-  expect_named(specs$tables, "estimates")
-  expect_s3_class(specs$tables$estimates, "rev_dictionary")
-  expect_identical(nrow(specs$joins), 0L)
-})
-
-test_that("rev_spec_run(file = 'joins.yaml') runs within-file checks only", {
-  # This joins fixture names a table no dictionary declares: reference
-  # resolution would reject it, so succeeding proves within-file scope.
-  specs <- rev_spec_run(specs_path("specs-joins-only"), file = "joins.yaml")
-  expect_length(specs$tables, 0)
-  expect_gt(nrow(specs$joins), 0)
-})
-
-test_that("rev_spec_run() rejects a path where a filename is expected", {
+test_that("single-file mode keeps the same presentation", {
+  root <- spec_project("specs-good")
+  withr::local_dir(root)
   expect_snapshot(
-    rev_spec_run(specs_path("specs-good"), file = "tables/estimates.yaml"),
-    error = TRUE
+    one <- rev_spec_run("specs", file = "estimates.yaml"),
+    transform = scrub_runstamp
   )
+  expect_named(one$tables, "estimates")
+  joins_only <- suppressMessages(rev_spec_run("specs", file = "joins.yaml"))
+  expect_identical(nrow(joins_only$joins), 1L)
+  expect_length(joins_only$tables, 0)
 })
 
-test_that("rev_spec_run() aborts with the problems of a broken dictionary", {
-  problems <- thrown_problems(
-    rev_spec_run(specs_path("specs-run-bad"), joins = FALSE)
+test_that("usage errors still abort before any checking", {
+  root <- spec_project("specs-good")
+  withr::local_dir(root)
+  expect_error(
+    rev_spec_run("specs", file = "tables/estimates.yaml"),
+    class = "revpiper_spec_error"
   )
-  expect_identical(spec_codes(problems), "YS01")
+  expect_error(rev_spec_run("no/such/dir"), class = "revpiper_spec_error")
 })

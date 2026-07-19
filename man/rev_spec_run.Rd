@@ -14,31 +14,60 @@ joins spec at \verb{<dir>/joins.yaml}.}
 checks only: a dictionary filename resolved in \verb{<dir>/tables/}, or
 \code{"joins.yaml"}. A filename, never a path. Overrides \code{joins}.}
 
-\item{joins}{Include the joins spec? \code{TRUE} (the default) errors when
-\verb{<dir>/joins.yaml} does not exist; \code{FALSE} skips it even when
-present.}
+\item{joins}{Include the joins spec? \code{TRUE} (the default) makes an
+absent \verb{<dir>/joins.yaml} a standing error; \code{FALSE} runs without it.}
 }
 \value{
-A list with one entry per spec kind: \code{tables} (named list of
-\code{rev_dictionary} objects) and \code{joins} (the joins tibble; zero rows
-when skipped or not selected).
+The validated spec set, invisibly, on success: \verb{$tables} (a
+named list of dictionaries) and \verb{$joins} (the joins tibble; zero
+rows when skipped). Assign it to use it: \code{specs <- rev_spec_run()}.
+On failure, nothing is returned — the error halts the script, with
+the certification outcome riding on the condition as \verb{$outcome}.
 }
 \description{
-Reads and validates the project's spec set — every table dictionary
-standalone, the across-dictionary identity check, and (with
-\code{joins = TRUE}) the joins spec against the dictionaries — and returns
-the validated spec objects. A run of an unsound spec cannot produce
-output: any spec problem aborts with the complete problem list;
-\code{rev_spec_audit()} turns the same problems into a report instead of an
-error.
+Performs, writes, and prints exactly what \code{\link[=rev_spec_audit]{rev_spec_audit()}} does —
+the same checks, the same per-file reports, the same console lines —
+then, when every file certifies, returns the validated spec set
+invisibly, ready for the next step. When any file does not certify,
+it raises one error after all checking has completed: nothing is
+returned, and no later pipeline step executes on an unsound spec.
 }
+\section{Spec layout}{
+
+A spec folder holds one dictionary per table in \verb{<dir>/tables/}, and
+the joins spec beside them at \verb{<dir>/joins.yaml}. Correctly formatted
+example files ship with the package — locate them with
+\code{system.file("extdata", "specs-example", package = "revpiper")}.
+}
+
+\section{The related column}{
+
+The \code{related} column never guesses causes. It records one of two
+checkable facts:
+\itemize{
+\item \strong{Same entry:} this error sits in the same entry as at least one
+other error. Fixing that one entry and re-running may clear several
+errors at once.
+\item \strong{Incomplete search:} this error says a name couldn't be found (a
+column, a table) — and the place that should have declared that
+name is itself broken (a column entry whose own name can't be read,
+or a spec file that failed its checks). The search was therefore
+run against an incomplete list. Fix the broken declaration first;
+this error may then disappear on its own.
+}
+
+When \code{related} is empty, the error stands on its own as far as
+revpiper can tell — most often a typo or a genuine omission, and the
+\code{suggestion} column is the better guide.
+}
+
 \examples{
+# run writes output/reports/ under the working directory, so this
+# example runs in a throwaway one
 specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
+owd <- setwd(tempdir())
 specs <- rev_spec_run(specs_dir)
 names(specs$tables)
 specs$joins
-
-# one dictionary standalone, within-file checks only
-one <- rev_spec_run(specs_dir, file = "estimates.yaml")
-names(one$tables)
+setwd(owd)
 }

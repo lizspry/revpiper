@@ -1,20 +1,37 @@
-# rev_spec_run(joins = TRUE) errors when no joins spec exists
+# run success: audit-identical output plus final acts; spec set invisible
 
     Code
-      rev_spec_run(specs_path("specs-nojoins"))
-    Condition
-      Error:
-      ! `joins` is TRUE but 'fixtures/specs-nojoins/joins.yaml' does not exist.
-      i Set `joins = FALSE` to run a spec set without joins.
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+      specs <- rev_spec_run("specs")
+    Message
+      revpiper spec run: SUCCESS
+      v all input files CERTIFIED (3 of 3 files certified)
+      v estimates.yaml — CERTIFIED
+      v rob.yaml — CERTIFIED
+      v joins.yaml — CERTIFIED
+      v reports written to output/reports/spec-<runstamp>/
+      v spec set returned, ready for the load step
 
-# rev_spec_run() rejects a path where a filename is expected
+# run failure: all checking completes, reports written, then one abort
 
     Code
-      rev_spec_run(specs_path("specs-good"), file = "tables/estimates.yaml")
+      rev_spec_run("specs")
+    Message
+      revpiper spec run: NOT CERTIFIED (1 of 3 files certified)
+      x estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-<runstamp>/estimates.txt
+      v rob.yaml — CERTIFIED
+      x joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-<runstamp>/joins.txt
     Condition
       Error:
-      ! `file` must be a filename, not a path.
-      i Dictionary filenames resolve in 'fixtures/specs-good/tables'.
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
+      ! spec set not certified and not returned.
+
+# single-file mode keeps the same presentation
+
+    Code
+      one <- rev_spec_run("specs", file = "estimates.yaml")
+    Message
+      revpiper spec run: SUCCESS
+      v all input files CERTIFIED (1 of 1 files certified)
+      v estimates.yaml — CERTIFIED
+      v reports written to output/reports/spec-<runstamp>/
+      v spec set returned, ready for the load step
 

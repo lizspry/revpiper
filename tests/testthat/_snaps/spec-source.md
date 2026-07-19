@@ -1,13 +1,3 @@
-# duplicate table names across files flag YX01
-
-    Code
-      read_dictionaries(bad_path("yx01-duplicate-table"))
-    Condition
-      Error:
-      ! Spec validation failed (1 problem):
-      x YX01 estimates-a.yaml, estimates-b.yaml / dictionary set: duplicate table name 'estimates'
-      i Canonical spec examples ship with the package: `system.file("extdata", "specs-example", package = "revpiper")`
-
 # a nonexistent dictionary path aborts with the classed error
 
     Code

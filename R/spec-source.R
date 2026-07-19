@@ -24,25 +24,6 @@ read_dictionary <- function(path) {
   )
 }
 
-# Load every dictionary in dir standalone via read_dictionary(), then run
-# the data-free set-level check: no two files may claim the same table
-# name. Returns the list named by table. Interim thrower for the run
-# path only (dies with Task 8; audit and the collector consume
-# read_dictionary directly).
-read_dictionaries <- function(dir) {
-  rlang::check_string(dir)
-  files <- dictionary_files(dir)
-  read <- lapply(files, read_dictionary)
-  problems <- bind_problems(lapply(read, `[[`, "problems"))
-  loaded <- !vapply(read, \(r) is.null(r$value), logical(1))
-  dicts <- name_by_table(lapply(read[loaded], `[[`, "value"))
-  problems <- rbind(problems, check_table_identity(names(dicts), files[loaded]))
-  if (nrow(problems) > 0) {
-    stop_spec(problems)
-  }
-  dicts
-}
-
 # Name a list of dictionaries by their tables: the one home for how a
 # tables list is keyed.
 name_by_table <- function(dicts) {

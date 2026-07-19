@@ -170,28 +170,6 @@ test_that("dictionary_key_columns returns declared plus virtual columns", {
   )
 })
 
-test_that("read_dictionaries returns a table-named list of dictionaries", {
-  dicts <- read_dictionaries(
-    test_path("fixtures", "specs-good", "tables")
-  )
-  expect_named(dicts, c("estimates", "rob"))
-  expect_s3_class(dicts$estimates, "rev_dictionary")
-  expect_s3_class(dicts$rob, "rev_dictionary")
-})
-
-test_that("duplicate table names across files flag YX01", {
-  expect_error(
-    read_dictionaries(bad_path("yx01-duplicate-table")),
-    class = "revpiper_spec_error"
-  )
-  expect_snapshot(
-    error = TRUE,
-    read_dictionaries(bad_path("yx01-duplicate-table"))
-  )
-})
-
-# ---- Layer 2: curated fixtures — wording and routing ----
-
 test_that("read_dictionary parses a valid dictionary into every slot", {
   dict <- read_dictionary(good_path())$value
 

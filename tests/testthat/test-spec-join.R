@@ -3,7 +3,11 @@ joins_path <- function(fixture) {
 }
 
 good_dictionaries <- function() {
-  read_dictionaries(test_path("fixtures", "specs-good", "tables"))
+  files <- list.files(
+    test_path("fixtures", "specs-good", "tables"),
+    full.names = TRUE
+  )
+  name_by_table(lapply(files, \(f) read_dictionary(f)$value))
 }
 
 # A zero-problem join the matrix mutates one aspect at a time.
@@ -143,7 +147,8 @@ test_that("a join key may be another table's virtual column", {
     ),
     file.path(dir, "rob.yaml")
   )
-  dicts <- read_dictionaries(dir)
+  files <- list.files(dir, full.names = TRUE)
+  dicts <- name_by_table(lapply(files, \(f) read_dictionary(f)$value))
   j <- minimal_join()
   j$keys$estimates <- "study_key"
   joins <- joins_from_list(list(j), dicts)$value

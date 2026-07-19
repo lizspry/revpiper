@@ -52,34 +52,6 @@ relate_same_entry <- function(problems) {
   problems
 }
 
-# Throw once, listing every accumulated problem with its fix route.
-stop_spec <- function(problems) {
-  hint <- ifelse(
-    is.na(problems$suggestion),
-    "",
-    sprintf(" (did you mean '%s'?)", problems$suggestion)
-  )
-  lines <- sprintf(
-    "%s %s / %s: %s%s",
-    problems$code,
-    problems$file,
-    problems$entry,
-    problems$message,
-    hint
-  )
-  names(lines) <- rep("x", length(lines))
-  cli::cli_abort(
-    c(
-      "Spec validation failed ({nrow(problems)} problem{?s}):",
-      lines,
-      spec_error_footer
-    ),
-    class = "revpiper_spec_error",
-    call = NULL,
-    problems = problems
-  )
-}
-
 # Every spec-error abort ends with the same pointer (decision 2026-07-13):
 # the one home for the footer's wording.
 spec_error_footer <- c(

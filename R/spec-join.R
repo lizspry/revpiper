@@ -18,7 +18,7 @@ read_joins <- function(
     if (!is_dictionary_list) {
       cli::cli_abort(
         "{.arg dictionaries} must be a list of {.cls rev_dictionary}
-         objects, as returned by {.fun read_dictionaries}."
+         objects."
       )
     }
   }
