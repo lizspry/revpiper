@@ -93,11 +93,28 @@ dev/superpowers/specs/2026-07-07-revpiper-design.md (design + rationale).
   PDFs, cited/cited.bib (citation-tracking rule; all claims verified via
   paperclip), and a spec amendment (dashboards in scope for v3, umbrella
   reviews in scope from v1, §10 corrections-container-format question
-  for Phase 3). NEXT, in order: (1) Liz pulls phase-1-core, pushes,
-  opens the Phase 1 PR (squash-merge, CI green gate); (2) Liz reviews
-  the collab-onepagers PR — that review is the sign-off for the
-  deliverables AND the spec amendment together; (3) Phase 2 (load)
-  planning.
+  for Phase 3). NEXT, in order: (1) Liz pulls spec-step-ux, pushes, opens the PR
+  (squash-merge, CI green gate) — the PR reviews the implementation,
+  the design doc, the spec amendments, and the conventions changes
+  together; (2) Phase 2 (load) planning.
+  DONE since the one-pagers session: phase-1-core MERGED to main
+  (PR #7); collab-onepagers MERGED. The spec-step UX redesign is
+  COMPLETE on branch spec-step-ux (2026-07-19, error-testing session;
+  design dev/superpowers/specs/2026-07-19-spec-step-ux-design.md and
+  plan dev/superpowers/plans/2026-07-19-spec-step-ux.md, all tasks +
+  9b/9c executed): readers return value+problems (nothing throws spec
+  problems), collect_spec_step + spec_step spine, per-file plain-text
+  reports mirroring the spec tree, related column (deterministic, self-
+  contained phrases in related_phrases), YE09 self-join + YX05 zero-
+  dictionaries checks, joins-excluded disposition, withr test idiom
+  suite-wide, adversarial battery run (4 blind internal lenses + Liz's
+  external-model pack, dev/adversarial/) with all decisions applied,
+  two-tier review (workflow code-review + conventions audit) and
+  /simplify applied. Gates at close: 519 tests, 0 lints, check 0/0/0.
+  Parked for later: pruning overlap between
+  test-spec-run-public-promises.R and the core suites (Liz's call); a
+  notices mechanism if a second disposition ever joins joins_excluded;
+  outcome finalization lifecycle note; YS01 twin test (Phase 2 list).
   m:m/append data-check semantics parked to the process phase (old
   Task 11); structural reviews at each phase's close-out (amendment
   7h/8e).
