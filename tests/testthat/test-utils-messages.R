@@ -40,3 +40,24 @@ test_that("the canonical examples the spec-error footer points to exist", {
   expect_true(file.exists(file.path(path, "joins.yaml")))
   expect_gt(length(list.files(file.path(path, "tables"))), 0)
 })
+
+test_that("problems carry a related column, NA by default", {
+  p <- new_problem("f.yaml", "column entry 1", "YE01", "unknown field 'x'")
+  expect_named(
+    p,
+    c("file", "entry", "code", "message", "suggestion", "related")
+  )
+  expect_identical(p$related, NA_character_)
+  expect_identical(
+    new_problem(
+      "f",
+      "e",
+      "C",
+      "m",
+      related = "other error in this entry"
+    )$related,
+    "other error in this entry"
+  )
+  expect_identical(nrow(no_problems()), 0L)
+  expect_true("related" %in% names(no_problems()))
+})

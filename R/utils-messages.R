@@ -8,13 +8,21 @@ suggest_name <- function(name, known) {
 }
 
 # One problem, one row: the raw constructor for the fixed problem schema.
-new_problem <- function(file, entry, code, message, suggestion = NULL) {
+new_problem <- function(
+  file,
+  entry,
+  code,
+  message,
+  suggestion = NULL,
+  related = NULL
+) {
   tibble::tibble(
     file = file,
     entry = entry,
     code = code,
     message = message,
-    suggestion = suggestion %||% NA_character_
+    suggestion = suggestion %||% NA_character_,
+    related = related %||% NA_character_
   )
 }
 

@@ -484,7 +484,8 @@ no_problems <- function() {
     character(0),
     character(0),
     character(0),
-    suggestion = character(0)
+    suggestion = character(0),
+    related = character(0)
   )
 }
 
