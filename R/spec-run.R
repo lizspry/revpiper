@@ -1,97 +1,56 @@
 #' Run the spec step
 #'
-#' Reads and validates the project's spec set — every table dictionary
-#' standalone, the across-dictionary identity check, and (with
-#' `joins = TRUE`) the joins spec against the dictionaries — and returns
-#' the validated spec objects. A run of an unsound spec cannot produce
-#' output: any spec problem aborts with the complete problem list;
-#' `rev_spec_audit()` turns the same problems into a report instead of an
-#' error.
+#' Performs and writes exactly what [rev_spec_audit()] does — the same
+#' checks, the same per-file reports — and prints the same per-file
+#' certification lines under its own banner. Then comes run's own final
+#' act: when every file certifies, the validated spec set is returned
+#' invisibly, ready for the next step; when any file does not certify,
+#' one error is raised after all checking has completed — nothing is
+#' returned, and no later pipeline step executes on an unsound spec.
+#' (The audit equivalence describes the whole-folder run; `file =` is
+#' run's own standalone mode, which audit does not have.)
 #'
+#' @section Spec layout:
+#' A spec folder holds one dictionary per table in `<dir>/tables/`, and
+#' the joins spec beside them at `<dir>/joins.yaml`. Correctly formatted
+#' example files ship with the package — locate them with
+#' `system.file("extdata", "specs-example", package = "revpiper")`.
+#'
+#' @inheritSection rev_spec_audit The related column
 #' @param dir The spec folder: table dictionaries in `<dir>/tables/`, the
 #'   joins spec at `<dir>/joins.yaml`.
 #' @param file A single spec filename to run standalone with within-file
 #'   checks only: a dictionary filename resolved in `<dir>/tables/`, or
-#'   `"joins.yaml"`. A filename, never a path. Overrides `joins`.
-#' @param joins Include the joins spec? `TRUE` (the default) errors when
-#'   `<dir>/joins.yaml` does not exist; `FALSE` skips it even when
-#'   present.
-#' @return A list with one entry per spec kind: `tables` (named list of
-#'   `rev_dictionary` objects) and `joins` (the joins tibble; zero rows
-#'   when skipped or not selected).
+#'   `"joins.yaml"` (which returns empty `$tables` beside the
+#'   within-file-checked joins tibble). A filename, never a path — a
+#'   path is rejected as a usage error. Overrides `joins`.
+#' @param joins Include the joins spec? `TRUE` (the default) makes an
+#'   absent `<dir>/joins.yaml` a standing error; `FALSE` runs without it.
+#' @return The validated spec set, invisibly, on success: `$tables` (a
+#'   named list of dictionaries) and `$joins` (the joins tibble; zero
+#'   rows when skipped). Assign it to use it: `specs <- rev_spec_run()`.
+#'   On failure, nothing is returned — the error halts the script, with
+#'   the certification outcome riding on the condition as `$outcome`.
 #' @examples
+#' # run writes output/reports/ under the working directory, so this
+#' # example runs in a throwaway one
 #' specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
+#' owd <- setwd(tempdir())
 #' specs <- rev_spec_run(specs_dir)
 #' names(specs$tables)
 #' specs$joins
-#'
-#' # one dictionary standalone, within-file checks only
-#' one <- rev_spec_run(specs_dir, file = "estimates.yaml")
-#' names(one$tables)
+#' setwd(owd)
 #' @export
 rev_spec_run <- function(dir = "specs", file = NULL, joins = TRUE) {
-  rlang::check_string(dir)
-  rlang::check_bool(joins)
-  if (is.null(file)) {
-    return(run_spec_set(dir, joins))
-  }
-  rlang::check_string(file)
-  if (basename(file) != file) {
+  outcome <- spec_step(dir, joins, file, verb = "run")
+  if (!outcome$certified) {
     cli::cli_abort(
-      c(
-        "{.arg file} must be a filename, not a path.",
-        i = "Dictionary filenames resolve in {.file {spec_tables_dir(dir)}}.",
-        spec_error_footer
-      ),
+      "spec set not certified and not returned.",
       class = "revpiper_spec_error",
-      call = NULL
+      call = NULL,
+      outcome = outcome
     )
   }
-  if (file == spec_joins_file) {
-    path <- spec_joins_path(dir)
-    stop_missing_path("Spec file", path)
-    return(spec_set(joins = read_joins(path)))
-  }
-  path <- file.path(spec_tables_dir(dir), file)
-  stop_missing_path("Spec file", path)
-  spec_set(tables = name_by_table(list(read_dictionary(path))))
-}
-
-run_spec_set <- function(dir, joins) {
-  tables <- read_dictionaries(spec_tables_dir(dir))
-  if (!joins) {
-    return(spec_set(tables = tables))
-  }
-  path <- spec_joins_path(dir)
-  if (!file.exists(path)) {
-    cli::cli_abort(
-      c(
-        "{.arg joins} is TRUE but {.file {path}} does not exist.",
-        i = "Set {.code joins = FALSE} to run a spec set without joins.",
-        spec_error_footer
-      ),
-      class = "revpiper_spec_error",
-      call = NULL
-    )
-  }
-  spec_set(tables = tables, joins = read_joins(path, tables))
-}
-
-# The spec step's output: the one home for its shape.
-spec_set <- function(
-  tables = stats::setNames(list(), character(0)),
-  joins = no_joins()
-) {
-  list(tables = tables, joins = joins)
-}
-
-# The spec folder layout: the one home for its paths.
-spec_joins_file <- "joins.yaml"
-
-spec_tables_dir <- function(dir) {
-  file.path(dir, "tables")
-}
-
-spec_joins_path <- function(dir) {
-  file.path(dir, spec_joins_file)
+  cli::cli_alert_success("spec set returned, ready for the load step")
+  invisible(outcome$specs)
 }

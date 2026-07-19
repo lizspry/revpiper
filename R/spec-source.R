@@ -1,10 +1,19 @@
-# Parse one specs/tables/<table>.yaml into a rev_dictionary, collecting
-# every spec problem before aborting. Complete for a single source: one
-# file validates with zero knowledge of any other source.
+# Parse one specs/tables/<table>.yaml, collecting every spec problem.
+# Complete for a single source: one file validates with zero knowledge of
+# any other source. Returns list(value, problems): the rev_dictionary
+# exactly when zero problems stand, else NULL (problems are data, never
+# thrown — design 2026-07-19).
 read_dictionary <- function(path) {
   rlang::check_string(path)
   stop_missing_path("Dictionary file", path)
-  raw <- parse_spec_yaml(path)
+  parsed <- parse_spec_yaml(path)
+  if (nrow(parsed$problems) > 0) {
+    return(list(value = NULL, problems = parsed$problems))
+  }
+  # A parsed-but-empty (or non-mapping) file flows into the normal
+  # checks: the required-field battery states what is missing (battery
+  # B1, Liz 2026-07-19 — an empty file must never certify).
+  raw <- if (is_mapping(parsed$raw)) parsed$raw else list()
   problems <- rbind(
     run_entry_checks(raw, "file", path, root_entry_label),
     run_contents_checks(raw, "file", path),
@@ -12,24 +21,10 @@ read_dictionary <- function(path) {
     check_virtual_collisions(raw, path),
     resolve_references(raw, path)
   )
-  if (nrow(problems) > 0) {
-    stop_spec(problems)
-  }
-  new_dictionary(raw, path)
-}
-
-# Load every dictionary in dir standalone via read_dictionary(), then run
-# the data-free set-level check: no two files may claim the same table
-# name. Returns the list named by table.
-read_dictionaries <- function(dir) {
-  rlang::check_string(dir)
-  files <- dictionary_files(dir)
-  dicts <- name_by_table(lapply(files, read_dictionary))
-  problems <- check_table_identity(names(dicts), files)
-  if (nrow(problems) > 0) {
-    stop_spec(problems)
-  }
-  dicts
+  list(
+    value = if (nrow(problems) == 0) new_dictionary(raw, path) else NULL,
+    problems = problems
+  )
 }
 
 # Name a list of dictionaries by their tables: the one home for how a
@@ -141,6 +136,9 @@ resolve_references <- function(raw, file) {
     if (is.null(known)) {
       next
     }
+    related_for <- if (pool_incomplete(raw, row$refers_to)) {
+      \(value) related_phrases$incomplete_columns
+    }
     for (instance in reference_instances(raw, row$field)) {
       problems <- rbind(
         problems,
@@ -149,12 +147,24 @@ resolve_references <- function(raw, file) {
           known,
           row$refers_to,
           file,
-          instance$entry
+          instance$entry,
+          related_for = related_for
         )
       )
     }
   }
   problems
+}
+
+# Whether a referred-to section's name pool is provably incomplete: it
+# contains entries whose identity could not be read. Level names are
+# mapping keys (always readable), so only column entries can go nameless.
+pool_incomplete <- function(raw, section) {
+  if (!section %in% c("columns", "key columns")) {
+    return(FALSE)
+  }
+  is_list_of_mappings(raw$columns) &&
+    anyNA(entry_names(raw$columns, "column"))
 }
 
 # Where each referring field's values live in a raw dictionary. Instances
@@ -275,25 +285,6 @@ declared_levels <- function(raw) {
   }
   names(raw$levels)
 }
-
-# YX: cross-source checks (across files)
-
-# YX01: two spec files claim the same table name. Deliberately not
-# check_identity: code, params, entry label, and file semantics all differ,
-# and set-level tables are never NA (table is required per file).
-check_table_identity <- function(tables, files) {
-  dupes <- unique(tables[duplicated(tables)])
-  bind_problems(lapply(dupes, \(d) {
-    flag_problem(
-      paste(basename(files[tables == d]), collapse = ", "),
-      "dictionary set",
-      "YX01",
-      table = d
-    )
-  }))
-}
-
-# YX02 (cross-source references) arrives with read_joins() in Task 5.
 
 # Constructor
 

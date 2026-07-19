@@ -4,8 +4,13 @@
 # depends on it. A missing joins file is a valid single-table project and
 # returns the zero-row tibble. `dictionaries = NULL` runs within-file
 # checks only (no reference resolution), for single-file selection.
-# Returns a tibble, one row per declared join.
-read_joins <- function(path, dictionaries = NULL) {
+# Returns list(value, problems): the joins tibble (one row per declared
+# join) exactly when zero problems stand, else NULL.
+read_joins <- function(
+  path,
+  dictionaries = NULL,
+  failed_tables = character(0)
+) {
   rlang::check_string(path)
   if (!is.null(dictionaries)) {
     is_dictionary_list <- is.list(dictionaries) &&
@@ -13,25 +18,33 @@ read_joins <- function(path, dictionaries = NULL) {
     if (!is_dictionary_list) {
       cli::cli_abort(
         "{.arg dictionaries} must be a list of {.cls rev_dictionary}
-         objects, as returned by {.fun read_dictionaries}."
+         objects."
       )
     }
   }
   if (!file.exists(path)) {
-    return(no_joins())
+    return(list(value = no_joins(), problems = no_problems()))
   }
-  raw <- parse_spec_yaml(path)
+  parsed <- parse_spec_yaml(path)
+  if (nrow(parsed$problems) > 0) {
+    return(list(value = NULL, problems = parsed$problems))
+  }
+  # Parsed-but-empty flows into the checks (battery B1): the required
+  # joins field is then stated missing rather than silently certifying.
+  raw <- if (is_mapping(parsed$raw)) parsed$raw else list()
   problems <- rbind(
     run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),
+    check_join_sides(raw, path),
+    check_join_coverage(raw, path),
     if (!is.null(dictionaries)) {
-      resolve_join_references(raw, path, dictionaries)
+      resolve_join_references(raw, path, dictionaries, failed_tables)
     }
   )
-  if (nrow(problems) > 0) {
-    stop_spec(problems)
-  }
-  new_joins(raw$joins)
+  list(
+    value = if (nrow(problems) == 0) new_joins(raw$joins) else NULL,
+    problems = problems
+  )
 }
 
 # The joins tibble: the one home for its shape.
@@ -82,17 +95,91 @@ new_joins <- function(joins) {
   )
 }
 
-# YX02/YX03: across-source resolution — sides against the loaded tables,
+# YE09: a join relates two different tables — left == right is flagged
+# with or without dictionaries loaded (battery decision, Liz 2026-07-19:
+# self-joins are illegal).
+check_join_sides <- function(raw, file) {
+  if (!is_list_of_mappings(raw$joins)) {
+    return(no_problems())
+  }
+  bind_problems(lapply(seq_along(raw$joins), \(i) {
+    join <- raw$joins[[i]]
+    if (
+      is_string(join$left) &&
+        is_string(join$right) &&
+        identical(join$left, join$right)
+    ) {
+      flag_problem(
+        file,
+        entry_label(NA_character_, i, "join"),
+        "YE09",
+        table = join$left
+      )
+    } else {
+      no_problems()
+    }
+  }))
+}
+
+# YE10: keys must cover both sides — recoded from YX03 (Liz,
+# 2026-07-19): by the deletion test its verdict reads only the entry,
+# so it belongs to the entry series and fires in standalone joins mode
+# too (the old cross-source placement wrongly prevented that).
+check_join_coverage <- function(raw, file) {
+  if (!is_list_of_mappings(raw$joins)) {
+    return(no_problems())
+  }
+  bind_problems(lapply(seq_along(raw$joins), \(i) {
+    join <- raw$joins[[i]]
+    sides <- unlist(Filter(is_string, list(join$left, join$right)))
+    if (length(sides) != 2 || !is_mapping(join$keys)) {
+      return(no_problems())
+    }
+    covered <- vapply(
+      sides,
+      \(side) length(unlist(join$keys[[side]])) > 0,
+      logical(1)
+    )
+    if (all(covered)) {
+      return(no_problems())
+    }
+    flag_problem(
+      file,
+      entry_label(NA_character_, i, "join"),
+      "YE10",
+      left = join$left,
+      right = join$right
+    )
+  }))
+}
+
+# YX02: across-source resolution — sides against the loaded tables,
 # keys' own names against the join's sides, key columns against the named
 # side's key pool (declared plus virtual columns). Every pool resolves
 # through check_reference (YS02's engine, cross-source code). Only
 # well-shaped values are resolved: their shape problems are already
 # reported.
-resolve_join_references <- function(raw, file, dictionaries) {
+resolve_join_references <- function(
+  raw,
+  file,
+  dictionaries,
+  failed_tables = character(0)
+) {
   if (!is_list_of_mappings(raw$joins)) {
     return(no_problems())
   }
   tables <- names(dictionaries)
+  # A side naming the table a FAILED spec file intended (its raw table:
+  # field) is an incomplete search, stated as the checked fact (design
+  # 2026-07-19); an unreadable table field asserts no link.
+  related_for <- function(v) {
+    if (v %in% names(failed_tables)) {
+      sprintf(
+        related_phrases$incomplete_file,
+        paste(failed_tables[[v]], collapse = ", ")
+      )
+    }
+  }
   bind_problems(lapply(seq_along(raw$joins), \(i) {
     join <- raw$joins[[i]]
     entry <- entry_label(NA_character_, i, "join")
@@ -103,7 +190,8 @@ resolve_join_references <- function(raw, file, dictionaries) {
       "the loaded tables",
       file,
       entry,
-      code = "YX02"
+      code = "YX02",
+      related_for = related_for
     )
     if (!is_mapping(join$keys)) {
       return(problems)
@@ -130,19 +218,6 @@ resolve_join_references <- function(raw, file, dictionaries) {
           file,
           entry,
           code = "YX02"
-        )
-      )
-    }
-    covered <- vapply(sides, \(side) length(key_values[[side]]) > 0, logical(1))
-    if (length(sides) == 2 && !all(covered)) {
-      problems <- rbind(
-        problems,
-        flag_problem(
-          file,
-          entry,
-          "YX03",
-          left = join$left,
-          right = join$right
         )
       )
     }

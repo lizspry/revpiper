@@ -136,13 +136,21 @@ render_message <- function(code, ...) {
 }
 
 # A check flags a problem: the code's registry template renders the message.
-flag_problem <- function(file, entry, code, ..., suggestion = NULL) {
+flag_problem <- function(
+  file,
+  entry,
+  code,
+  ...,
+  suggestion = NULL,
+  related = NULL
+) {
   new_problem(
     file,
     entry,
     code,
     render_message(code, ...),
-    suggestion = suggestion
+    suggestion = suggestion,
+    related = related
   )
 }
 

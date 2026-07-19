@@ -1,8 +1,0 @@
-table: estimates
-source:
-  file: data/raw/estimates.csv
-columns:
-  - name: study
-    type: text
-  - name: study
-    type: text

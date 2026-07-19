@@ -2,15 +2,10 @@ bad_path <- function(fixture) {
   test_path("fixtures", "specs-bad", fixture)
 }
 
-# Problems collected from a spec-reading call, or NULL when it succeeds.
-spec_problems <- function(expr) {
-  tryCatch(
-    {
-      expr
-      NULL
-    },
-    revpiper_spec_error = \(e) e$problems
-  )
+# A reader result's problems (readers return list(value, problems) and
+# never throw on spec problems — design 2026-07-19).
+spec_problems <- function(result) {
+  result$problems
 }
 
 spec_codes <- function(problems) {

@@ -58,19 +58,31 @@ source), not here — this document covers code conventions only.
   standalone; across-source is a separate, composable, data-free step.
 - Workflow **steps** — spec, load, process, transform (then present,
   module 2) — are the user-facing stage words (2026-07-12, plan amendment
-  8): reports, certificates, and R-file prefixes carry
-  them. "derive" is retired as the user-facing stage word (say transform;
+  8): reports and R-file prefixes carry
+  them (certificates folded into the per-file reports, 2026-07-19). "derive" is retired as the user-facing stage word (say transform;
   internal helper names may keep it where clearer).
 - User-facing workflow functions read `rev_<step>_<action>` (2026-07-12,
   plan amendment 9). Two **action** words, the same pair at every step:
-  **audit** — check and report (writes the step's report + certificate,
-  never aborts); **run** — execute the step and produce its output
-  (aborts on problems, pointing at the audit). "check" stays internal
+  **audit** — check and report, per file (writes the per-file reports,
+  never aborts on spec problems, returns certification information
+  only); **run** — the same checks, writes, and per-file console lines,
+  then the final act: the step's product returned on success, one
+  halting error after complete checking on failure (2026-07-19
+  contract). "check" stays internal
   (`check_*` functions); never name a user-facing function with it.
 
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml
   committed, defaults only). Never hand-format; never argue with Air.
+- The style commitment is tidyverse-throughout, tooling included — not
+  only the style guide's letter. Tests use withr (`withr::local_*` /
+  `with_*`) for fixtures and state, never hand-rolled setwd/on.exit or
+  tempfile/on.exit pairs (adopted Liz 2026-07-19, after a base-idiom
+  drift; withr already rides with testthat, declared in Suggests).
+- The first instance of any new pattern — idiom, tooling, test
+  scaffolding, file layout — is a decision point: surface it for Liz's
+  sign-off at the walkthrough; never resolve a gap in these conventions
+  by silent default (adopted Liz 2026-07-19).
 - snake_case; `<-` for assignment; native pipe `|>` in new code.
 - Comment section headers are single `# Text` lines with a blank line
   above; subheaders name the check code they implement. No decorative
@@ -99,8 +111,9 @@ Closed decisions (this project):
   section, ordered narrow to broad (field, entry, context, list).
   rlang's throwing `check_*` are always namespace-qualified.
 - Problem workflow verbs: `new_problem()` constructs the row,
-  `flag_problem()` is how a check reports one (registry-rendered),
-  `stop_spec()` throws the collected set.
+  `flag_problem()` is how a check reports one (registry-rendered).
+  Readers return `list(value, problems)` — nothing throws spec problems
+  (2026-07-19); classed aborts are for usage errors only.
 - Cached data getters are plain nouns naming what they return
   (`schema_fields`, `schema_properties`, `check_registry`).
 
@@ -129,6 +142,30 @@ Closed decisions (this project):
   / spec ambiguity; no fixes during the run; adopted divergences
   become regression tests. First run: 2026-07-13, spec step (54 cases;
   YS05, YS06, canonical examples, six determinations).
+  Upgrades (Liz, 2026-07-19): the adversary runs on a DIFFERENT model
+  than wrote the code, TOOLLESS — the brief pasted into its prompt, no
+  file access, so blindness is enforced by construction, not
+  instruction; the brief is committed as a blind pack under
+  dev/adversarial/ so the PR can audit exactly what the adversary saw
+  and Liz can hand the identical pack to external models at will.
+- Suite structure (settled at the 2026-07-19 test-structure review;
+  where each kind of new test belongs): Layer 1, unit tests of building
+  blocks, with the suite invariants in test-schema.R (every implemented
+  code snapshotted; no unregistered code in snapshots). Layer 2, check
+  matrices — one minimal valid spec, one mutation per test, expected
+  code stated BY HAND (coverage may derive from the schema; verdicts
+  never do). Layer 3, single-defect fixture batteries
+  (fixtures/specs-bad/), snapshot-tested: the gallery of every
+  user-visible error. Layer 4, assembly and the exported surface
+  (collector, rendering, audit/run end-to-end via spec_project copies).
+  Helpers shared by 2+ files live in helper*.R; single-file helpers stay
+  file-local.
+- Snapshots are review gates: a human reads the diff against the
+  signed-off design before snapshot_accept; never bulk-accepted.
+- Principle: green tests mean "consistent with the reviewed design",
+  never "correct" — the author's artifacts share one mind's blind
+  spots. User error-testing rounds and the adversarial battery are part
+  of the quality system, not evidence of its failure.
 
 ## Documentation
 - roxygen2 for every export; comments say why, not what; internal helpers

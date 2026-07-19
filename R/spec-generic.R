@@ -155,18 +155,21 @@ root_entry_label <- "file entry"
 
 # Parse a spec file, converting YAML parser failures into the YS05
 # problem so no raw parser error ever reaches a user (error doctrine;
-# audits must always complete). Aborts with the problem: an unparseable
-# file has nothing further to validate.
+# audits must always complete). An unparseable file has nothing further
+# to validate: raw is NULL and readers short-circuit.
 parse_spec_yaml <- function(path) {
   tryCatch(
-    yaml::read_yaml(path),
+    list(raw = yaml::read_yaml(path), problems = no_problems()),
     error = function(e) {
-      stop_spec(flag_problem(
-        path,
-        root_entry_label,
-        "YS05",
-        error = conditionMessage(e)
-      ))
+      list(
+        raw = NULL,
+        problems = flag_problem(
+          path,
+          root_entry_label,
+          "YS05",
+          error = conditionMessage(e)
+        )
+      )
     }
   )
 }
@@ -453,14 +456,17 @@ check_identity <- function(ids, kind, file, section) {
 }
 
 # YS02 (within one file) / YX02 (across sources): a value does not name
-# something its declared pool contains.
+# something its declared pool contains. `related_for` maps a failed value
+# to its related text (or NULL) — the one seam both incomplete-search
+# routes share (design 2026-07-19: related states checked facts only).
 check_reference <- function(
   values,
   declared,
   section,
   file,
   entry,
-  code = "YS02"
+  code = "YS02",
+  related_for = NULL
 ) {
   bad <- setdiff(values, declared)
   bind_problems(lapply(bad, \(v) {
@@ -470,27 +476,13 @@ check_reference <- function(
       code,
       value = v,
       section = section,
-      suggestion = suggest_name(v, declared)
+      suggestion = suggest_name(v, declared),
+      related = if (!is.null(related_for)) related_for(v)
     )
   }))
 }
 
 # Plumbing
-
-# Zero-row problems table: the rbind seed guaranteeing a stable shape.
-no_problems <- function() {
-  new_problem(
-    character(0),
-    character(0),
-    character(0),
-    character(0),
-    suggestion = character(0)
-  )
-}
-
-bind_problems <- function(problem_list) {
-  do.call(rbind, c(list(no_problems()), problem_list))
-}
 
 is_mapping <- function(x) {
   is.list(x) && !is.null(names(x)) && all(nzchar(names(x)))

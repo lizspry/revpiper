@@ -148,13 +148,13 @@ test_that("a level's keys may reference another level's virtual column", {
   )
   expect_identical(codes_of(d), character(0))
   expect_identical(
-    dictionary_key_columns(read_dict(d)),
+    dictionary_key_columns(read_dict(d)$value),
     c("study", "mean_age", "study_key")
   )
 })
 
 test_that("dictionary_key_columns returns declared plus virtual columns", {
-  dict <- read_dictionary(good_path())
+  dict <- read_dictionary(good_path())$value
   expect_identical(
     dictionary_key_columns(dict),
     c("study", "design", "mean_age", "rob_score", "notes_temp")
@@ -165,35 +165,13 @@ test_that("dictionary_key_columns returns declared plus virtual columns", {
     study_id = list(combine = c("study", "mean_age"), separator = "_")
   )
   expect_identical(
-    dictionary_key_columns(read_dict(d)),
+    dictionary_key_columns(read_dict(d)$value),
     c("study", "mean_age", "study_id")
   )
 })
 
-test_that("read_dictionaries returns a table-named list of dictionaries", {
-  dicts <- read_dictionaries(
-    test_path("fixtures", "specs-good", "tables")
-  )
-  expect_named(dicts, c("estimates", "rob"))
-  expect_s3_class(dicts$estimates, "rev_dictionary")
-  expect_s3_class(dicts$rob, "rev_dictionary")
-})
-
-test_that("duplicate table names across files flag YX01", {
-  expect_error(
-    read_dictionaries(bad_path("yx01-duplicate-table")),
-    class = "revpiper_spec_error"
-  )
-  expect_snapshot(
-    error = TRUE,
-    read_dictionaries(bad_path("yx01-duplicate-table"))
-  )
-})
-
-# ---- Layer 2: curated fixtures — wording and routing ----
-
 test_that("read_dictionary parses a valid dictionary into every slot", {
-  dict <- read_dictionary(good_path())
+  dict <- read_dictionary(good_path())$value
 
   expect_s3_class(dict, "rev_dictionary")
   expect_equal(dict$table, "estimates")
@@ -239,7 +217,7 @@ test_that("boundary-legal declarations parse cleanly (permissive rule)", {
     missing = "NR"
   )
   expect_identical(codes_of(d), character(0))
-  dict <- read_dict(d)
+  dict <- read_dict(d)$value
   expect_equal(dict$columns$values[[1]], c("2019-03-01", "2021-03-01"))
   expect_true(dict$columns$unique[2])
   expect_equal(dict$columns$missing[[2]], "NR")
@@ -253,55 +231,50 @@ test_that("a nonexistent dictionary path aborts with the classed error", {
   expect_snapshot(error = TRUE, read_dictionary("no/such/dictionary.yaml"))
 })
 
-test_that("the classed abort carries the problems table as data", {
-  err <- tryCatch(
-    read_dictionary(bad_path("many-defects.yaml")),
-    error = \(e) e
-  )
-  expect_s3_class(err, "revpiper_spec_error")
-  expect_s3_class(err$problems, "tbl_df")
-  expect_setequal(err$problems$code, c("YE01", "YF03", "YF05"))
+test_that("the reader carries the problems table as data, value withheld", {
+  res <- read_dictionary(bad_path("many-defects.yaml"))
+  expect_null(res$value)
+  expect_s3_class(res$problems, "tbl_df")
+  expect_setequal(res$problems$code, c("YE01", "YF03", "YF05"))
 })
 
 test_that("each single-defect dictionary aborts naming its problem", {
-  read_bad <- function(fixture) read_dictionary(bad_path(fixture))
+  read_bad <- function(fixture) {
+    problem_frame(spec_problems(read_dictionary(bad_path(fixture))))
+  }
 
-  expect_snapshot(error = TRUE, read_bad("ye01-file-entry.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye02-missing-type.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye03-range-on-text.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye04-values-and-range.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye05-mixed-values.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye05-date-range-not-iso.yaml"))
-  expect_snapshot(error = TRUE, read_bad("yf01-empty-field.yaml"))
-  expect_snapshot(error = TRUE, read_bad("yf02-name-list.yaml"))
-  expect_snapshot(error = TRUE, read_bad("yf03-bad-type.yaml"))
-  expect_snapshot(error = TRUE, read_bad("yf04-duplicate-values.yaml"))
-  expect_snapshot(error = TRUE, read_bad("yf05-descending-range.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ys01-duplicate-column.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye06-level-number.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ye07-separator-without-combine.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ys02-key-unknown-column.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ys02-combine-part-unknown.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ys02-cwl-unknown-level.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ys02-within-unknown-level.yaml"))
-  expect_snapshot(error = TRUE, read_bad("ys04-within-cycle.yaml"))
-  expect_snapshot(error = TRUE, read_bad("yf04-duplicate-combine-parts.yaml"))
+  expect_snapshot(read_bad("ye01-file-entry.yaml"))
+  expect_snapshot(read_bad("ye02-missing-type.yaml"))
+  expect_snapshot(read_bad("ye03-range-on-text.yaml"))
+  expect_snapshot(read_bad("ye04-values-and-range.yaml"))
+  expect_snapshot(read_bad("ye05-mixed-values.yaml"))
+  expect_snapshot(read_bad("ye05-date-range-not-iso.yaml"))
+  expect_snapshot(read_bad("yf01-empty-field.yaml"))
+  expect_snapshot(read_bad("yf02-name-list.yaml"))
+  expect_snapshot(read_bad("yf03-bad-type.yaml"))
+  expect_snapshot(read_bad("yf04-duplicate-values.yaml"))
+  expect_snapshot(read_bad("yf05-descending-range.yaml"))
+  expect_snapshot(read_bad("ys01-duplicate-column.yaml"))
+  expect_snapshot(read_bad("ye06-level-number.yaml"))
+  expect_snapshot(read_bad("ye07-separator-without-combine.yaml"))
+  expect_snapshot(read_bad("ys02-key-unknown-column.yaml"))
+  expect_snapshot(read_bad("ys02-combine-part-unknown.yaml"))
+  expect_snapshot(read_bad("ys02-cwl-unknown-level.yaml"))
+  expect_snapshot(read_bad("ys02-within-unknown-level.yaml"))
+  expect_snapshot(read_bad("ys04-within-cycle.yaml"))
+  expect_snapshot(read_bad("yf04-duplicate-combine-parts.yaml"))
 })
 
 test_that("every problem in a broken dictionary is reported at once", {
-  expect_snapshot(
-    error = TRUE,
-    read_dictionary(bad_path("many-defects.yaml"))
-  )
+  expect_snapshot(as.data.frame(
+    spec_problems(read_dictionary(bad_path("many-defects.yaml")))
+  ))
 })
 
-test_that("a file that does not parse aborts as a spec problem, not rawly", {
-  expect_snapshot(
-    read_dictionary(bad_path("ys05-unparseable.yaml")),
-    error = TRUE
-  )
+test_that("a file that does not parse reports a spec problem, not rawly", {
   problems <- spec_problems(read_dictionary(bad_path("ys05-unparseable.yaml")))
   expect_identical(spec_codes(problems), "YS05")
+  expect_snapshot(as.data.frame(problems))
 })
 
 # Adopted from the adversarial battery (hostile-10): YAML reads an
@@ -323,11 +296,51 @@ test_that("a level nested within itself is a cycle", {
 # a combine level registers a virtual column named by the level, so the
 # name may not collide with a declared column.
 test_that("a combine level may not collide with a declared column", {
-  expect_snapshot(
-    read_dictionary(bad_path("ys06-virtual-collision.yaml")),
-    error = TRUE
-  )
+  expect_snapshot(as.data.frame(
+    spec_problems(read_dictionary(bad_path("ys06-virtual-collision.yaml")))
+  ))
   d <- minimal_dict()
   d$levels <- list(study = list(combine = c("study", "mean_age")))
   expect_identical(codes_of(d), "YS06")
+})
+
+test_that("a failed reference beside nameless column entries carries related", {
+  d <- minimal_dict()
+  d$levels <- list(study = "studyx") # fails to resolve
+  d$columns[[2]] <- list(nam = "site", type = "text") # nameless entry
+  p <- problems_of(d)
+  expect_identical(
+    p[p$code == "YS02", ]$related,
+    related_phrases$incomplete_columns
+  )
+
+  # clean names: the same failed reference stands alone (typo territory)
+  d2 <- minimal_dict()
+  d2$levels <- list(study = "studyx")
+  p2 <- problems_of(d2)
+  expect_identical(p2[p2$code == "YS02", ]$related, NA_character_)
+})
+
+test_that("read_dictionary returns value + problems, never throwing on spec problems", {
+  good <- read_dict(minimal_dict())
+  expect_named(good, c("value", "problems"))
+  expect_s3_class(good$value, "rev_dictionary")
+  expect_identical(nrow(good$problems), 0L)
+  bad <- minimal_dict()
+  bad$columns[[1]] <- list(nam = "study", type = "text")
+  res <- read_dict(bad)
+  expect_null(res$value)
+  expect_gt(nrow(res$problems), 0)
+})
+
+test_that("an empty or non-mapping spec file never certifies (battery B1)", {
+  path <- withr::local_tempfile(fileext = ".yaml")
+  writeLines("", path)
+  res <- read_dictionary(path)
+  expect_null(res$value)
+  expect_true("YE02" %in% res$problems$code)
+  writeLines("just a string", path)
+  res2 <- read_dictionary(path)
+  expect_null(res2$value)
+  expect_gt(nrow(res2$problems), 0)
 })
