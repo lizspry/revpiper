@@ -22,8 +22,34 @@ test_that("export writes one txt per input file in a per-run folder", {
   expect_true(dir.exists(paths$dir))
   expect_match(paths$dir, "^output/reports/spec-\\d{8}-\\d{6}$")
   expect_setequal(
+    paths$files,
+    file.path(
+      paths$dir,
+      c("tables/estimates.yaml.txt", "tables/rob.yaml.txt", "joins.yaml.txt")
+    )
+  )
+  expect_true(all(file.exists(paths$files)))
+})
+
+test_that("reports mirror the spec tree: same-stem inputs never collide (battery)", {
+  root <- spec_project("specs-good")
+  yml <- file.path(root, "specs", "tables", "estimates.yml")
+  writeLines(
+    sub(
+      "table: estimates",
+      "table: estimatez",
+      readLines(
+        file.path(root, "specs", "tables", "estimates.yaml")
+      )
+    ),
+    yml
+  )
+  withr::local_dir(root)
+  out <- collect_spec_step("specs", joins = FALSE)
+  paths <- export_spec_reports(out)
+  expect_setequal(
     basename(paths$files),
-    c("estimates.txt", "rob.txt", "joins.txt")
+    c("estimates.yaml.txt", "estimates.yml.txt", "rob.yaml.txt")
   )
   expect_true(all(file.exists(paths$files)))
 })

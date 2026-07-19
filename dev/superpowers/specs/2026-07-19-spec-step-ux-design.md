@@ -53,9 +53,12 @@ implementation, per the outward-docs-never-fork-the-design rule.
 ## (replaces xlsx workbook + certificate)
 
 - One plain-text report **per input spec file**, written to a per-run
-  folder, never overwriting prior runs:
-  `output/reports/spec-<runstamp>/<specfile>.txt` (folder name neutral —
-  both functions write it).
+  folder that MIRRORS the spec folder's layout (battery amendment, Liz
+  2026-07-19 — full input filename kept, so same-stem inputs can never
+  collide on one report path): dictionaries under
+  `output/reports/spec-<runstamp>/tables/<file>.txt`, the joins spec at
+  `output/reports/spec-<runstamp>/joins.yaml.txt`. Never overwrites
+  prior runs; folder name neutral — both functions write it.
 - Certified dictionary report: status + summary of the file's own contents
   (table, source, columns, levels). **No joins information in a
   dictionary's report** — joins summaries and errors belong solely to
@@ -144,8 +147,8 @@ Audit — points to the reports it wrote:
 ```
 revpiper spec audit: NOT CERTIFIED (1 of 3 files certified)
 ✔ rob.yaml — CERTIFIED
-✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-20260719-101502/estimates.txt
-✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-20260719-101502/joins.txt
+✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-20260719-101502/tables/estimates.yaml.txt
+✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-20260719-101502/joins.yaml.txt
 ```
 
 (Audit success: the same shape — overall line, per-file CERTIFIED lines,
@@ -158,8 +161,8 @@ short sentence):
 ```
 revpiper spec run: NOT CERTIFIED (1 of 3 files certified)
 ✔ rob.yaml — CERTIFIED
-✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-20260719-101502/estimates.txt
-✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-20260719-101502/joins.txt
+✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-20260719-101502/tables/estimates.yaml.txt
+✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-20260719-101502/joins.yaml.txt
 Error: spec set not certified and not returned.
 ```
 

@@ -23,7 +23,7 @@ test_that("run failure: all checking completes, reports written, then one abort"
   written <- list.files("output/reports", recursive = TRUE)
   expect_setequal(
     basename(written),
-    c("estimates.txt", "rob.txt", "joins.txt")
+    c("estimates.yaml.txt", "rob.yaml.txt", "joins.yaml.txt")
   )
   e <- tryCatch(
     suppressMessages(rev_spec_run("specs")),

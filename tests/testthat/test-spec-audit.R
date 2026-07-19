@@ -19,7 +19,7 @@ test_that("audit success: reports written, specs still not returned", {
   written <- list.files("output/reports", recursive = TRUE)
   expect_setequal(
     basename(written),
-    c("estimates.txt", "rob.txt", "joins.txt")
+    c("estimates.yaml.txt", "rob.yaml.txt", "joins.yaml.txt")
   )
 })
 

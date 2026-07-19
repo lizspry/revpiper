@@ -27,8 +27,9 @@
   `suggestion` column keeps the did-you-mean hints.
 * Report files are plain text with plainly aligned columns, replacing
   the xlsx workbook and separate certificate (the writexl dependency is
-  dropped); every run writes into its own timestamped folder, never
-  overwriting a prior run.
+  dropped); every run writes into its own timestamped folder that mirrors the
+  spec folder's layout, so no run and no two input files ever share a
+  report path.
 * Spec-error messages end with a help pointer (`?rev_spec_run`, whose
   docs describe the spec layout and the shipped examples) instead of a
   `system.file()` incantation.

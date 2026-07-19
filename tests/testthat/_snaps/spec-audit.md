@@ -4,9 +4,9 @@
       out <- rev_spec_audit("specs")
     Message
       revpiper spec audit: NOT CERTIFIED (1 of 3 files certified)
-      x estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-<runstamp>/estimates.txt
+      x estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-<runstamp>/tables/estimates.yaml.txt
       v rob.yaml — CERTIFIED
-      x joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-<runstamp>/joins.txt
+      x joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-<runstamp>/joins.yaml.txt
 
 # audit success: reports written, specs still not returned
 

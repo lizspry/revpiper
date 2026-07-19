@@ -449,7 +449,10 @@ Every user-facing step command always completes its checking and always
 emits certification through one shared machinery (amended 2026-07-19,
 spec-step UX design, signed off — supersedes the xlsx-plus-certificate
 format): one plain-text report **per input spec file**, written to a
-fresh per-run folder `output/reports/<step>-<runstamp>/<file>.txt` — a
+fresh per-run folder that mirrors the spec folder's layout
+(`output/reports/<step>-<runstamp>/tables/<file>.txt`,
+`.../joins.yaml.txt` — full input filename kept, so distinct inputs
+never collide on one report path; battery amendment 2026-07-19) — a
 summary of the file's own contents when it certifies (a dictionary's
 report never describes joins; joins.yaml has its own report), its error
 table when it does not (columns entry / code / message / suggestion /
@@ -811,6 +814,7 @@ phase-1 plan's amendment trail.
 | 2026-07-12 | Held architecture agenda closed: user-facing format passes the convolution check; "kind" wording kept; same-named-field divergence list kept (conformance test guards drift); schema vocabulary gaps + `permitted_when` stay deferred — triggers: the transform spec's kinds as the likely third permission instance, and phase close-out structural reviews | decide with evidence in view; build nothing speculatively |
 | 2026-07-15 | Interactive, user-facing dashboards in scope for the present step's release (v3), generated and updated from the same specs; exact scope at the module-2 brainstorm | auto-regenerating dashboards are a core appeal of the pipeline, especially for living reviews; supersedes the blanket interactive-layer deferral (recorded via the collaborator one-pagers review) |
 | 2026-07-15 | Umbrella reviews in scope from v1 | one pilot review is an umbrella review; data-model implications worked at the affected phases' planning |
+| 2026-07-19 | Adversarial battery round (blind pack + Liz's external-model run): empty/non-mapping spec files never certify (readers short-circuit only on parse error); YE09 self-joins illegal; YX05 zero dictionaries is a standing problem (no vacuous certification); report tree mirrors the spec folder with full input filenames (kills intra-run report collisions); five docs-precision fixes incl. scoping the related incomplete-search wording to the searched list | 39 internal + external oracle-first cases; 14 scenarios confirmed the contract, the rest converged on these decisions (Liz) |
 | 2026-07-19 | Spec-step UX redesign (design doc 2026-07-19-spec-step-ux-design.md, signed off): per-file plain-text reports in per-run folders replace the xlsx workbook + certificate (writexl dropped); deterministic `related` column (same entry / provably incomplete search; self-contained phrases in one home); audit/run share one spine, run halts only after complete checking; readers return value + problems (stop_spec, audit_one, read_dictionaries deleted; spec problems never thrown); usage-error footer points at ?rev_spec_run; withr test idiom; adversarial-battery upgrades (different model, toolless, committed blind pack) | Liz's error-testing session found the old output opaque, cascade-noisy, and the run/audit split unexplainable; problems-as-data makes the audit contract structural |
 
 ## 10. Open questions (with owners)

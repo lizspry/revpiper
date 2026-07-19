@@ -84,14 +84,22 @@ format_problem_table <- function(problems) {
 }
 
 # Write one report per record into a fresh runstamped folder under
-# output/reports/. Returns the folder and the per-record paths invisibly.
+# output/reports/, mirroring the spec folder's layout (battery decision,
+# Liz 2026-07-19: dictionaries under tables/, full input filename kept —
+# distinct inputs can never collide on one report path). Returns the
+# folder and the per-record paths invisibly.
 export_spec_reports <- function(outcome, dir = output_reports_dir) {
   run_dir <- file.path(dir, sprintf("%s-%s", outcome$stage, runstamp()))
-  dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
   files <- vapply(
     outcome$files,
     \(record) {
-      path <- file.path(run_dir, sub("\\.ya?ml$", ".txt", record$name))
+      rel <- if (record$kind == "dictionary") {
+        file.path("tables", paste0(record$name, ".txt"))
+      } else {
+        paste0(record$name, ".txt")
+      }
+      path <- file.path(run_dir, rel)
+      dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
       writeLines(format_file_report(record), path)
       path
     },

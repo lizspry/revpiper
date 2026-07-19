@@ -114,7 +114,10 @@ test_that("missing joins is a standing error by default but not when joins is FA
     expect_equal(nrow(run_skip$value$joins), 0)
 
     report_dir <- latest_report_dir(work_dir)
-    expect_true(file.exists(file.path(report_dir, "estimates.txt")))
+    expect_true(file.exists(file.path(
+      report_dir,
+      file.path("tables", "estimates.yaml.txt")
+    )))
   })
 })
 
@@ -150,8 +153,11 @@ test_that("single-file mode applies within-file checks only and overrides joins"
     expect_true(is.list(run_single$value))
 
     report_dir <- latest_report_dir(work_dir)
-    expect_true(file.exists(file.path(report_dir, "estimates.txt")))
-    expect_false(file.exists(file.path(report_dir, "joins.txt")))
+    expect_true(file.exists(file.path(
+      report_dir,
+      file.path("tables", "estimates.yaml.txt")
+    )))
+    expect_false(file.exists(file.path(report_dir, "joins.yaml.txt")))
   })
 })
 
@@ -216,9 +222,15 @@ test_that("run checks every input before halting and writes per-file reports", {
     )
 
     report_dir <- latest_report_dir(work_dir)
-    expect_true(file.exists(file.path(report_dir, "estimates.txt")))
-    expect_true(file.exists(file.path(report_dir, "rob.txt")))
-    expect_true(file.exists(file.path(report_dir, "joins.txt")))
+    expect_true(file.exists(file.path(
+      report_dir,
+      file.path("tables", "estimates.yaml.txt")
+    )))
+    expect_true(file.exists(file.path(
+      report_dir,
+      file.path("tables", "rob.yaml.txt")
+    )))
+    expect_true(file.exists(file.path(report_dir, "joins.yaml.txt")))
   })
 })
 
@@ -248,7 +260,10 @@ test_that("same-entry and incomplete-search related text appear only when promis
     audit_a <- capture_stdout(rev_spec_audit(dir = specs_a))
     expect_null(audit_a$error)
     report_dir_a <- latest_report_dir(work_a)
-    estimates_report_a <- report_text(report_dir_a, "estimates.txt")
+    estimates_report_a <- report_text(
+      report_dir_a,
+      file.path("tables", "estimates.yaml.txt")
+    )
 
     expect_match(estimates_report_a, "unknown field 'nam'")
     expect_match(estimates_report_a, "missing required field 'name'")
@@ -281,7 +296,10 @@ test_that("same-entry and incomplete-search related text appear only when promis
     audit_b <- capture_stdout(rev_spec_audit(dir = specs_b))
     expect_null(audit_b$error)
     report_dir_b <- latest_report_dir(work_b)
-    estimates_report_b <- report_text(report_dir_b, "estimates.txt")
+    estimates_report_b <- report_text(
+      report_dir_b,
+      file.path("tables", "estimates.yaml.txt")
+    )
 
     expect_match(estimates_report_b, "study")
     expect_no_match(estimates_report_b, "incomplete list")
@@ -327,8 +345,11 @@ test_that("cross-file duplicate table errors are reported in both dictionary rep
     expect_false(isTRUE(audit$value$certified))
 
     report_dir <- latest_report_dir(work_dir)
-    estimates_report <- report_text(report_dir, "estimates.txt")
-    rob_report <- report_text(report_dir, "rob.txt")
+    estimates_report <- report_text(
+      report_dir,
+      file.path("tables", "estimates.yaml.txt")
+    )
+    rob_report <- report_text(report_dir, file.path("tables", "rob.yaml.txt"))
 
     expect_match(estimates_report, "dup_table")
     expect_match(rob_report, "dup_table")
