@@ -453,14 +453,17 @@ check_identity <- function(ids, kind, file, section) {
 }
 
 # YS02 (within one file) / YX02 (across sources): a value does not name
-# something its declared pool contains.
+# something its declared pool contains. `related_for` maps a failed value
+# to its related text (or NULL) — the one seam both incomplete-search
+# routes share (design 2026-07-19: related states checked facts only).
 check_reference <- function(
   values,
   declared,
   section,
   file,
   entry,
-  code = "YS02"
+  code = "YS02",
+  related_for = NULL
 ) {
   bad <- setdiff(values, declared)
   bind_problems(lapply(bad, \(v) {
@@ -470,7 +473,8 @@ check_reference <- function(
       code,
       value = v,
       section = section,
-      suggestion = suggest_name(v, declared)
+      suggestion = suggest_name(v, declared),
+      related = if (!is.null(related_for)) related_for(v)
     )
   }))
 }

@@ -141,6 +141,9 @@ resolve_references <- function(raw, file) {
     if (is.null(known)) {
       next
     }
+    related_for <- if (pool_incomplete(raw, row$refers_to)) {
+      \(value) "the columns section has entries whose names cannot be read"
+    }
     for (instance in reference_instances(raw, row$field)) {
       problems <- rbind(
         problems,
@@ -149,12 +152,24 @@ resolve_references <- function(raw, file) {
           known,
           row$refers_to,
           file,
-          instance$entry
+          instance$entry,
+          related_for = related_for
         )
       )
     }
   }
   problems
+}
+
+# Whether a referred-to section's name pool is provably incomplete: it
+# contains entries whose identity could not be read. Level names are
+# mapping keys (always readable), so only column entries can go nameless.
+pool_incomplete <- function(raw, section) {
+  if (!section %in% c("columns", "key columns")) {
+    return(FALSE)
+  }
+  is_list_of_mappings(raw$columns) &&
+    anyNA(entry_names(raw$columns, "column"))
 }
 
 # Where each referring field's values live in a raw dictionary. Instances

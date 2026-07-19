@@ -331,3 +331,20 @@ test_that("a combine level may not collide with a declared column", {
   d$levels <- list(study = list(combine = c("study", "mean_age")))
   expect_identical(codes_of(d), "YS06")
 })
+
+test_that("a failed reference beside nameless column entries carries related", {
+  d <- minimal_dict()
+  d$levels <- list(study = "studyx") # fails to resolve
+  d$columns[[2]] <- list(nam = "site", type = "text") # nameless entry
+  p <- problems_of(d)
+  expect_identical(
+    p[p$code == "YS02", ]$related,
+    "the columns section has entries whose names cannot be read"
+  )
+
+  # clean names: the same failed reference stands alone (typo territory)
+  d2 <- minimal_dict()
+  d2$levels <- list(study = "studyx")
+  p2 <- problems_of(d2)
+  expect_identical(p2[p2$code == "YS02", ]$related, NA_character_)
+})
