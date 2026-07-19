@@ -302,25 +302,6 @@ declared_levels <- function(raw) {
   names(raw$levels)
 }
 
-# YX: cross-source checks (across files)
-
-# YX01: two spec files claim the same table name. Deliberately not
-# check_identity: code, params, entry label, and file semantics all differ,
-# and set-level tables are never NA (table is required per file).
-check_table_identity <- function(tables, files) {
-  dupes <- unique(tables[duplicated(tables)])
-  bind_problems(lapply(dupes, \(d) {
-    flag_problem(
-      paste(basename(files[tables == d]), collapse = ", "),
-      "dictionary set",
-      "YX01",
-      table = d
-    )
-  }))
-}
-
-# YX02 (cross-source references) arrives with read_joins() in Task 5.
-
 # Constructor
 
 new_dictionary <- function(raw, path) {

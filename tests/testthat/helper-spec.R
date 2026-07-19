@@ -64,3 +64,41 @@ problems_of <- function(dict) {
 codes_of <- function(dict) {
   spec_codes(problems_of(dict))
 }
+
+# A fresh temp project containing <fixture> as <root>/specs; cleaned up
+# when the calling test finishes (withr idiom, adopted 2026-07-19).
+spec_project <- function(fixture) {
+  root <- withr::local_tempdir(.local_envir = parent.frame())
+  file.copy(test_path("fixtures", fixture), root, recursive = TRUE)
+  file.rename(file.path(root, fixture), file.path(root, "specs"))
+  root
+}
+
+# Runstamps make report paths nondeterministic; scrub them in snapshots.
+scrub_runstamp <- function(lines) {
+  gsub("[0-9]{8}-[0-9]{6}", "<runstamp>", lines)
+}
+
+# Break one dictionary in a spec_project copy: the last column entry's
+# name field is misspelled (name: -> nam:), leaving the entry nameless.
+break_file <- function(root, file) {
+  path <- file.path(root, "specs", "tables", file)
+  lines <- readLines(path)
+  hits <- grep("^\\s*(- )?name:", lines)
+  lines[hits[length(hits)]] <- sub("name:", "nam:", lines[hits[length(hits)]])
+  writeLines(lines, path)
+  invisible(path)
+}
+
+# The record whose $name matches, from a collector outcome.
+record <- function(outcome, name) {
+  names <- vapply(outcome$files, `[[`, character(1), "name")
+  outcome$files[[match(name, names)]]
+}
+
+expect_named_records <- function(outcome, names) {
+  testthat::expect_setequal(
+    vapply(outcome$files, `[[`, character(1), "name"),
+    names
+  )
+}

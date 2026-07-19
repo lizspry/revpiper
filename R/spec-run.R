@@ -88,22 +88,3 @@ run_spec_set <- function(dir, joins) {
   }
   spec_set(tables = tables, joins = res$value)
 }
-
-# The spec step's output: the one home for its shape.
-spec_set <- function(
-  tables = stats::setNames(list(), character(0)),
-  joins = no_joins()
-) {
-  list(tables = tables, joins = joins)
-}
-
-# The spec folder layout: the one home for its paths.
-spec_joins_file <- "joins.yaml"
-
-spec_tables_dir <- function(dir) {
-  file.path(dir, "tables")
-}
-
-spec_joins_path <- function(dir) {
-  file.path(dir, spec_joins_file)
-}
