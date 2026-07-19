@@ -62,7 +62,7 @@ implementation, per the outward-docs-never-fork-the-design rule.
   `joins.yaml`'s report, which follows the same pattern.
 
 ```
-revpiper spec audit — estimates.yaml
+revpiper spec report — estimates.yaml
 Status: CERTIFIED
 
 Table:   estimates
@@ -77,7 +77,7 @@ Errors: none.
   aligned per contents (no centring).
 
 ```
-revpiper spec audit — estimates.yaml
+revpiper spec report — estimates.yaml
 Status: NOT CERTIFIED (2 errors)
 
 Errors:
