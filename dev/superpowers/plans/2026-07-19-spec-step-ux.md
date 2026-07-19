@@ -381,254 +381,152 @@ through it.
 
 - [ ] **Step 5: Commit** — `related rule 2 (cross-file): join sides naming a failed dictionary's table`
 
-### Task 5: The collector — one core for audit and run
+### Task 5a: Readers return (value, problems) — the throw/catch layer removed
+
+(Restructure signed off by Liz 2026-07-19: under the new contract every
+caller catches, so nothing should throw. Problems are data.)
+
+**Files:**
+- Rename: `R/utils-messages.R` -> `R/spec-problems.R` (git mv), and move
+  `no_problems()` / `bind_problems()` into it from spec-generic.R — one
+  home for the problem schema (two-axis naming: spec- prefix, per Liz).
+- Modify: `R/spec-generic.R` (parse_spec_yaml), `R/spec-source.R`
+  (read_dictionary), `R/spec-join.R` (read_joins), `R/spec-audit.R`
+  (audit_one deleted; call sites call readers directly), `R/spec-run.R`
+  (interim: keeps aborting via the retained stop_spec until Task 8),
+  `tests/testthat/helper.R` (spec_problems becomes `\(x) x$problems`),
+  affected reader tests/snapshots.
+
+**Interfaces (produced, consumed by 5b-8):**
+- `read_dictionary(path)` -> `list(value = rev_dictionary|NULL, problems)`
+  (value non-NULL iff zero problems; parse failure = YS05 problem row,
+  value NULL, no validation attempted)
+- `read_joins(path, dictionaries = NULL, failed_tables = character(0))`
+  -> `list(value = joins tibble|NULL, problems)`; missing file stays
+  `list(value = no_joins(), problems = no_problems())`
+- `parse_spec_yaml(path)` -> `list(raw = <yaml>|NULL, problems)`
+- DELETED: `audit_one()`. RETAINED FOR TASK 8's DELETION: `stop_spec()`
+  (sole remaining caller: spec-run.R's interim paths; test-utils-messages'
+  stop_spec tests move to test-spec-problems.R and die in Task 8).
+
+- [ ] **Step 1: Failing contract tests** (test-spec-source.R and
+  test-spec-join.R):
+
+```r
+test_that("read_dictionary returns value + problems, never throwing on spec problems", {
+  good <- read_dict(minimal_dict())
+  expect_named(good, c("value", "problems"))
+  expect_s3_class(good$value, "rev_dictionary")
+  expect_identical(nrow(good$problems), 0L)
+  bad <- minimal_dict()
+  bad$columns[[1]] <- list(nam = "study", type = "text")
+  res <- read_dict(bad)
+  expect_null(res$value)
+  expect_gt(nrow(res$problems), 0)
+})
+```
+
+```r
+test_that("read_joins returns value + problems, never throwing on spec problems", {
+  good <- joins_from_list(list(minimal_join()))
+  expect_s3_class(good$value, "tbl_df")
+  expect_identical(nrow(good$problems), 0L)
+  bad <- minimal_join()
+  bad$left <- "nope"
+  res <- joins_from_list(list(bad))
+  expect_null(res$value)
+  expect_gt(nrow(res$problems), 0)
+})
+```
+
+- [ ] **Step 2: Run to verify failure** (readers currently throw).
+
+- [ ] **Step 3: Implement.** Readers collect problems exactly as now but
+  END with `list(value = if (nrow(problems) == 0) <constructor> else NULL,
+  problems = problems)` instead of `stop_spec()`. parse_spec_yaml wraps
+  its tryCatch result the same way; read_dictionary/read_joins
+  short-circuit on `is.null(p$raw)`. Adapt in place, same commit:
+  - helper.R: `spec_problems <- function(x) x$problems`; joins_from_list
+    returns the reader result unchanged; audit tests' fixture flows are
+    untouched (audit adapts below).
+  - spec-audit.R: `audited <- lapply(files, read_dictionary)`;
+    `audit_joins` calls `read_joins()` directly (result already has the
+    value/problems shape audit_one used to build).
+  - spec-run.R interim (dies in Task 8): read_dictionaries aggregates —
+    `results <- lapply(files, read_dictionary)` + identity check, then
+    `stop_spec(all problems)` if any stand; single-file paths likewise
+    read then `stop_spec()` on problems. Behaviour note: run now reports
+    problems across ALL files (was: first bad file) — snapshot diffs in
+    run's error tests are expected and reviewed, not resisted; they
+    preview Task 8's contract.
+  - git mv utils-messages.R spec-problems.R (+ tests file rename);
+    move no_problems/bind_problems in.
+- [ ] **Step 4: Full suite; review every snapshot diff (aggregation-only
+  changes); accept; `air format .`.**
+- [ ] **Step 5: Commit** — `Readers return (value, problems): throw/catch removed; spec-problems.R consolidated`
+
+### Task 5b: The collector — assembly without exception plumbing
 
 **Files:**
 - Create: `R/spec-collect.R`
-- Modify: `R/spec-audit.R` (audit_one moves to spec-collect.R unchanged)
+- Modify: `R/spec-source.R` (check_table_identity moves OUT to
+  spec-collect.R), `R/spec-run.R` (spec_set + layout paths move OUT to
+  spec-collect.R), `tests/testthat/helper-spec.R` (promoted helpers)
 - Test: `tests/testthat/test-spec-collect.R` (new)
 
 **Interfaces:**
-- Consumes: read_dictionary, read_joins(+failed_tables), audit_one,
-  check_table_identity, dictionary_files, name_by_table, spec_set,
-  relate_same_entry.
-- Produces: `collect_spec_step(dir, joins = TRUE, file = NULL)` returning
-  a classed outcome (class `rev_report`):
+- Produces: `collect_spec_step(dir, joins = TRUE, file = NULL)` -> the
+  outcome object exactly as previously specified (records with name/kind/
+  certified/problems/value; certified; specs when certified; verb stamped
+  by callers). Step-scope facts re-homed here: `spec_set()`,
+  `spec_tables_dir()`, `spec_joins_path()`, `spec_joins_file`,
+  `check_table_identity()`, plus new `intended_tables()`.
+- Consumes: 5a's reader contract. NO tryCatch anywhere.
+
+Semantics and the six tests: UNCHANGED from the pre-amendment Task 5
+(every file visited; YX01 in both records; YX04 record for missing
+expected joins; joins = FALSE; single-file mode; usage errors still
+abort). Helper promotions as amended (spec_project/scrub_runstamp to
+helper-spec.R on withr; break_file/record/expect_named_records new).
+The collector body simplifies to:
 
 ```r
-structure(
-  list(
-    stage = "spec",
-    verb = NA_character_,     # "audit"/"run", stamped by the caller
-    files = <list of records>,
-    certified = <all records certified>,
-    specs = <spec_set(tables, joins) when certified, else NULL>
-  ),
-  class = "rev_report"
-)
-# each record:
-list(
-  name = <basename, e.g. "estimates.yaml">,
-  kind = "dictionary" | "joins",
-  certified = <logical>,
-  problems = <problems tibble, related applied>,
-  value = <rev_dictionary | joins tibble | NULL when failed>
-)
-```
-
-Semantics locked by the design: every dictionary checked standalone
-(problems accumulated across all files); set-identity (YX01) rows appear
-in BOTH involved files' records; `failed_tables` built from failed files'
-raw YAML (`tryCatch(yaml::read_yaml(f)$table, error = \(e) NULL)`, kept
-only when a single string); joins.yaml is a record like any other —
-missing-when-expected becomes its YX04 problem record (no abort);
-`joins = FALSE` means no joins record and `specs$joins = no_joins()`;
-`file =` mode returns a one-record outcome, within-file checks only
-(`read_joins(path)` with no dictionaries for `file = "joins.yaml"`).
-Usage errors (missing dir, `file` given as a path) still abort — they are
-argument errors, not spec problems.
-
-- [ ] **Step 1: Write the failing tests** — one per locked semantic:
-
-```r
-test_that("collector checks every file and certifies per file", {
-  dir <- specs_example_copy()           # helper: copy inst example to tempdir
-  break_file(dir, "estimates.yaml")     # helper: rename 'name:' to 'nam:' in column 4
-  out <- collect_spec_step(dir)
-  expect_s3_class(out, "rev_report")
-  expect_named_records(out, c("estimates.yaml", "rob.yaml", "joins.yaml"))
-  expect_false(record(out, "estimates.yaml")$certified)
-  expect_true(record(out, "rob.yaml")$certified)
-  expect_false(out$certified)
-  expect_null(out$specs)
-})
-
-test_that("cross-file related reaches the joins record", {
-  dir <- specs_example_copy(); break_file(dir, "estimates.yaml")
-  out <- collect_spec_step(dir)
-  joins_problems <- record(out, "joins.yaml")$problems
-  expect_true(
-    "spec file estimates.yaml has standing errors" %in% joins_problems$related
-  )
-})
-
-test_that("clean set certifies and releases the spec set", {
-  out <- collect_spec_step(specs_example_copy())
-  expect_true(out$certified)
-  expect_named(out$specs, c("tables", "joins"))
-})
-
-test_that("joins = FALSE: no joins record, zero-row joins in specs", {
-  dir <- specs_example_copy(); unlink(file.path(dir, "joins.yaml"))
-  out <- collect_spec_step(dir, joins = FALSE)
-  expect_named_records(out, c("estimates.yaml", "rob.yaml"))
-  expect_identical(nrow(out$specs$joins), 0L)
-})
-
-test_that("missing joins.yaml when expected is a YX04 record, not an abort", {
-  dir <- specs_example_copy(); unlink(file.path(dir, "joins.yaml"))
-  out <- collect_spec_step(dir)
-  expect_identical(record(out, "joins.yaml")$problems$code, "YX04")
-  expect_false(out$certified)
-})
-
-test_that("single-file mode collects one record, within-file only", {
-  dir <- specs_example_copy()
-  out <- collect_spec_step(dir, file = "estimates.yaml")
-  expect_named_records(out, "estimates.yaml")
-  expect_true(out$certified)
-})
-```
-
-Helpers, all in `tests/testthat/helper-spec.R` (Tasks 6-8 use them too;
-withr idiom per the adopted convention — add `withr` to DESCRIPTION
-Suggests in this task, its first use):
-- `spec_project(fixture)` — PROMOTED from test-spec-audit.R (delete it
-  there in Task 7's rewrite), reimplemented with
-  `dir <- withr::local_tempdir(.local_envir = parent.frame())`, copying
-  `test_path("fixtures", fixture)` in as `<dir>/specs`, returning `dir`.
-  Callers that need the cwd use `withr::local_dir(spec_project(...))`;
-  Task 5's collector tests pass `file.path(root, "specs")` directly.
-- `scrub_runstamp()` — PROMOTED from test-spec-audit.R verbatim.
-- `break_file(root, file)` — rewrites `name:` to `nam:` in the last
-  column entry of `<root>/specs/tables/<file>`.
-- `record(out, name)` — the record whose `$name` matches.
-- `expect_named_records(out, names)` — records' names setequal `names`.
-- Migrate `joins_from_list()`'s `tempfile`/`on.exit` pair to
-  `withr::local_tempfile()` (test-spec-join.R keeps working unchanged).
-In the Task 5-8 test code below, read `specs_example_copy()` as
-`file.path(spec_project("specs-good"), "specs")` for collector calls, and
-as `withr::local_dir(spec_project("specs-good"))` + `"specs"` where the
-test also exercises report-writing (Tasks 6-8).
-
-- [ ] **Step 2: Run to verify failure** — collect_spec_step not found.
-
-- [ ] **Step 3: Implement `R/spec-collect.R`** (audit_one moves here
-  verbatim, with its comment):
-
-```r
-# The spec step's one checking core: audit and run both call exactly this.
 collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
   if (!is.null(file)) {
     return(collect_one(dir, file))
   }
   files <- dictionary_files(spec_tables_dir(dir))
-  audited <- lapply(files, \(f) audit_one(read_dictionary(f)))
-  loaded <- !vapply(audited, \(a) is.null(a$value), logical(1))
-  tables <- name_by_table(lapply(audited[loaded], \(a) a$value))
+  read <- lapply(files, read_dictionary)
+  loaded <- !vapply(read, \(r) is.null(r$value), logical(1))
+  tables <- name_by_table(lapply(read[loaded], `[[`, "value"))
   identity <- check_table_identity(names(tables), files[loaded])
   failed_tables <- intended_tables(files[!loaded])
-
   records <- lapply(seq_along(files), \(i) {
     own <- rbind(
-      audited[[i]]$problems,
+      read[[i]]$problems,
       identity[grepl(basename(files[[i]]), identity$file, fixed = TRUE), ]
     )
-    new_record(basename(files[[i]]), "dictionary", own, audited[[i]]$value)
+    new_record(basename(files[[i]]), "dictionary", own, read[[i]]$value)
   })
   if (joins) {
     records <- c(records, list(collect_joins(dir, tables, failed_tables)))
   }
-  certified <- all(vapply(records, `[[`, logical(1), "certified"))
-  new_outcome(records, certified)
-}
-
-new_record <- function(name, kind, problems, value) {
-  problems <- relate_same_entry(problems)
-  list(
-    name = name, kind = kind,
-    certified = nrow(problems) == 0,
-    problems = problems,
-    value = value
-  )
-}
-
-new_outcome <- function(records, certified) {
-  specs <- NULL
-  if (certified) {
-    dicts <- Filter(\(r) r$kind == "dictionary", records)
-    joins_rec <- Filter(\(r) r$kind == "joins", records)
-    specs <- spec_set(
-      tables = name_by_table(lapply(dicts, `[[`, "value")),
-      joins = if (length(joins_rec)) joins_rec[[1]]$value else no_joins()
-    )
-  }
-  structure(
-    list(
-      stage = "spec", verb = NA_character_,
-      files = records, certified = certified, specs = specs
-    ),
-    class = "rev_report"
-  )
-}
-
-# The table each failed file INTENDED, read straight from its raw YAML;
-# unreadable or non-string table fields assert no link (design: related
-# is deterministic or absent).
-intended_tables <- function(failed_files) {
-  out <- character(0)
-  for (f in failed_files) {
-    tab <- tryCatch(yaml::read_yaml(f)$table, error = \(e) NULL)
-    if (is_string(tab)) {
-      out[[tab]] <- basename(f)
-    }
-  }
-  out
-}
-
-collect_joins <- function(dir, tables, failed_tables) {
-  path <- spec_joins_path(dir)
-  if (!file.exists(path)) {
-    problems <- flag_problem(
-      path, "spec set", "YX04",
-      path = path,
-      hint = "set joins = FALSE to run the spec step without a joins spec"
-    )
-    return(new_record(spec_joins_file, "joins", problems, NULL))
-  }
-  audit <- audit_one(read_joins(path, tables, failed_tables))
-  new_record(spec_joins_file, "joins", audit$problems, audit$value)
-}
-
-collect_one <- function(dir, file) {
-  rlang::check_string(file)
-  if (basename(file) != file) {
-    cli::cli_abort(
-      c(
-        "{.arg file} must be a filename, not a path.",
-        i = "Dictionary filenames resolve in {.file {spec_tables_dir(dir)}}.",
-        spec_error_footer
-      ),
-      class = "revpiper_spec_error", call = NULL
-    )
-  }
-  if (file == spec_joins_file) {
-    path <- spec_joins_path(dir)
-    stop_missing_path("Spec file", path)
-    audit <- audit_one(read_joins(path))
-    return(new_outcome(
-      list(new_record(spec_joins_file, "joins", audit$problems, audit$value)),
-      certified = nrow(audit$problems) == 0
-    ))
-  }
-  path <- file.path(spec_tables_dir(dir), file)
-  stop_missing_path("Spec file", path)
-  audit <- audit_one(read_dictionary(path))
-  new_outcome(
-    list(new_record(file, "dictionary", audit$problems, audit$value)),
-    certified = nrow(audit$problems) == 0
-  )
+  new_outcome(records)
 }
 ```
 
-(Single-file certified outcome must release `specs` too — `new_outcome`
-already does, via the records. Verify the joins-only single-file case
-sets `specs$tables` to the empty named list: `spec_set()`'s default.)
+with `new_outcome(records)` deriving certified internally (it owns the
+rule), `collect_joins`/`collect_one`/`intended_tables`/`new_record` as
+previously specified minus audit_one (readers give the shape directly;
+collect_one reads then wraps, no tryCatch).
 
-- [ ] **Step 4: Run to verify pass**, full suite (spec-audit.R still
-  compiles — it keeps its old body until Task 7; only audit_one moved).
-
-- [ ] **Step 5: Commit** — `collect_spec_step: the one checking core for audit and run`
+- [ ] **Step 1: helpers + the six failing tests** (as previously
+  specified, reading `specs_example_copy()` per the amended note)
+- [ ] **Step 2: verify failure** (collect_spec_step not found)
+- [ ] **Step 3: implement spec-collect.R + the moves** (git-mv-style:
+  function bodies unchanged for moved pieces)
+- [ ] **Step 4: full suite green; `air format .`**
+- [ ] **Step 5: Commit** — `collect_spec_step: the spec step assembled from pure readers; step-scope facts re-homed`
 
 ### Task 6: Rendering and writing — per-file reports (report.R rewrite)
 
