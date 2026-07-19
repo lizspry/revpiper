@@ -136,8 +136,9 @@ report_lines <- function(outcome) {
     )
   }
   per_file <- vapply(
-    outcome$files,
-    \(record) {
+    seq_along(outcome$files),
+    \(i) {
+      record <- outcome$files[[i]]
       if (record$certified) {
         sprintf("%s \u2014 CERTIFIED", record$name)
       } else {
@@ -147,7 +148,9 @@ report_lines <- function(outcome) {
           record$name,
           n_err,
           if (n_err == 1) "" else "s",
-          paths$files[[record$name]]
+          # by index, never by name: two records may share a name
+          # (review finding, 2026-07-19)
+          paths$files[[i]]
         )
       }
     },

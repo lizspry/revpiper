@@ -12,14 +12,19 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
   loaded <- !vapply(read, \(r) is.null(r$value), logical(1))
   tables <- name_by_table(lapply(read[loaded], `[[`, "value"))
   identity <- check_table_identity(names(tables), files[loaded])
-  failed_tables <- intended_tables(files[!loaded])
+  # Exact membership, never substring matching: s.yaml must not inherit
+  # estimates.yaml's YX01 (review finding, 2026-07-19).
+  identity_files <- strsplit(identity$file, ", ", fixed = TRUE)
   records <- lapply(seq_along(files), \(i) {
-    own <- rbind(
-      read[[i]]$problems,
-      identity[grepl(basename(files[[i]]), identity$file, fixed = TRUE), ]
+    involved <- vapply(
+      identity_files,
+      \(names) basename(files[[i]]) %in% names,
+      logical(1)
     )
+    own <- rbind(read[[i]]$problems, identity[involved, ])
     new_record(basename(files[[i]]), "dictionary", own, read[[i]]$value)
   })
+  failed_tables <- intended_tables(files[!loaded])
   if (length(files) == 0) {
     # Zero dictionaries never certifies vacuously (battery decision,
     # Liz 2026-07-19): a spec set that describes nothing is a standing

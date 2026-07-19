@@ -85,3 +85,40 @@ test_that("zero dictionaries is a standing problem, never vacuous (battery)", {
   expect_identical(record(out, "tables")$problems$code, "YX05")
   expect_snapshot(as.data.frame(record(out, "tables")$problems[-1]))
 })
+
+test_that("YX01 lands only on the involved files, never substring matches (review)", {
+  root <- spec_project("specs-good")
+  tables <- file.path(root, "specs", "tables")
+  writeLines(
+    sub(
+      "table: estimates",
+      "table: estimates",
+      readLines(
+        file.path(tables, "estimates.yaml")
+      )
+    ),
+    file.path(tables, "estimates2.yaml")
+  )
+  writeLines(
+    c(
+      "table: solo",
+      "source: {file: s.csv}",
+      "columns:",
+      "  - {name: a, type: text}"
+    ),
+    file.path(tables, "s.yaml")
+  )
+  out <- collect_spec_step(file.path(root, "specs"), joins = FALSE)
+  expect_true(record(out, "s.yaml")$certified)
+  expect_true(record(out, "rob.yaml")$certified)
+  expect_identical(record(out, "estimates.yaml")$problems$code, "YX01")
+  expect_identical(record(out, "estimates2.yaml")$problems$code, "YX01")
+})
+
+test_that("joins = FALSE skips an EXISTING joins spec too (review gap)", {
+  root <- spec_project("specs-good")
+  out <- collect_spec_step(file.path(root, "specs"), joins = FALSE)
+  expect_true(out$certified)
+  expect_named_records(out, c("estimates.yaml", "rob.yaml"))
+  expect_identical(nrow(out$specs$joins), 0L)
+})

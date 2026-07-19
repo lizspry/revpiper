@@ -53,3 +53,31 @@ test_that("reports mirror the spec tree: same-stem inputs never collide (battery
   )
   expect_true(all(file.exists(paths$files)))
 })
+
+test_that("console pointers survive duplicate record names (review, battery B6)", {
+  root <- spec_project("specs-good")
+  writeLines(
+    c(
+      "table: joinsdict",
+      "source: {file: x.csv}",
+      "columns:",
+      "  - {name: a, type: text}"
+    ),
+    file.path(root, "specs", "tables", "joins.yaml")
+  )
+  writeLines(
+    paste0(
+      "joins:\n  - {adds: variables, left: nope, right: rob, ",
+      "keys: {nope: [a], rob: [study_id]}, relationship: one-to-many}"
+    ),
+    file.path(root, "specs", "joins.yaml")
+  )
+  withr::local_dir(root)
+  out <- collect_spec_step("specs")
+  out$verb <- "audit"
+  out$paths <- export_spec_reports(out)
+  lines <- report_lines(out)
+  joins_line <- lines$per_file[[length(lines$per_file)]]
+  expect_match(joins_line, "spec-[0-9-]+/joins\\.yaml\\.txt")
+  expect_no_match(joins_line, "tables/joins\\.yaml\\.txt")
+})

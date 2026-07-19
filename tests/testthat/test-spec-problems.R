@@ -62,3 +62,14 @@ test_that("relate_same_entry links co-located errors deterministically", {
   # zero-row input passes through
   expect_identical(nrow(relate_same_entry(no_problems())), 0L)
 })
+
+test_that("an NA reference value gets no suggestion and no raw error (review)", {
+  expect_identical(
+    suggest_name(NA_character_, c("study", "design")),
+    NA_character_
+  )
+  d <- minimal_dict()
+  d$levels <- list(study = list(keys = c("study", NA)))
+  expect_no_error(p <- problems_of(d))
+  expect_true(nrow(p) > 0)
+})
