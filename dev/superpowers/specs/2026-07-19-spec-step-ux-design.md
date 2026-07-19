@@ -111,31 +111,30 @@ core; only the closing differs.
 Audit — points to the reports it wrote:
 
 ```
+revpiper spec audit: NOT CERTIFIED (1 of 3 files certified)
 ✔ rob.yaml — CERTIFIED
 ✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-audit-20260719-101502/estimates.txt
 ✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-audit-20260719-101502/joins.txt
-Spec step: NOT CERTIFIED (1 of 3 files certified)
 ```
 
-Run, failure — first error per failed file only, then one error that
-halts the script and points to audit:
+Run, failure — points to the reports it wrote:
 
 ```
+revpiper spec run: NOT CERTIFIED (1 of 3 files certified)
 ✔ rob.yaml — CERTIFIED
-✖ estimates.yaml — NOT CERTIFIED — first error: unknown field 'nam' (did you mean 'name'?)
-✖ joins.yaml — NOT CERTIFIED — references table 'estimates', whose spec file has errors
-Spec step: NOT CERTIFIED (1 of 3 files certified)
-Error: Spec step failed. Run rev_spec_audit() for the full diagnostic report.
+✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-audit-20260719-101502/estimates.txt
+✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-audit-20260719-101502/joins.txt
 ```
 
 Run, success — invisible return; detail routes to audit:
 
 ```
+revpiper spec run: SUCCESS
+✔ all input files CERTIFIED (3 of 3 files certified)
 ✔ estimates.yaml — CERTIFIED
 ✔ rob.yaml — CERTIFIED
 ✔ joins.yaml — CERTIFIED
-Spec step: CERTIFIED (3 of 3 files)
-ℹ For a detailed per-file record, run rev_spec_audit().
+✔ data object/s returned for next pipeline stage
 ```
 
 ## Returns
@@ -143,8 +142,7 @@ Spec step: CERTIFIED (3 of 3 files)
 - `rev_spec_audit()`: certification information only — per-file statuses,
   standing problems, report paths. Printable. The `attr(report, "specs")`
   ride-along is removed.
-- `rev_spec_run()`: the spec set, returned **invisibly** on success
-  (assignment and `print()` behave as normal R); nothing on failure.
+- `rev_spec_run()`: as per `rev_spec_audit()`, plus the spec set returned **invisibly** on success
   Single-file mode (`file =`) retained, same presentation.
 
 ## Error footer
