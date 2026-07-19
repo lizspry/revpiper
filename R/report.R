@@ -94,7 +94,7 @@ export_spec_reports <- function(outcome, dir = output_reports_dir) {
     outcome$files,
     \(record) {
       rel <- if (record$kind == "dictionary") {
-        file.path("tables", paste0(record$name, ".txt"))
+        file.path(spec_tables_dirname, paste0(record$name, ".txt"))
       } else {
         paste0(record$name, ".txt")
       }

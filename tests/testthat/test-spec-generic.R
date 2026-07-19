@@ -202,11 +202,9 @@ test_that("shape_phrase wording is grammatical for every shape x cardinality", {
 # are YAML booleans, not text - the coercion must be caught, and the
 # quoted twin must pass.
 test_that("YAML type coercion inside values is caught by content typing", {
-  tmps <- character(0)
-  on.exit(unlink(tmps))
+  local_dir <- withr::local_tempdir()
   write_spec <- function(values_line) {
-    tmp <- tempfile(fileext = ".yaml")
-    tmps <<- c(tmps, tmp)
+    tmp <- tempfile(tmpdir = local_dir, fileext = ".yaml")
     writeLines(
       c(
         "table: estimates",

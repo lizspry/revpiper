@@ -144,11 +144,13 @@ spec_set <- function(
   list(tables = tables, joins = joins)
 }
 
-# The spec folder layout: the one home for its paths.
+# The spec folder layout: the one home for its paths and names — the
+# report tree mirrors it through these same constants.
 spec_joins_file <- "joins.yaml"
+spec_tables_dirname <- "tables"
 
 spec_tables_dir <- function(dir) {
-  file.path(dir, "tables")
+  file.path(dir, spec_tables_dirname)
 }
 
 spec_joins_path <- function(dir) {

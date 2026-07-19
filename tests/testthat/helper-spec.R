@@ -51,8 +51,7 @@ place_field <- function(d, kind, field, value) {
 
 # Round-trip a dictionary list through a temp yaml file.
 read_dict <- function(dict) {
-  tmp <- tempfile(fileext = ".yaml")
-  on.exit(unlink(tmp))
+  tmp <- withr::local_tempfile(fileext = ".yaml")
   yaml::write_yaml(dict, tmp)
   read_dictionary(tmp)
 }

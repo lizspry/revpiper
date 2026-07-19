@@ -23,8 +23,7 @@ minimal_join <- function() {
 
 # Round-trip a joins list through a temp yaml file.
 joins_from_list <- function(joins, dictionaries = good_dictionaries()) {
-  tmp <- tempfile(fileext = ".yaml")
-  on.exit(unlink(tmp))
+  tmp <- withr::local_tempfile(fileext = ".yaml")
   yaml::write_yaml(list(joins = joins), tmp)
   read_joins(tmp, dictionaries)
 }
@@ -122,9 +121,7 @@ test_that("YX03: keys must cover both sides", {
 })
 
 test_that("a join key may be another table's virtual column", {
-  dir <- tempfile()
-  dir.create(dir)
-  on.exit(unlink(dir, recursive = TRUE))
+  dir <- withr::local_tempdir()
   yaml::write_yaml(
     list(
       table = "estimates",

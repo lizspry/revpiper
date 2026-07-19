@@ -58,14 +58,17 @@ source), not here — this document covers code conventions only.
   standalone; across-source is a separate, composable, data-free step.
 - Workflow **steps** — spec, load, process, transform (then present,
   module 2) — are the user-facing stage words (2026-07-12, plan amendment
-  8): reports, certificates, and R-file prefixes carry
-  them. "derive" is retired as the user-facing stage word (say transform;
+  8): reports and R-file prefixes carry
+  them (certificates folded into the per-file reports, 2026-07-19). "derive" is retired as the user-facing stage word (say transform;
   internal helper names may keep it where clearer).
 - User-facing workflow functions read `rev_<step>_<action>` (2026-07-12,
   plan amendment 9). Two **action** words, the same pair at every step:
-  **audit** — check and report (writes the step's report + certificate,
-  never aborts); **run** — execute the step and produce its output
-  (aborts on problems, pointing at the audit). "check" stays internal
+  **audit** — check and report, per file (writes the per-file reports,
+  never aborts on spec problems, returns certification information
+  only); **run** — the same checks, writes, and per-file console lines,
+  then the final act: the step's product returned on success, one
+  halting error after complete checking on failure (2026-07-19
+  contract). "check" stays internal
   (`check_*` functions); never name a user-facing function with it.
 
 ## Style & formatting
@@ -108,8 +111,9 @@ Closed decisions (this project):
   section, ordered narrow to broad (field, entry, context, list).
   rlang's throwing `check_*` are always namespace-qualified.
 - Problem workflow verbs: `new_problem()` constructs the row,
-  `flag_problem()` is how a check reports one (registry-rendered),
-  `stop_spec()` throws the collected set.
+  `flag_problem()` is how a check reports one (registry-rendered).
+  Readers return `list(value, problems)` — nothing throws spec problems
+  (2026-07-19); classed aborts are for usage errors only.
 - Cached data getters are plain nouns naming what they return
   (`schema_fields`, `schema_properties`, `check_registry`).
 
