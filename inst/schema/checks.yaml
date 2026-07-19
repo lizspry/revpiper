@@ -126,6 +126,14 @@ checks:
 
   # YS: source checks (across entries within one file)
 
+  YE09:
+    scope: entry
+    property: "custom: join sides"
+    meaning: a join's two sides name the same table
+    message_template: "left and right both name '{table}'"
+    params: [table]
+    fix: relate two different tables, or remove the join
+    implemented: true
   YS01:
     scope: source
     property: identity
@@ -209,14 +217,6 @@ checks:
     message_template: "expected spec file '{path}' does not exist; {hint}"
     params: [path, hint]
     fix: add the file, or audit with the expectation turned off
-    implemented: true
-  YE09:
-    scope: entry
-    property: "custom: join sides"
-    meaning: a join's two sides name the same table
-    message_template: "left and right both name '{table}'"
-    params: [table]
-    fix: relate two different tables, or remove the join
     implemented: true
   YX05:
     scope: cross-source
