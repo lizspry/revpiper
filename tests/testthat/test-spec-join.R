@@ -237,3 +237,20 @@ test_that("relationship is required on a variables join", {
   j$relationship <- NULL
   expect_true("YE02" %in% join_codes_of(list(j)))
 })
+
+test_that("a join side naming a failed file's table carries the cross-file related", {
+  # rob loads; estimates' dictionary is absent (failed): the join's left
+  # side cannot resolve. With failed_tables knowledge, related states why.
+  dicts <- good_dictionaries()["rob"]
+  path <- withr::local_tempfile(fileext = ".yaml")
+  yaml::write_yaml(list(joins = list(minimal_join())), path)
+  e <- tryCatch(
+    read_joins(path, dicts, failed_tables = c(estimates = "estimates.yaml")),
+    revpiper_spec_error = identity
+  )
+  yx02 <- e$problems[e$problems$code == "YX02", ]
+  expect_true("spec file estimates.yaml has standing errors" %in% yx02$related)
+  # without the failed-tables knowledge: plain YX02, related NA
+  e2 <- tryCatch(read_joins(path, dicts), revpiper_spec_error = identity)
+  expect_true(all(is.na(e2$problems$related[e2$problems$code == "YX02"])))
+})

@@ -1101,6 +1101,32 @@ spec_error_footer <- c(
 
 - [ ] **Step 5: Commit** — `Spec-error footer: help pointer replaces the examples incantation`
 
+### Task 9b: related-column wording review (added 2026-07-19, Liz)
+
+**Files:**
+- Modify (as decided at the walkthrough): the related-phrase call sites
+  (`R/utils-messages.R` relate_same_entry, `R/spec-source.R`
+  resolve_references, `R/spec-collect.R` failed-tables closure), their
+  tests/snapshots, and the design doc if wording changes.
+
+Joint wording review with Liz — this task is a decision point by
+construction; nothing is predecided except the questions:
+
+- [ ] **Step 1: Review the shipped phrases against the help-doc
+  definition.** Decide whether each cell should carry the self-contained
+  scenario wording directly (no help lookup needed to act on it), e.g.
+  "another error sits in this same entry — fixing it may clear this one"
+  vs the current "other error in this entry". Liz decides the final
+  strings; snapshots updated accordingly.
+- [ ] **Step 2: Generalisation pass.** All related phrases move to one
+  home (a small constructor set or registry beside the check registry),
+  so a future rule adds one entry there instead of scattering strings —
+  mirror of how check messages already live in checks.yaml. Assess
+  whether checks.yaml itself is that home (a `related_template` field)
+  or a code-side constant block suffices; present both, Liz picks.
+- [ ] **Step 3: Apply, run full suite, update design doc wording if
+  changed, commit** — `related wording: reviewed strings, single home`.
+
 ### Task 10: Spec amendment, NEWS, close-out gates
 
 **Files:**

@@ -5,7 +5,11 @@
 # returns the zero-row tibble. `dictionaries = NULL` runs within-file
 # checks only (no reference resolution), for single-file selection.
 # Returns a tibble, one row per declared join.
-read_joins <- function(path, dictionaries = NULL) {
+read_joins <- function(
+  path,
+  dictionaries = NULL,
+  failed_tables = character(0)
+) {
   rlang::check_string(path)
   if (!is.null(dictionaries)) {
     is_dictionary_list <- is.list(dictionaries) &&
@@ -25,7 +29,7 @@ read_joins <- function(path, dictionaries = NULL) {
     run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),
     if (!is.null(dictionaries)) {
-      resolve_join_references(raw, path, dictionaries)
+      resolve_join_references(raw, path, dictionaries, failed_tables)
     }
   )
   if (nrow(problems) > 0) {
@@ -88,11 +92,24 @@ new_joins <- function(joins) {
 # through check_reference (YS02's engine, cross-source code). Only
 # well-shaped values are resolved: their shape problems are already
 # reported.
-resolve_join_references <- function(raw, file, dictionaries) {
+resolve_join_references <- function(
+  raw,
+  file,
+  dictionaries,
+  failed_tables = character(0)
+) {
   if (!is_list_of_mappings(raw$joins)) {
     return(no_problems())
   }
   tables <- names(dictionaries)
+  # A side naming the table a FAILED spec file intended (its raw table:
+  # field) is an incomplete search, stated as the checked fact (design
+  # 2026-07-19); an unreadable table field asserts no link.
+  related_for <- function(v) {
+    if (v %in% names(failed_tables)) {
+      sprintf("spec file %s has standing errors", failed_tables[[v]])
+    }
+  }
   bind_problems(lapply(seq_along(raw$joins), \(i) {
     join <- raw$joins[[i]]
     entry <- entry_label(NA_character_, i, "join")
@@ -103,7 +120,8 @@ resolve_join_references <- function(raw, file, dictionaries) {
       "the loaded tables",
       file,
       entry,
-      code = "YX02"
+      code = "YX02",
+      related_for = related_for
     )
     if (!is_mapping(join$keys)) {
       return(problems)
