@@ -36,7 +36,7 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
     problems <- flag_problem(
       spec_tables_dir(dir),
       "spec set",
-      "YX05",
+      "YX04",
       path = spec_tables_dir(dir)
     )
     records <- c(
@@ -117,7 +117,7 @@ collect_joins <- function(dir, tables, failed_tables) {
     problems <- flag_problem(
       path,
       "spec set",
-      "YX04",
+      "YX03",
       path = path,
       hint = "set joins = FALSE to run the spec step without a joins spec"
     )

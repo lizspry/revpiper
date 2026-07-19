@@ -16,5 +16,5 @@
       as.data.frame(record(out, "tables")$problems[-1])
     Output
            entry code                                 message suggestion related
-      1 spec set YX05 no dictionaries found in 'specs/tables'       <NA>    <NA>
+      1 spec set YX04 no dictionaries found in 'specs/tables'       <NA>    <NA>
 

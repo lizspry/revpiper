@@ -46,11 +46,11 @@ test_that("joins = FALSE: no joins record, zero-row joins in specs", {
   expect_identical(nrow(out$specs$joins), 0L)
 })
 
-test_that("missing joins.yaml when expected is a YX04 record, not an abort", {
+test_that("missing joins.yaml when expected is a YX03 record, not an abort", {
   root <- spec_project("specs-good")
   unlink(file.path(root, "specs", "joins.yaml"))
   out <- collect_spec_step(file.path(root, "specs"))
-  expect_identical(record(out, "joins.yaml")$problems$code, "YX04")
+  expect_identical(record(out, "joins.yaml")$problems$code, "YX03")
   expect_false(out$certified)
 })
 
@@ -84,7 +84,7 @@ test_that("zero dictionaries is a standing problem, never vacuous (battery)", {
   withr::local_dir(root) # relative dir keeps the snapshot deterministic
   out <- collect_spec_step("specs", joins = FALSE)
   expect_false(out$certified)
-  expect_identical(record(out, "tables")$problems$code, "YX05")
+  expect_identical(record(out, "tables")$problems$code, "YX04")
   expect_snapshot(as.data.frame(record(out, "tables")$problems[-1]))
 })
 

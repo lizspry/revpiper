@@ -32,13 +32,13 @@
       ✔ joins.yaml — CERTIFIED
       ✔ reports written to output/reports/spec-<runstamp>/
 
-# an expected-but-absent joins spec decertifies via YX04
+# an expected-but-absent joins spec decertifies via YX03
 
     Code
       as.data.frame(record(out, "joins.yaml")$problems)
     Output
                     file    entry code
-      1 specs/joins.yaml spec set YX04
+      1 specs/joins.yaml spec set YX03
                                                                                                                   message
       1 expected spec file 'specs/joins.yaml' does not exist; set joins = FALSE to run the spec step without a joins spec
         suggestion related

@@ -30,13 +30,13 @@ test_that("printing the returned outcome repeats the console lines", {
   expect_snapshot(print(out), transform = scrub_runstamp)
 })
 
-test_that("an expected-but-absent joins spec decertifies via YX04", {
+test_that("an expected-but-absent joins spec decertifies via YX03", {
   root <- spec_project("specs-good")
   unlink(file.path(root, "specs", "joins.yaml"))
   withr::local_dir(root)
   out <- suppressMessages(rev_spec_audit("specs"))
   expect_false(out$certified)
-  expect_identical(record(out, "joins.yaml")$problems$code, "YX04")
+  expect_identical(record(out, "joins.yaml")$problems$code, "YX03")
   expect_snapshot(as.data.frame(record(out, "joins.yaml")$problems))
   out2 <- suppressMessages(rev_spec_audit("specs", joins = FALSE))
   expect_true(out2$certified)
