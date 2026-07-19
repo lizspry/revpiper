@@ -34,7 +34,12 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="revpiper-0009000">revpiper 0.0.0.9000<a class="anchor" aria-label="anchor" href="#revpiper-0009000"></a></h2>
-<ul><li>Project bootstrapped: package skeleton, conventions, CI. No user-facing functionality yet — first features arrive with the processing module.</li>
+<ul><li>From the first adversarial spec-only test battery: an unparseable spec file is now reported as a spec problem with the YAML parser’s message embedded, never a raw error (YS05); a <code>combine</code> level may not collide with a declared column name (YS06); and every spec-validation error points to the canonical examples shipped in <code>system.file("extdata", "specs-example", package = "revpiper")</code>.</li>
+<li>
+<code><a href="../reference/rev_spec_audit.html">rev_spec_audit()</a></code> audits the spec step: every dictionary is checked with problems gathered across all files, the joins spec is checked against them, and the result is a spec report plus certificate written under <code>output/reports/</code> — CERTIFIED exactly when zero problems stand. It never errors on spec problems, states the outcome in one status line, and the certificate names each dictionary and the joins disposition. Data-free: a spec set certifies before any data exists.</li>
+<li>
+<code><a href="../reference/rev_spec_run.html">rev_spec_run()</a></code> runs the spec step: reads and validates every table dictionary and (by default, <code>joins = TRUE</code>) the joins spec, returning the validated spec objects — or errors listing every spec problem at once. <code>file =</code> runs a single spec file standalone. First member of the per-step command family: every step gets <code>rev_&lt;step&gt;_audit</code> (check and report) and <code>rev_&lt;step&gt;_run</code> (execute and produce output).</li>
+<li>Project bootstrapped: package skeleton, conventions, CI.</li>
 </ul></div>
   </main></div>
 
