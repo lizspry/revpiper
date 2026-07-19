@@ -267,3 +267,16 @@ test_that("read_joins returns value + problems, never throwing on spec problems"
   expect_null(res$value)
   expect_gt(nrow(res$problems), 0)
 })
+
+test_that("a self-join is flagged with or without dictionaries (YE09, battery)", {
+  j <- minimal_join()
+  j$right <- "estimates"
+  j$keys <- list(estimates = "study")
+  standalone <- joins_from_list(list(j), NULL)
+  expect_true("YE09" %in% spec_problems(standalone)$code)
+  resolved <- joins_from_list(list(j))
+  p <- spec_problems(resolved)
+  expect_snapshot(
+    as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
+  )
+})

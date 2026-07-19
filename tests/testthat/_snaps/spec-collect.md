@@ -8,3 +8,11 @@
                                  message suggestion related
       1 duplicate table name 'estimates'       <NA>    <NA>
 
+# zero dictionaries is a standing problem, never vacuous (battery)
+
+    Code
+      as.data.frame(record(out, "tables")$problems[-1])
+    Output
+           entry code                                 message suggestion related
+      1 spec set YX05 no dictionaries found in 'specs/tables'       <NA>    <NA>
+

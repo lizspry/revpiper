@@ -20,6 +20,18 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
     )
     new_record(basename(files[[i]]), "dictionary", own, read[[i]]$value)
   })
+  if (length(files) == 0) {
+    # Zero dictionaries never certifies vacuously (battery decision,
+    # Liz 2026-07-19): a spec set that describes nothing is a standing
+    # problem, parallel to an expected-but-absent joins.yaml.
+    problems <- flag_problem(
+      spec_tables_dir(dir),
+      "spec set",
+      "YX05",
+      path = spec_tables_dir(dir)
+    )
+    records <- c(list(new_record("tables", "set", problems, NULL)), records)
+  }
   if (joins) {
     records <- c(records, list(collect_joins(dir, tables, failed_tables)))
   }

@@ -210,3 +210,19 @@ checks:
     params: [path, hint]
     fix: add the file, or audit with the expectation turned off
     implemented: true
+  YE09:
+    scope: entry
+    property: "custom: join sides"
+    meaning: a join's two sides name the same table
+    message_template: "left and right both name '{table}'"
+    params: [table]
+    fix: relate two different tables, or remove the join
+    implemented: true
+  YX05:
+    scope: cross-source
+    property: "custom: expected dictionaries"
+    meaning: the spec set declares no table dictionaries
+    message_template: "no dictionaries found in '{path}'"
+    params: [path]
+    fix: add at least one table dictionary under tables/
+    implemented: true

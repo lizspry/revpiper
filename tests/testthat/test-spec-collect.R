@@ -75,3 +75,13 @@ test_that("duplicate table names across files flag YX01, snapshotted", {
   dicts <- name_by_table(lapply(files, \(f) read_dictionary(f)$value))
   expect_snapshot(as.data.frame(check_table_identity(names(dicts), files)))
 })
+
+test_that("zero dictionaries is a standing problem, never vacuous (battery)", {
+  root <- spec_project("specs-good")
+  unlink(file.path(root, "specs", "tables", c("estimates.yaml", "rob.yaml")))
+  withr::local_dir(root) # relative dir keeps the snapshot deterministic
+  out <- collect_spec_step("specs", joins = FALSE)
+  expect_false(out$certified)
+  expect_identical(record(out, "tables")$problems$code, "YX05")
+  expect_snapshot(as.data.frame(record(out, "tables")$problems[-1]))
+})

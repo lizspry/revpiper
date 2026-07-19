@@ -333,3 +333,15 @@ test_that("read_dictionary returns value + problems, never throwing on spec prob
   expect_null(res$value)
   expect_gt(nrow(res$problems), 0)
 })
+
+test_that("an empty or non-mapping spec file never certifies (battery B1)", {
+  path <- withr::local_tempfile(fileext = ".yaml")
+  writeLines("", path)
+  res <- read_dictionary(path)
+  expect_null(res$value)
+  expect_true("YE02" %in% res$problems$code)
+  writeLines("just a string", path)
+  res2 <- read_dictionary(path)
+  expect_null(res2$value)
+  expect_gt(nrow(res2$problems), 0)
+})

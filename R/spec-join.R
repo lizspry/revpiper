@@ -26,13 +26,16 @@ read_joins <- function(
     return(list(value = no_joins(), problems = no_problems()))
   }
   parsed <- parse_spec_yaml(path)
-  if (is.null(parsed$raw)) {
+  if (nrow(parsed$problems) > 0) {
     return(list(value = NULL, problems = parsed$problems))
   }
-  raw <- parsed$raw
+  # Parsed-but-empty flows into the checks (battery B1): the required
+  # joins field is then stated missing rather than silently certifying.
+  raw <- if (is_mapping(parsed$raw)) parsed$raw else list()
   problems <- rbind(
     run_entry_checks(raw, "join_file", path, root_entry_label),
     run_contents_checks(raw, "join_file", path),
+    check_join_sides(raw, path),
     if (!is.null(dictionaries)) {
       resolve_join_references(raw, path, dictionaries, failed_tables)
     }
@@ -89,6 +92,32 @@ new_joins <- function(joins) {
       })
     )
   )
+}
+
+# YE09: a join relates two different tables — left == right is flagged
+# with or without dictionaries loaded (battery decision, Liz 2026-07-19:
+# self-joins are illegal).
+check_join_sides <- function(raw, file) {
+  if (!is_list_of_mappings(raw$joins)) {
+    return(no_problems())
+  }
+  bind_problems(lapply(seq_along(raw$joins), \(i) {
+    join <- raw$joins[[i]]
+    if (
+      is_string(join$left) &&
+        is_string(join$right) &&
+        identical(join$left, join$right)
+    ) {
+      flag_problem(
+        file,
+        entry_label(NA_character_, i, "join"),
+        "YE09",
+        table = join$left
+      )
+    } else {
+      no_problems()
+    }
+  }))
 }
 
 # YX02/YX03: across-source resolution — sides against the loaded tables,

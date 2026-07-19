@@ -4,8 +4,20 @@ write_spec_file <- function(path, lines) {
 }
 
 new_spec_sandbox <- function() {
-  root <- file.path(tempdir(), paste0("revpiper-spec-test-", as.integer(Sys.time()), "-", sample.int(1000000, 1)))
-  dir.create(file.path(root, "specs", "tables"), recursive = TRUE, showWarnings = FALSE)
+  root <- file.path(
+    tempdir(),
+    paste0(
+      "revpiper-spec-test-",
+      as.integer(Sys.time()),
+      "-",
+      sample.int(1000000, 1)
+    )
+  )
+  dir.create(
+    file.path(root, "specs", "tables"),
+    recursive = TRUE,
+    showWarnings = FALSE
+  )
   dir.create(file.path(root, "work"), recursive = TRUE, showWarnings = FALSE)
   root
 }
@@ -18,13 +30,16 @@ capture_stdout <- function(expr) {
   error <- NULL
 
   output <- capture.output(
-    tryCatch({
-      result <- withVisible(eval(expr, envir = parent.frame()))
-      value <- result$value
-      visible <- result$visible
-    }, error = function(err) {
-      error <<- err
-    }),
+    tryCatch(
+      {
+        result <- withVisible(eval(expr, envir = parent.frame()))
+        value <- result$value
+        visible <- result$visible
+      },
+      error = function(err) {
+        error <<- err
+      }
+    ),
     type = "output"
   )
 
@@ -56,18 +71,21 @@ test_that("missing joins is a standing error by default but not when joins is FA
   specs_dir <- file.path(root, "specs")
   work_dir <- file.path(root, "work")
 
-  write_spec_file(file.path(specs_dir, "tables", "estimates.yaml"), c(
-    "table: estimates",
-    "description: One row per extracted estimate.",
-    "source:",
-    "  file: data/raw/estimates.csv",
-    "levels:",
-    "  study: study",
-    "columns:",
-    "  - name: study",
-    "    type: text",
-    "    required: true"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "tables", "estimates.yaml"),
+    c(
+      "table: estimates",
+      "description: One row per extracted estimate.",
+      "source:",
+      "  file: data/raw/estimates.csv",
+      "levels:",
+      "  study: study",
+      "columns:",
+      "  - name: study",
+      "    type: text",
+      "    required: true"
+    )
+  )
 
   with_work_dir(work_dir, {
     audit_default <- capture_stdout(rev_spec_audit(dir = specs_dir))
@@ -77,7 +95,10 @@ test_that("missing joins is a standing error by default but not when joins is FA
     run_default <- capture_stdout(rev_spec_run(dir = specs_dir))
     expect_null(run_default$value)
     expect_false(is.null(run_default$error))
-    expect_match(conditionMessage(run_default$error), "spec set not certified and not returned\\.")
+    expect_match(
+      conditionMessage(run_default$error),
+      "spec set not certified and not returned\\."
+    )
     expect_false(is.null(run_default$error$outcome))
 
     audit_skip <- capture_stdout(rev_spec_audit(dir = specs_dir, joins = FALSE))
@@ -102,21 +123,28 @@ test_that("single-file mode applies within-file checks only and overrides joins"
   specs_dir <- file.path(root, "specs")
   work_dir <- file.path(root, "work")
 
-  write_spec_file(file.path(specs_dir, "tables", "estimates.yaml"), c(
-    "table: estimates",
-    "description: One row per extracted estimate.",
-    "source:",
-    "  file: data/raw/estimates.csv",
-    "levels:",
-    "  study: study",
-    "columns:",
-    "  - name: study",
-    "    type: text",
-    "    required: true"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "tables", "estimates.yaml"),
+    c(
+      "table: estimates",
+      "description: One row per extracted estimate.",
+      "source:",
+      "  file: data/raw/estimates.csv",
+      "levels:",
+      "  study: study",
+      "columns:",
+      "  - name: study",
+      "    type: text",
+      "    required: true"
+    )
+  )
 
   with_work_dir(work_dir, {
-    run_single <- capture_stdout(rev_spec_run(dir = specs_dir, file = "estimates.yaml", joins = TRUE))
+    run_single <- capture_stdout(rev_spec_run(
+      dir = specs_dir,
+      file = "estimates.yaml",
+      joins = TRUE
+    ))
     expect_null(run_single$error)
     expect_false(run_single$visible)
     expect_true(is.list(run_single$value))
@@ -132,39 +160,48 @@ test_that("run checks every input before halting and writes per-file reports", {
   specs_dir <- file.path(root, "specs")
   work_dir <- file.path(root, "work")
 
-  write_spec_file(file.path(specs_dir, "tables", "estimates.yaml"), c(
-    "table: estimates",
-    "description: One row per extracted estimate.",
-    "source:",
-    "  file: data/raw/estimates.csv",
-    "levels:",
-    "  study: study",
-    "columns:",
-    "  - nam: study",
-    "    type: text"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "tables", "estimates.yaml"),
+    c(
+      "table: estimates",
+      "description: One row per extracted estimate.",
+      "source:",
+      "  file: data/raw/estimates.csv",
+      "levels:",
+      "  study: study",
+      "columns:",
+      "  - nam: study",
+      "    type: text"
+    )
+  )
 
-  write_spec_file(file.path(specs_dir, "tables", "rob.yaml"), c(
-    "table: rob",
-    "description: One row per study's risk-of-bias rating.",
-    "source:",
-    "  file: data/raw/rob.csv",
-    "columns:",
-    "  - name: study_id",
-    "    type: text"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "tables", "rob.yaml"),
+    c(
+      "table: rob",
+      "description: One row per study's risk-of-bias rating.",
+      "source:",
+      "  file: data/raw/rob.csv",
+      "columns:",
+      "  - name: study_id",
+      "    type: text"
+    )
+  )
 
-  write_spec_file(file.path(specs_dir, "joins.yaml"), c(
-    "joins:",
-    "  - adds: variables",
-    "    left: estimates",
-    "    right: rob",
-    "    keys:",
-    "      estimates: [study]",
-    "      rob: [study_id]",
-    "    relationship: one-to-many",
-    "    unmatched_ok: false"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "joins.yaml"),
+    c(
+      "joins:",
+      "  - adds: variables",
+      "    left: estimates",
+      "    right: rob",
+      "    keys:",
+      "      estimates: [study]",
+      "      rob: [study_id]",
+      "    relationship: one-to-many",
+      "    unmatched_ok: false"
+    )
+  )
 
   with_work_dir(work_dir, {
     audit <- capture_stdout(rev_spec_audit(dir = specs_dir))
@@ -173,7 +210,10 @@ test_that("run checks every input before halting and writes per-file reports", {
 
     run <- capture_stdout(rev_spec_run(dir = specs_dir))
     expect_false(is.null(run$error))
-    expect_match(conditionMessage(run$error), "spec set not certified and not returned\\.")
+    expect_match(
+      conditionMessage(run$error),
+      "spec set not certified and not returned\\."
+    )
 
     report_dir <- latest_report_dir(work_dir)
     expect_true(file.exists(file.path(report_dir, "estimates.txt")))
@@ -187,18 +227,21 @@ test_that("same-entry and incomplete-search related text appear only when promis
   specs_a <- file.path(root_a, "specs")
   work_a <- file.path(root_a, "work")
 
-  write_spec_file(file.path(specs_a, "tables", "estimates.yaml"), c(
-    "table: estimates",
-    "description: One row per extracted estimate.",
-    "source:",
-    "  file: data/raw/estimates.csv",
-    "columns:",
-    "  - nam: study",
-    "    type: text",
-    "  - name: mean_age",
-    "    type: decimal",
-    "    constant_within_level: study"
-  ))
+  write_spec_file(
+    file.path(specs_a, "tables", "estimates.yaml"),
+    c(
+      "table: estimates",
+      "description: One row per extracted estimate.",
+      "source:",
+      "  file: data/raw/estimates.csv",
+      "columns:",
+      "  - nam: study",
+      "    type: text",
+      "  - name: mean_age",
+      "    type: decimal",
+      "    constant_within_level: study"
+    )
+  )
   write_spec_file(file.path(specs_a, "joins.yaml"), "joins: []")
 
   with_work_dir(work_a, {
@@ -217,18 +260,21 @@ test_that("same-entry and incomplete-search related text appear only when promis
   specs_b <- file.path(root_b, "specs")
   work_b <- file.path(root_b, "work")
 
-  write_spec_file(file.path(specs_b, "tables", "estimates.yaml"), c(
-    "table: estimates",
-    "description: One row per extracted estimate.",
-    "source:",
-    "  file: data/raw/estimates.csv",
-    "columns:",
-    "  - name: study_id",
-    "    type: text",
-    "  - name: mean_age",
-    "    type: decimal",
-    "    constant_within_level: study"
-  ))
+  write_spec_file(
+    file.path(specs_b, "tables", "estimates.yaml"),
+    c(
+      "table: estimates",
+      "description: One row per extracted estimate.",
+      "source:",
+      "  file: data/raw/estimates.csv",
+      "columns:",
+      "  - name: study_id",
+      "    type: text",
+      "  - name: mean_age",
+      "    type: decimal",
+      "    constant_within_level: study"
+    )
+  )
   write_spec_file(file.path(specs_b, "joins.yaml"), "joins: []")
 
   with_work_dir(work_b, {
@@ -247,25 +293,31 @@ test_that("cross-file duplicate table errors are reported in both dictionary rep
   specs_dir <- file.path(root, "specs")
   work_dir <- file.path(root, "work")
 
-  write_spec_file(file.path(specs_dir, "tables", "estimates.yaml"), c(
-    "table: dup_table",
-    "description: First dictionary",
-    "source:",
-    "  file: data/raw/a.csv",
-    "columns:",
-    "  - name: id",
-    "    type: text"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "tables", "estimates.yaml"),
+    c(
+      "table: dup_table",
+      "description: First dictionary",
+      "source:",
+      "  file: data/raw/a.csv",
+      "columns:",
+      "  - name: id",
+      "    type: text"
+    )
+  )
 
-  write_spec_file(file.path(specs_dir, "tables", "rob.yaml"), c(
-    "table: dup_table",
-    "description: Second dictionary",
-    "source:",
-    "  file: data/raw/b.csv",
-    "columns:",
-    "  - name: id",
-    "    type: text"
-  ))
+  write_spec_file(
+    file.path(specs_dir, "tables", "rob.yaml"),
+    c(
+      "table: dup_table",
+      "description: Second dictionary",
+      "source:",
+      "  file: data/raw/b.csv",
+      "columns:",
+      "  - name: id",
+      "    type: text"
+    )
+  )
 
   write_spec_file(file.path(specs_dir, "joins.yaml"), "joins: []")
 

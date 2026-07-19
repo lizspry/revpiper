@@ -7,10 +7,13 @@ read_dictionary <- function(path) {
   rlang::check_string(path)
   stop_missing_path("Dictionary file", path)
   parsed <- parse_spec_yaml(path)
-  if (is.null(parsed$raw)) {
+  if (nrow(parsed$problems) > 0) {
     return(list(value = NULL, problems = parsed$problems))
   }
-  raw <- parsed$raw
+  # A parsed-but-empty (or non-mapping) file flows into the normal
+  # checks: the required-field battery states what is missing (battery
+  # B1, Liz 2026-07-19 — an empty file must never certify).
+  raw <- if (is_mapping(parsed$raw)) parsed$raw else list()
   problems <- rbind(
     run_entry_checks(raw, "file", path, root_entry_label),
     run_contents_checks(raw, "file", path),

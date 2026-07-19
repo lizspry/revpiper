@@ -58,3 +58,11 @@
         suggestion related
       1       <NA>    <NA>
 
+# a self-join is flagged with or without dictionaries (YE09, battery)
+
+    Code
+      as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
+    Output
+               entry code                              message suggestion related
+      1 join entry 1 YE09 left and right both name 'estimates'       <NA>    <NA>
+
