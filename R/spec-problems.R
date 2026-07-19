@@ -44,12 +44,16 @@ bind_problems <- function(problem_list) {
 
 # The related column's phrases: the one home (Liz, 2026-07-19). Every
 # phrase is self-contained — a checked fact plus what fixing it may do,
-# never a guessed cause. A future rule adds its phrase here.
+# never a guessed cause. A future rule adds its phrase here. Lines run
+# long because a phrase lives whole (never composed from fragments,
+# conventions §Style) — the one rule outranks the other here.
+# nolint start: line_length_linter.
 related_phrases <- list(
   same_entry = "another error sits in this entry \u2014 fixing it may clear this one",
   incomplete_columns = "a column entry's name cannot be read, so this search ran against an incomplete list \u2014 fixing it may clear this one",
   incomplete_file = "spec file %s failed its checks, so its table was not available to search"
 )
+# nolint end
 
 # Rule 1 of the related column (design 2026-07-19): a plain fact of
 # location, never causation. Rule 2 (set at flag time) wins where present.
