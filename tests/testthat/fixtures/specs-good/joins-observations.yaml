@@ -1,0 +1,7 @@
+joins:
+  - adds: observations
+    left: estimates
+    right: rob
+    keys:
+      estimates: [study]
+      rob: [study_id]

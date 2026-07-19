@@ -1,0 +1,9 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+levels:
+  study:
+    keys: studyy
+columns:
+  - name: study
+    type: text

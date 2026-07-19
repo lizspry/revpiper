@@ -4,7 +4,6 @@
 ^\.claude$
 ^\.superpowers$
 ^dev$
-^CLAUDE\.md$
 ^[.]?air[.]toml$
 ^\.vscode$
 ^\.Rprofile$

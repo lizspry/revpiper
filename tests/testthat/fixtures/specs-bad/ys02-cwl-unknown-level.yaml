@@ -1,0 +1,11 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+levels:
+  study: study
+columns:
+  - name: study
+    type: text
+  - name: mean_age
+    type: decimal
+    constant_within_level: wave

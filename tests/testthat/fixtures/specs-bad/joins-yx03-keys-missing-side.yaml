@@ -1,0 +1,7 @@
+joins:
+  - adds: variables
+    left: estimates
+    right: rob
+    keys:
+      estimates: [study]
+    relationship: one-to-many

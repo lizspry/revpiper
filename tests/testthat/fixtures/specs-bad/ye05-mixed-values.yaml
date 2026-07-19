@@ -1,0 +1,7 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: rob_score
+    type: integer
+    values: [1, two]

@@ -1,0 +1,15 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+levels:
+  study:
+    keys: study
+    within: substudy
+  substudy:
+    keys: substudy_code
+    within: study
+columns:
+  - name: study
+    type: text
+  - name: substudy_code
+    type: text

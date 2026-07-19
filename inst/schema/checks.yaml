@@ -1,0 +1,212 @@
+# inst/schema/checks.yaml — the check registry: every spec-problem code, its
+# meaning, message template, and fix route, keyed by code so a duplicated
+# code fails at parse. Validators fetch codes and templates from here; the
+# docs reference page is generated from here. Placeholders in
+# message_template are replaced verbatim (no code evaluation); params
+# declares them. implemented: false marks codes whose checks land in later
+# tasks (closure-tested once implemented).
+checks:
+
+  # YF: form checks (within one field)
+
+  YF01:
+    scope: form
+    property: empty_ok
+    meaning: a field is written but has no value (YAML null)
+    message_template: "field '{field}' is declared but has no value"
+    params: [field]
+    fix: the named entry
+    implemented: true
+  YF02:
+    scope: form
+    property: shape + cardinality
+    meaning: a field's value has the wrong form (element type or count)
+    message_template: "field '{field}' must be {expected}"
+    params: [field, expected]
+    fix: the named entry
+    implemented: true
+    # Phrases rendered into {expected}, per shape and cardinality
+    phrases:
+      string: {one: a single text value, one_or_many: one or more text values, two: exactly two text values}
+      boolean: {one: a single true/false value, one_or_many: one or more true/false values, two: exactly two true/false values}
+      scalar: {one: a single value, one_or_many: one or more values, two: exactly two values}
+      mapping: "a group of key: value fields"
+      list_of_mappings: a list of entries
+  YF03:
+    scope: form
+    property: domain
+    meaning: a field's value is outside its closed domain
+    message_template: "unknown {field} '{value}'"
+    params: [field, value]
+    fix: the named entry
+    implemented: true
+  YF04:
+    scope: form
+    property: unique_entries
+    meaning: a list field contains duplicate entries
+    message_template: "field '{field}' has duplicate entries: {dupes}"
+    params: [field, dupes]
+    fix: the named entry
+    implemented: true
+  YF05:
+    scope: form
+    property: ordered
+    meaning: a range's two entries descend (numeric or chronological)
+    message_template: "'{field}' is descending ({high} > {low})"
+    params: [field, high, low]
+    fix: the named entry
+    implemented: true
+
+  # YE: entry checks (across fields within one entry)
+
+  YE01:
+    scope: entry
+    property: field vocabulary
+    meaning: a field name is not in the closed set for its context
+    message_template: "unknown field '{field}'"
+    params: [field]
+    fix: the named entry
+    implemented: true
+  YE02:
+    scope: entry
+    property: required
+    meaning: a field the schema marks required is absent from its context
+    message_template: "missing required field '{field}'"
+    params: [field]
+    fix: the named entry
+    implemented: true
+  YE03:
+    scope: entry
+    property: permitted_types
+    meaning: a constraint field appears on a column type outside its permitted set
+    message_template: "'{field}' is not allowed on type '{type}'"
+    params: [field, type]
+    fix: column entry
+    implemented: true
+  YE04:
+    scope: entry
+    property: excludes
+    meaning: two mutually exclusive fields are both present on one entry
+    message_template: "'{field1}' and '{field2}' are mutually exclusive"
+    params: [field1, field2]
+    fix: column entry
+    implemented: true
+  YE05:
+    scope: entry
+    property: content_typed
+    meaning: a constraint's entries do not match the column's declared type
+    message_template: "'{field}' entries do not match declared type '{type}'"
+    params: [field, type]
+    fix: column entry
+    implemented: true
+  YE06:
+    scope: entry
+    property: "custom: union dispatch"
+    meaning: a level entry neither names a column nor declares keys or combine
+    message_template: "level '{level}' must be a column name or a mapping with 'keys' or 'combine'"
+    params: [level]
+    fix: levels section
+    implemented: true
+  YE07:
+    scope: entry
+    property: requires
+    meaning: a field is present without the field it requires
+    message_template: "'{field}' requires '{required_field}'"
+    params: [field, required_field]
+    fix: the named entry
+    implemented: true
+  YE08:
+    scope: entry
+    property: permitted_adds
+    meaning: a field appears on a join type outside its permitted set
+    message_template: "'{field}' is not allowed when a join adds {adds}"
+    params: [field, adds]
+    fix: joins.yaml entry
+    implemented: true
+
+  # YS: source checks (across entries within one file)
+
+  YS01:
+    scope: source
+    property: identity
+    meaning: two entries claim the same name within one spec file
+    message_template: "duplicate {kind} name '{name}'"
+    params: [kind, name]
+    fix: columns section
+    implemented: true
+  YS02:
+    scope: source
+    property: refers_to
+    meaning: a value must name something declared elsewhere in the file and does not
+    message_template: "'{value}' does not name one of the declared {section}"
+    params: [value, section]
+    fix: the named entry
+    implemented: true
+  YS03:
+    scope: source
+    property: "custom: environment"
+    meaning: a declared reader is neither shipped nor defined in readers.R
+    message_template: "reader '{reader}' is neither shipped nor defined in readers.R"
+    params: [reader]
+    fix: source section / readers.R
+    implemented: false
+  YS04:
+    scope: source
+    property: "custom: nesting"
+    meaning: level nesting via 'within' is circular
+    message_template: "level nesting is circular: {cycle}"
+    params: [cycle]
+    fix: levels section
+    implemented: true
+
+  YS05:
+    scope: source
+    property: "custom: parseable"
+    meaning: the file is not parseable YAML
+    message_template: "the file couldn't be processed as there is a YAML error: {error}"
+    params: [error]
+    fix: the named file
+    implemented: true
+  YS06:
+    scope: source
+    property: "custom: identity"
+    meaning: a combine level's virtual column collides with a declared column
+    message_template: "the combine level '{level}' would create a virtual column named like the declared column '{level}'"
+    params: [level]
+    fix: rename the level or the column
+    implemented: true
+
+  # YX: cross-source checks (across files)
+
+  YX01:
+    scope: cross-source
+    property: identity
+    meaning: two spec files claim the same table name
+    message_template: "duplicate table name '{table}'"
+    params: [table]
+    fix: the two files named
+    implemented: true
+  YX02:
+    scope: cross-source
+    property: "custom: cross-source resolution"
+    meaning: a cross-source reference does not resolve (join tables, key columns)
+    message_template: "'{value}' does not resolve against {section}"
+    params: [value, section]
+    fix: joins.yaml entry
+    implemented: true
+  YX03:
+    scope: cross-source
+    property: "custom: completeness"
+    meaning: a join's keys do not cover both sides
+    message_template: "keys must name both sides ('{left}' and '{right}')"
+    params: [left, right]
+    fix: joins.yaml entry
+    implemented: true
+  YX04:
+    scope: cross-source
+    property: "custom: expected file"
+    meaning: an expected spec file is absent from the set
+    message_template: "expected spec file '{path}' does not exist; {hint}"
+    params: [path, hint]
+    fix: add the file, or audit with the expectation turned off
+    implemented: true

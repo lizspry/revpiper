@@ -1,0 +1,5 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: extra_notes

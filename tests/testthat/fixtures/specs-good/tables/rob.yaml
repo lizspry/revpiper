@@ -1,0 +1,13 @@
+table: rob
+description: One row per study's risk-of-bias rating.
+source:
+  file: data/raw/rob.csv
+levels:
+  study: study_id
+columns:
+  - name: study_id
+    type: text
+    required: true
+  - name: rob_direct
+    type: text
+    values: [low, high]

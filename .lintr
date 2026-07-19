@@ -1,6 +1,13 @@
 linters: linters_with_defaults(
     library_call_linter(),
     namespace_linter(),
-    backport_linter(r_version = "4.2.0")
+    backport_linter(r_version = "4.2.0", except = "%||%")
+  )
+exclusions: list(
+    # object_usage cannot model the testthat runner's environment
+    # (attached testthat + sourced helper*.R): its test-side verdicts are
+    # session-dependent noise (decision: Liz, 2026-07-13). All other
+    # linters still cover tests; object_usage still covers R/.
+    "tests/testthat" = list(object_usage_linter = Inf)
   )
 encoding: "UTF-8"

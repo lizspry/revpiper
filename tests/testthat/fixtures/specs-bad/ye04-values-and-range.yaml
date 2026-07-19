@@ -1,0 +1,8 @@
+table: estimates
+source:
+  file: data/raw/estimates.csv
+columns:
+  - name: mean_age
+    type: decimal
+    values: [10, 20]
+    range: [10, 60]

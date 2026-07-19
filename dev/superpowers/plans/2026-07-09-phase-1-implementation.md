@@ -1,4 +1,4 @@
-# Phase 1 — Spec Machinery + Stages 1–3 Implementation Plan
+# Phase 1 — Spec Machinery Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (Liz's
 > standing preference: checkpointed mode, check in at every checkpoint) to implement
@@ -28,27 +28,344 @@
      (use_standalone source), git identity correct, R 4.6.1 / Air 0.10.0 present,
      DESCRIPTION floor R >= 4.2 matches spec, no Imports yet (skeleton state),
      family workbook present in the host mount for the fixtures-local copy.
+- **Execution amendment (2026-07-10, during Task 1; SIGNED OFF, Liz 2026-07-10):**
+  the r-lib standalone vendoring is DROPPED. Task 1 execution found the standalone's
+  upstream changelog (2026-03-17) moved `check_bool()`, `check_string()`, and
+  `check_data_frame()` out of the standalone file into rlang's own exports (verified
+  present in installed rlang 1.3.0). Per conventions ("depend / vendor / write it" —
+  depend first): no vendored files; the three checkers are called qualified
+  (`rlang::check_string()` etc.); rlang floor raised to >= 1.3.0. `%||%` stays and is
+  imported via `@importFrom rlang "%||%"` — the package's sole namespace import
+  (infix operators cannot be namespace-qualified; ecosystem-standard exception,
+  recorded as a closed rule in dev/conventions.md). Task 1 Step 3's gate restated:
+  0 errors / 0 warnings / exactly one expected NOTE (declared-but-not-yet-used
+  Imports), which shrinks as Tasks 2-13 land code and must be gone at Task 14's
+  error_on = "note" pre-push gate. Also fixed: "nine Imports" miscount (ten).
+- **Execution amendment 2 (2026-07-10, before Task 2; SIGNED OFF, Liz 2026-07-10):**
+  `abort_spec()` renamed `stop_spec()` (Liz's preference; `stop_` is the
+  base-R-familiar error-constructor prefix, per rlang/vctrs convention). Zebra
+  assertion strengthened to `expect_identical(..., NA_character_)` (pins the typed
+  NA). Problem-line formatting vectorised (`sprintf` over whole columns) in place
+  of row-wise `vapply` — simpler and idiomatic; performance immaterial on the
+  error path.
+- **Execution amendment 3 (2026-07-10, before Task 3; SIGNED OFF, Liz 2026-07-10):**
+  design change from Liz's walkthrough review, replacing the name-only
+  acknowledgment concept entirely. (a) **The dictionary declares exactly the
+  columns the user imports, checks, and uses**: `type` becomes required per
+  column (generalised Y017 — same helper, second call site). (b) **R006 is
+  retired**: source columns absent from the dictionary are never findings — they
+  carry no consequence; `rev_read_table()` returns them as `unspecified`,
+  `rev_check()` reports them informationally, the certificate lists them as an
+  annex, and pipeline artifacts drop them until declared (list-and-drop). R005
+  is unchanged. (c) **Y012 extended** to missing (not just duplicate/empty)
+  column names — `name` is the entry's identity. (d) **Y020 defined**: a field
+  declared with no value (YAML NULL) is an error, not a silent absence;
+  `description` exempt (draft skeletons carry empty descriptions by design).
+  (e) `rev_read_dictionary()` gains a missing-file guard aborting with class
+  `revpiper_spec_error` (raw `yaml::read_yaml()` connection errors violate the
+  error doctrine for an exported function). (f) The `acknowledged` column leaves
+  `rev_dictionary`; the good fixture's `notes_temp` gains `type: text`; Tasks 6,
+  9, and 12 adjusted accordingly. Design-spec §3.1/§3.4 amended in the same
+  commit (rides the phase-1-core PR, like decision 1's §4 amendment).
+- **Execution amendment 4 (2026-07-11, after Task 3; SIGNED OFF, Liz 2026-07-11):**
+  schema-driven validation architecture, from Liz's structural review of the checks.
+  (a) **Single source of truth**: `inst/schema/fields.yaml` declares every spec
+  field with ALL properties explicit (level, required, shape, cardinality,
+  empty_ok, domain [always inline], permitted_types, permission handling, excludes,
+  content_typed, ordered, unique_entries, refers_to, identity, default). Checks are
+  GENERATED from properties — one definition per check kind, instances declared in
+  the schema. Cardinality `one_or_many` accepts scalar-for-list everywhere (users
+  never penalised for `missing: NR`). Permissive permission sets: values/units on
+  everything except boolean; range on integer/decimal/date.
+  (b) **Scope taxonomy + code prefixes** (option b, Liz): checks are classed by how
+  much context they read — YF within one field, YE within one entry, YS within one
+  source file, YX across sources. Y-series renumbered accordingly (mapping in the
+  catalogue); collapses: one permission check (old Y004/Y005/Y006), one reference
+  resolver (old Y009/Y010/Y011/Y014/Y015), one identity check (old Y012/Y013),
+  old Y016 dissolved into domain/shape/reference, old Y019 into required.
+  (c) **Standalone-source rule**: `rev_read_dictionary()` exhausts YF/YE/YS alone —
+  one file fully validates with zero knowledge of other sources; YX runs in a
+  separate, composable, DATA-FREE set-level step (prespecification workflow
+  preserved). Task 3 as executed is superseded by Task 3b; Tasks 4-6 restated.
+  (d) **Two-layer tests**: a property matrix GENERATED from the schema (every
+  property × every field × applies/does-not-apply) proves logic by construction; a
+  small curated fixture set with snapshots guards wording and routing.
+  (e) **Terminology** (recorded in dev/conventions.md): data tables have *columns*
+  (variables); a dictionary describes each column via *fields*; the package schema
+  defines each field's *properties*; properties generate *checks*; failures are
+  *problems* (spec, abort) or *findings* (data, routed). "Attributes" avoided
+  (R-reserved meaning).
+  (f) **Deferred decisions logged in spec §8.2**: possible package split
+  (spec/process/vis); joins declaring expected column overlap; workflow ordering of
+  within-source vs across-source data checking + corrections (join spec may be
+  authored upfront for sheet compatibility).
+- **Execution amendment 5 (2026-07-11; SIGNED OFF, Liz 2026-07-11):** uniform
+  stage reporting, from Liz's requirement that spec development work standalone
+  and leave a durable record. (a) **Every user-facing stage command emits a
+  report + certification through ONE reusable machinery** (stage name, timestamp,
+  items, status, acknowledgments/annex; shared print, export, certificate
+  rendering — new stages bring only an item schema and a gate rule; the stage
+  name is a parameter, so the machinery is independent of the stage taxonomy).
+  Phase 1 implements the core plus two instantiations: `spec` (items = problems)
+  and the consolidated data-check report per D4 (items = findings). **The
+  user-facing stage VOCABULARY is provisional** (Liz 2026-07-11): the working
+  model is spec -> load (import) -> correct (manual, non-algorithmic) ->
+  transform (derive), each followed by a package check that flags issues;
+  whether correct stands alone and where joins/gating sit are open — resolved at
+  Task 9's walkthrough (report naming) and Phase 2 planning (full model), logged
+  in spec §8.2. (b) **Storage**: everything under
+  `output/reports/`, named `<stage>-<runstamp>.xlsx` (items) +
+  `<stage>-<runstamp>-certificate.txt`; certificates share one format with a
+  stage line ("Stage: specification — CERTIFIED"). A CERTIFIED spec report is a
+  timestamped prespecification artifact (registerable before data collection).
+  `output/diagnostics/` keeps the preprocessed-<table>.csv data artifacts
+  (decision 1 restated). (c) **Doctrine refined**: every stage always completes
+  and always reports; consequently the STAGE RUNNERS (`rev_check_specs()`,
+  `rev_check()`) no longer abort on spec problems — they return a NOT CERTIFIED
+  report (matching `rev_check()`'s no-abort behaviour on findings); classed
+  aborts remain for the constructors (`rev_read_dictionary()` etc.) called
+  directly. `rev_check()` with an uncertified spec writes the spec report and
+  skips data stages (they are impossible, not merely gated). (d) **Pipeline
+  gating deferred** (Liz): rules for partial processing — loading/processing one
+  source before others are join-ready — folded into the spec §8.2 workflow
+  question. Task 9 generalised (R/report.R core + findings as first item
+  schema); Task 12 restated.
+- **Execution amendment 6 (2026-07-11; SIGNED OFF, Liz 2026-07-11):**
+  single-source invariant adopted, from Liz's review of recurring duplication /
+  hard-coding / missed abstraction across Tasks 1-3b (each caught reactively;
+  this makes prevention structural). PRINCIPLES and PROCESSES recorded in
+  dev/conventions.md ("Single source of truth"): one authoritative home per
+  fact, preferably data; registry-first for new fact-families; checks by
+  construction over review; walkthrough facts-and-sources section; pre-commit
+  duplication pass; plan-authoring single-source scan. IN THIS PLAN: the
+  invariant joins Global Constraints (binding on Tasks 4-14); walkthroughs
+  from Task 4 onward carry facts-and-sources; Task 14's pre-push suite gains a
+  whole-package duplication/abstraction audit as the phase backstop. Specific
+  homes remain plan/spec decisions (currently inst/schema/fields.yaml and
+  checks.yaml).
+- **Execution amendment 7 (2026-07-12; drafted at the Task 5 walkthrough;
+  SIGNED OFF, Liz 2026-07-12, with addition (h)):** joins + levels redesign, resolving Task 4 follow-ups (c)
+  and (f), amendment 4(f)'s `shared:` question, and the many-to-many requirement.
+  (a) **Sections merge:** `identifiers:` dissolves into `levels:` (name kept —
+  users' multilevel vocabulary; `constant_within_level` keeps its name for the
+  same reason). A level entry maps a user-named level to what identifies it: a
+  bare column name (shorthand for `keys:`), or a mapping with `keys:` (one or
+  more columns) XOR `combine:` (one or more columns building a virtual column
+  named by the level; optional `separator`, default "" — `authorYEAR` is legal)
+  plus optional `within:` naming a parent level. Nesting is EXPLICIT (option B,
+  over composite-key-implicit nesting): it matches how users say it and makes
+  the hierarchy itself checkable (a child key under two parents — data-side
+  check, catalogued at Task 8/10). Effective grouping columns = own keys or
+  virtual column + all ancestors'. Forward references among sibling levels are
+  legal; nesting cycles are a new YS04 check. Level names are always the user's
+  words — nothing pipeline-reserved (Task 10's informational `study_id` lookup
+  resolves at its walkthrough: conventional name or drop). "Identifier" retires
+  as vocabulary (conventions Terminology updated in the rework); "virtual
+  column" survives. YE06 reworded for level entries.
+  (b) **Joins:** `granularity` is DROPPED — J002 derives its uniqueness
+  expectation from `keys` + `relationship` (single home); `levels:` is no longer
+  referenced by joins (it serves constant-within checks and key building). New
+  required field `adds: variables | observations` — the join's declared type
+  sets the overlap expectation, REPLACING per-column `shared:` declarations
+  (rejected: tedious, and the type carries the fact): `adds: variables` =
+  mutating join, where non-key column overlap becomes a data-side finding;
+  `adds: observations` = row append (bind_rows), where column mismatch becomes
+  the data-side finding (near-miss suggestions) and `keys` are the identity
+  columns for cross-table collision checks. The words are deliberately
+  shape-neutral (a wide input's on-disk layout never changes what a join
+  "adds"); orientation is the reader's job — see (f). `relationship` gains the
+  full dplyr domain [one-to-one, one-to-many, many-to-one, many-to-many] (users
+  never reorder a join to fit the vocabulary; the value passes through to dplyr
+  at Task 11). `relationship` and `unmatched_ok` are legal only when
+  `adds: variables`; requiredness applies only where a field is permitted. No
+  wrappers: each spec row compiles to one dplyr join / bind_rows call with
+  checks around it.
+  (c) **Schema restructure:** fields.yaml nests fields under their kind — a new
+  top-level `kinds:` list (file, source, column, level, join, join_file; the
+  `combine` kind dissolves into `level`) is the closed set's single home;
+  `appears_in` dissolves into the structure. Parse-time duplicate-key guarding
+  thereby lands at the right scope (per kind), letting same-named fields carry
+  different properties per kind — level `keys` vs join `keys`, the same concept
+  wearing the same word (one word per concept). Conformance tests: group
+  headers ⊆ kinds, `contains` values ⊆ kinds, and same-named fields whose
+  properties drift apart are flagged. New properties: `requires:`
+  (co-occurrence guard, new YE07 check; instance: `separator` requires
+  `combine`) and `permitted_adds:` (legality conditional on the sibling `adds`
+  value — second occurrence of the permitted_types pattern; rule of three says
+  the third extracts a general mechanism). "kind" recorded as provisional
+  wording (Liz: clunky; internal-only, so a later rename is cheap).
+  (d) **Certification granularity resolved (Liz, 2026-07-12):** a table
+  certification certifies internal coherence and correctness WITHOUT reference
+  to other files — that is its point; join-stage issues decertify the joined
+  artifact only (fixes may route back into tables and their corrections).
+  §8.2 updated; partial-processing gating rules remain Phase 2 planning.
+  (e) **Parked to Task 11's walkthrough:** exact data-side J-check semantics
+  for declared many-to-many joins (Liz: needed, shape unclear yet; candidates
+  recorded — observed-vs-declared looseness nudge, row accounting on the join
+  report) and for observation appends (column match, key collisions), plus
+  J-code assignments.
+  (f) **Reader guidance recorded:** every reader delivers the canonical frame
+  (rows = observations, columns = the declared variables); the join layer never
+  sees orientation. Users need guidance on both the target shape and how to
+  achieve it: the readers.R template (Phase 2 `rev_project()`) states the
+  contract explicitly, and an import-and-shaping vignette (worked transpose
+  example) lands with Task 14 docs / Phase 3 vignette work.
+  (g) **Task 4 contained rework executes as Task 5's Step 0** (own commit,
+  TDD): schema restructure + loader, identifiers→levels merge, YE06 rewording,
+  YE07 + YS04 registry rows, matrix regenerate, fixture updates. Design-spec
+  §3.1/§3.3/§8.2 amendments ride the task's commits (amendment 3 precedent).
+  (h) **Structural reviews added to the Task 14 backstop (Liz, at sign-off):**
+  alongside amendment 6's duplication audit — (i) fact-home review: the
+  schematic structure across facts (registry shapes, where each fact-family
+  lives, the recorded same-named-fields divergence list); (ii) check-parsimony
+  review: checks stay schema-generated wherever possible — never the same
+  check specified separately for elements one generic check could cover.
+- **Execution amendment 8 (2026-07-12; drafted at the post-consolidation
+  workflow/architecture discussion; SIGNED OFF, Liz 2026-07-12, after one
+  review amendment — the front matter rewritten in place, commit b2f9bcc):**
+  workflow
+  step model and phase re-cut.
+  (a) **Step model + vocabulary** (resolves amendment 5's provisional
+  vocabulary and Task 9's naming question early): the user workflow is
+  discrete steps — spec → load → process → transform (v2) → present (v3) —
+  each with its own verification, report + certificate, and fix surface
+  (spec: edit the YAML; load: dictionary, source file, or reader; process:
+  corrections.csv or spec; transform: mapping/valence tables or spec).
+  "derive" retires as the user-facing stage word. Steps compose via
+  `rev_run()` (renamed from `rev_process()`), default all shipped steps,
+  `through =` to stop earlier — steps are prefixes of one stateless run, so
+  there is no non-contiguous selection and no stale handoff (transform,
+  consuming the certified clean artifact, is the one true handoff).
+  Per-step command spellings settle at each phase's implementation
+  walkthrough; reports/certificates carry the step name. Joins execute and
+  report in process; the joins SPEC reports in the spec step.
+  (b) **Releases and phases:** v1 = spec + load + process; v2 = transform;
+  v3 = vis. Phases re-cut one workflow unit each: 1 spec, 2 load, 3 process
+  (standardise, validate, joins, corrections engine, clean-certification),
+  4 scaffold+synthetic+vignettes, 5 dress rehearsal, 6 usability pilot
+  (→ v1), 7 transform (→ v2). Corrections and clean-certification move
+  AHEAD of derive.
+  (c) **Phase 1 re-scoped to spec only.** Remaining Phase 1 work = Tasks
+  15–18 (appended below): spec-axis file reorganisation, spec report
+  machinery, the spec-step runner, close-out. Old Tasks 6–13 MOVE to their
+  steps' phases — 6, 7, 13 and the findings half of 9 to Phase 2 (load);
+  8, 10, 11 and the data half of 12 to Phase 3 (process) — their text below
+  is FROZEN as source material for those phases' plans; do not execute from
+  this plan. `rev_draft_dictionary()` ships in Phase 2 (it reads data
+  files) under its spec-axis file name; `rev_run()` lands with Phase 2
+  (first multi-step composition).
+  (d) **Two-axis file scheme** (spec §7.3): `spec-*` declaration surfaces
+  vs `load-`/`process-`/`transform-*` execution; shared machinery
+  unprefixed. Phase 1 renames: spec-dictionary.R → spec-generic.R (shared
+  battery + plumbing) + spec-source.R (within-source + set identity);
+  spec-joins.R → spec-join.R. The File map above is restated accordingly.
+  (e) **Held Task 5-close agenda dispositions:** format convolution check
+  passed (no change); "kind" wording kept (question closed);
+  same-named-field divergence list kept (conformance test guards drift);
+  schema vocabulary gaps and `permitted_when` deferred with named triggers
+  (the transform spec's kinds as the likely third permission instance; each
+  phase's close-out structural review — Task 18 runs amendment 6/7h reviews
+  scoped to spec-stage code; the full-inventory check-parsimony review
+  moves to the process phase's close-out).
+  (f) Spec amended in the same commit (§2, §3, §6, §7.3, §9, §10);
+  conventions Terminology gains the step words and retires "derive"
+  user-facing. The title, Goal/Architecture front matter, and File map are
+  rewritten in place to state the re-cut scope (Liz's review 2026-07-12:
+  fix the old text rather than annotate it; pre-amendment wording is in
+  git history).
+- **Execution amendment 9 (2026-07-12; from Liz's review at the Task 15
+  walkthrough — the reader pair and step-command naming; SIGNED OFF,
+  Liz 2026-07-12):** user-facing naming grammar + one door per
+  purpose.
+  (a) **Naming grammar (binds all user-facing workflow functions):**
+  `rev_<step>_<action>`, step words per conventions Terminology (spec,
+  load, process, transform). Two action words, the same pair at every
+  step (Liz, 2026-07-12 — deliberate): `audit` — check and report:
+  write the step's report + certificate, never aborting; `run` —
+  actually execute the step and produce its output (spec step: the
+  validated spec objects; later steps: their artifacts, e.g. saved
+  files). A run of an unsound step cannot produce output: `run` aborts
+  with all problems listed, pointing at the step's audit. Internal
+  `check_*` naming (conventions, closed decision) is untouched —
+  "audit" is the user-facing word, "check" stays internal. Later
+  steps' spellings follow this grammar, settling per phase as
+  amendment 8 provides.
+  (b) **Task 17's runner is `rev_spec_audit()`** (replaces the incumbent
+  candidate `rev_check_specs()`; semantics exactly as Task 17 states).
+  (c) **Reader merge — one export replaces three.** `rev_spec_run(dir =
+  "specs", file = NULL, joins = NULL)` replaces exported
+  `rev_read_dictionary()`, `rev_read_dictionaries()`, and
+  `rev_read_joins()`, which become internal `read_dictionary()`,
+  `read_dictionaries()`, `read_joins()` (the decomposition is
+  unchanged; it stops being API). Default (`file = NULL`): read +
+  validate the whole spec set — every dictionary standalone, the
+  set-identity check, `joins.yaml` validated against the dictionaries.
+  `file = "<name>.yaml"` — a FILENAME, not a path, resolved against
+  `specs/tables/` (`"joins.yaml"` resolves to `specs/joins.yaml`) —
+  runs that one file with within-file checks only (Liz: filename
+  selection, 2026-07-12). Return is type-stable: always `list(tables =
+  <named list>, joins = <joins tibble>)` — zero-row when skipped or not
+  selected (implementation note 2026-07-12: the pre-existing
+  `no_joins()` idiom, not the NULL this amendment first sketched) —
+  length-1 tables when one dictionary is selected.
+  (d) **Joins disposition (Liz, 2026-07-12; default confirmable at Task
+  17's walkthrough):** a plain TRUE/FALSE `joins` parameter on BOTH
+  `rev_spec_audit()` and `rev_spec_run()` — the user simply states
+  whether joins are included. `TRUE` + no `joins.yaml` = error; `FALSE`
+  = joins skipped regardless of availability (no warning — deliberate).
+  Three-state auto rejected. Default `TRUE` (Liz, 2026-07-12: the user
+  must intentionally override — a safeguard when a joins file exists;
+  single-table projects state `joins = FALSE` explicitly). The report
+  and certificate ALWAYS state the joins disposition (included /
+  excluded)
+  — a certificate silent on what it skipped would misrepresent what was
+  certified.
+  (e) **Relation to `rev_run()` (amendment 8) — DEFERRED to Phase 2
+  planning (Liz, 2026-07-12):** per-step `_run` and the step-free
+  `rev_run(through =)` overlap as user surfaces. Incumbent
+  reconciliation: read `rev_<step>_run` as the stateless prefix run
+  through that step (amendment 8's "steps are prefixes" semantics,
+  spelled per-step); step-free `rev_run()` — and a corresponding
+  `rev_audit()` — may be kept as syntactic sugar (thin wrappers, cheap
+  to implement; Liz leans keep). For the spec step — the first prefix —
+  all readings coincide, so Phase 1 commits to nothing beyond
+  `rev_spec_run`'s semantics in (c). Flagged in spec §10.
+  (f) **Sequencing:** implemented as its own TDD commit BEFORE Task 15,
+  so the split files are born with the final API; Task 15's function
+  lists read accordingly (`read_dictionary`/`read_dictionaries` →
+  spec-source.R, `read_joins` → spec-join.R). Spec references to the
+  readers and the runner name, and conventions Terminology (user-facing
+  action words audit / run), amended in the same commit; NEWS.md bullet
+  rides the change.
 - **Source of truth:** dev/superpowers/specs/2026-07-07-revpiper-design.md
-  (as amended through 2026-07-09). Rationale trail:
+  (consolidated 2026-07-12). Rationale trail:
   dev/superpowers/plans/2026-07-08-phase-1-planning-notes.md.
 
-**Goal:** Implement revpiper's spec machinery and pipeline stages 1–3 — per-table
-dictionaries, joins spec, readers, standardisation, per-table validation, joins with
-J-checks, the consequence-based findings object with certification, `rev_check()`,
-and the minimal dictionary draft generator — fully TDD'd, CI green.
+**Goal:** Implement revpiper's spec machinery — the workflow's spec step:
+per-table dictionaries, the joins spec, schema-driven validation, the spec
+report with certification, and the spec-step runner — fully TDD'd, CI green.
+(Phase 1 was re-cut to the spec step by amendment 8; old Tasks 6–13 below
+are FROZEN source material for Phases 2–3, not executable from this plan.)
 
-**Architecture:** Functional core; one file per topic (provisional layout, spec §5);
-S3 for `rev_dictionary`, `rev_findings`, `rev_certificate`. All input read as
-character; types exist only via declared coercion (prespecify-then-check). Findings
-carry consequences, never severities; certification = zero standing findings, with
-explicit acknowledgment declarations the only pass.
+**Architecture:** Functional core; two-axis file layout (spec §7.3):
+`spec-*` declaration surfaces vs later steps' execution files, shared
+machinery unprefixed; S3 for `rev_dictionary` and `rev_report`. Checks are
+GENERATED from schema properties — `inst/schema/fields.yaml` is the single
+source of truth. Spec problems abort loading with all problems listed
+(file+entry, did-you-mean); the spec-step runner catches them into the
+spec report, which always completes — certification = zero standing
+problems, and the CERTIFIED report is the registerable artifact.
 
 **Tech Stack:** R (4.2 floor), yaml, readxl, writexl, dplyr, tidyr, stringi, cli,
-rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
+rlang (>= 1.3.0, supplying the entry-point type checkers); testthat 3e (parallel,
+snapshots).
 
 ## Global Constraints (spec §2; every task implicitly includes these)
 
-- R floor **4.2**; native pipe `|>` and `\(x)` fine; no base `%||%` (use rlang's).
+- R floor **4.2**; native pipe `|>` and `\(x)` fine; no base `%||%` (needs R >= 4.4)
+  — use rlang's, imported via `@importFrom rlang "%||%"` in `R/revpiper-package.R`,
+  the package's sole namespace import; every other external call is qualified
+  `pkg::fun()`.
 - Tidyverse style via **Air** (never hand-format); **zero lints** (`lintr::lint_package()`).
 - **TDD strictly**: failing test first, minimal code, watch pass, commit.
 - **Mirror rule**: every `R/` file gets `tests/testthat/test-<name>.R`.
@@ -65,15 +382,24 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
   network-policy block, STOP and report the domain.
 - Pre-push suite before declaring the branch ready: `air format .`,
   `lintr::lint_package()`, `devtools::test()`, `devtools::check()` (all clean).
+- **Single source of truth (amendment 6)**: every fact has one authoritative
+  home, preferably data (`inst/schema/`); code is generic over declared facts;
+  a literal appearing twice is a defect. New fact-family -> registry + loader +
+  closure test FIRST. Walkthroughs name each new fact's home
+  (facts-and-sources); every commit is preceded by a duplication pass, findings
+  reported at the check-in.
 
 ## Decisions embedded in this plan (for sign-off with the plan)
 
-1. **`rev_check()` writes diagnostics.** Spec §4 says rev_check "writes nothing";
-   D4's findings row numbers reference `preprocessed-<table>` artifacts. Resolved:
-   rev_check writes ONLY under `output/diagnostics/` (`preprocessed-<table>.csv`,
-   `findings-<runstamp>.xlsx`) — never pipeline artifacts, never `data/raw/`. "Always
-   safe" is preserved; the row numbers users see are inspectable. Spec §4 gets a
-   one-line amendment when this plan is signed off.
+1. **`rev_check()` writes diagnostics and reports.** Spec §4 says rev_check
+   "writes nothing"; D4's findings row numbers reference `preprocessed-<table>`
+   artifacts. Resolved (restated by amendment 5): stage reports + certificates go
+   under `output/reports/` (`<stage>-<runstamp>.xlsx`,
+   `<stage>-<runstamp>-certificate.txt`); data artifacts
+   (`preprocessed-<table>.csv`) under `output/diagnostics/` — never pipeline
+   artifacts, never `data/raw/`. "Always safe" is preserved; the row numbers users
+   see are inspectable. Spec §4 gets a one-line amendment when this plan is signed
+   off.
 2. **New Imports** (each justified per Area 7, logged here + in the commit):
    `yaml` (spec files; the maintained R YAML parser), `readr` (CSV ingestion:
    platform-independent UTF-8/BOM handling — a core behaviour, since encoding
@@ -83,14 +409,20 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
    zero-dependency, already spec-logged §3.7), `dplyr` + `tidyr` (joins with `relationship` enforcement;
    covidence pivot; Area 7 pre-approves), `stringi` (Unicode NFC + space/format-char
    classes — base R cannot NFC-normalise), `cli` (messages; first-logged dependency),
-   `rlang` (`%||%`, abort classes; cli dependency anyway), `tibble` (comes with dplyr).
+   `rlang` (`%||%`, abort classes, entry-point type checkers `check_string()` /
+   `check_bool()` / `check_data_frame()` exported since 1.3.0 — hence the floor;
+   cli dependency anyway), `tibble` (comes with dplyr).
 3. **All raw ingestion is character.**
    `readr::read_csv(col_types = readr::cols(.default = readr::col_character()))` /
    `readxl::read_excel(col_types = "text")`: types exist only through declared
    coercion, so nothing is guessed before the dictionary speaks. Extension dispatch:
    `.csv` → readr; `.xls`/`.xlsx` → readxl (auto-detects format).
-4. **Name-only column = acknowledgment**: a `columns:` entry with `name` and no
-   `type` claims existence only (R005 if absent) and is exempt from R006.
+4. **The dictionary lists exactly the columns of interest** (amendment 3;
+   supersedes the name-only acknowledgment concept): every entry requires
+   `type`; declared columns must exist (R005), are imported, standardised,
+   checked, and used. Source columns not declared are surfaced informationally
+   (`unspecified` list, certificate annex) and dropped from pipeline artifacts —
+   never findings, never silently absorbed.
 5. **Boolean coercion accepts** exactly TRUE/FALSE (case-insensitive); **date** =
    strict ISO `YYYY-MM-DD`. Everything else is V001.
 6. **Shipped reader registry v1** = `covidence` + the generic csv/excel readers;
@@ -107,51 +439,82 @@ rlang; vendored r-lib standalone type checks; testthat 3e (parallel, snapshots).
    only. Supersedes both the `home: exclude` mechanism (doesn't exist in pkgdown
    2.2.0) and the interim post-build-prune proposal.
 
-## File map (provisional layout per spec §5)
+## File map (two-axis layout, spec §7.3; re-cut by amendment 8)
 
 | File | Responsibility | Test twin |
 |---|---|---|
 | `R/utils-messages.R` | spec-error formatting, did-you-mean, cli wrappers | `tests/testthat/test-utils-messages.R` |
-| `R/spec-dictionary.R` | load/validate `specs/tables/<t>.yaml` → `rev_dictionary` (Y-checks) | `test-spec-dictionary.R` |
-| `R/spec-joins.R` | load/validate `specs/joins.yaml` (Y-checks vs dictionaries) | `test-spec-joins.R` |
-| `R/read.R` | generic csv/xlsx readers, reader dispatch, R-checks | `test-read.R` |
-| `R/read-covidence.R` | Covidence all-data CSV importer | `test-read-covidence.R` |
-| `R/standardise.R` | five ops + composed keys + counts log | `test-standardise.R` |
-| `R/findings.R` | `rev_findings`, consequences, print, xlsx export, certificate | `test-findings.R` |
-| `R/validate.R` | V-checks per table | `test-validate.R` |
-| `R/join.R` | join execution + J-checks + near-miss suggestions | `test-join.R` |
-| `R/check.R` | `rev_check()` orchestration + diagnostics output | `test-check.R` |
-| `R/draft.R` | `rev_draft_dictionary()` | `test-draft.R` |
-| `R/import-standalone-types-check.R` | vendored (never hand-edited) | exempt (principled) |
+| `inst/schema/fields.yaml` | single source of truth: every spec field's properties | schema self-validation in `test-schema.R` |
+| `R/schema.R` | schema loader (cached), accessors | `test-schema.R` |
+| `R/spec-generic.R` | generic schema-driven battery: check definitions, shape/type matchers, problem plumbing (Task 15 splits it out of `spec-dictionary.R`) | `test-spec-generic.R` |
+| `R/spec-source.R` | internal `read_dictionary()`/`read_dictionaries()` (amendment 9): per-table dictionaries, levels, reference resolution, set identity (the split's other half) | `test-spec-source.R` |
+| `R/spec-join.R` | internal `read_joins()`: load/validate `specs/joins.yaml` (Y-checks vs dictionaries; renamed from `spec-joins.R`, Task 15) | `test-spec-join.R` |
+| `R/spec-run.R` | `rev_spec_run(dir, file, joins)`: the spec step's run — validated spec objects or abort with all problems (amendment 9) | `test-spec-run.R` |
+| `R/report.R` | stage report + certification machinery, spec instantiation only (findings item schema lands in Phase 2) | `test-report.R` |
+| `R/spec-audit.R` | `rev_spec_audit()` (Task 17): data-free spec step audit — load specs, catch problems, report, certify | `test-spec-audit.R` |
+
+Files for the frozen old Tasks 6–13 (`read.R`, `read-covidence.R`,
+`standardise.R`, `findings.R`, `validate.R`, `join.R`, `check.R`,
+`draft.R`) move to Phases 2–3 with their tasks and get their spec-§7.3
+names in those phases' plans.
 
 ## Check catalogue, routing, and data-dict coverage (plan deliverable)
 
 Consequence constants: `not certifiable` (every finding, always) plus, where
 mechanical: `join '<left>-<right>' skipped`; `dependent checks on '<column>' not run`.
 
-### Y — spec validation (parse time; these ABORT with all problems listed, file+entry)
+### Spec validation (parse time; these ABORT with all problems listed, file+entry)
 
-| Code | Check | Fix routes to |
-|---|---|---|
-| Y001 | unknown field name (with did-you-mean, `utils::adist` ≤ 2) | named spec file + entry |
-| Y002 | unknown `type` (not text/integer/decimal/boolean/date) | column entry |
-| Y003 | `values` and `range` both present on one column | column entry |
-| Y004 | `values` on boolean/date | column entry |
-| Y005 | `range` on text/boolean | column entry |
-| Y006 | `units` on non-integer/decimal | column entry |
-| Y007 | mixed-type or empty `values` list; `range` not length-2 of column's type | column entry |
-| Y008 | descending `range` | column entry |
-| Y009 | role names unknown column, or invalid `combine` (unknown/duplicate/empty parts, missing separator) | roles block |
-| Y010 | `levels` key names unknown column | levels block |
-| Y011 | `constant_within_level` names an undeclared level | column entry |
-| Y012 | duplicate/empty column name within a table | columns block |
-| Y013 | duplicate table name across `specs/tables/*.yaml` | the two files named |
-| Y014 | join references unknown table | joins.yaml entry |
-| Y015 | join `keys` reference unknown column (roles-block combined keys count as known) | joins.yaml entry |
-| Y016 | `relationship` not one-to-one/one-to-many; `granularity` not a declared level of the "one" side; `unmatched_ok` not boolean | joins.yaml entry |
-| Y017 | missing required top-level field (`table`, `source`, `columns`) | spec file |
-| Y018 | `reader` neither shipped nor a function in `readers.R` | source block / readers.R |
-| Y019 | `source.file` missing from source block | source block |
+Codes are prefixed by SCOPE — how much context the check reads (amendment 4;
+one term per scope, used everywhere): **YF** form (within one field) · **YE**
+entry (across fields within one entry) · **YS** source (across entries within
+one file) · **YX** cross-source (across files). Every check is one definition; its instances are declared by
+schema properties in `inst/schema/fields.yaml`.
+
+#### YF — form checks (within one field)
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YF01 | `empty_ok` | field written with no value (YAML null); `description` exempt (draft skeletons) | the named entry |
+| YF02 | `shape` + `cardinality` | value malformed: wrong element type, or wrong count (`range` needs exactly two; empty list where one-or-more required) | the named entry |
+| YF03 | `domain` | value outside its closed domain, did-you-mean (`type`; joins `relationship`) | the named entry |
+| YF04 | `unique_entries` | duplicate entries within a list field (`values`, `combine`, level keys) | the named entry |
+| YF05 | `ordered` | `range` descending (numeric or chronological) | the named entry |
+
+#### YE — entry checks (across fields within one entry)
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YE01 | field vocabulary | unknown field name, did-you-mean vs the context's legal set | the named entry |
+| YE02 | `required` | required field absent (top: `table`,`source`,`columns`; source: `file`; column: `name`,`type`; combine: `combine`,`separator`) | the named entry |
+| YE03 | `permitted_types` | constraint on a column type outside its permitted set (`values`/`units`: all but boolean; `range`: integer/decimal/date) | column entry |
+| YE04 | `excludes` | mutually exclusive fields both present (`values`+`range`); type-independent | column entry |
+| YE05 | `content_typed` | constraint entries do not match the column's declared type (incl. mixed-type entries) | column entry |
+| YE06 | *custom: union dispatch* | role entry neither a column name nor a combine block | roles block |
+
+#### YS — source checks (across entries within one file)
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YS01 | `identity` (file scope) | duplicate column name within a table | columns block |
+| YS02 | `refers_to` (file scope) | unresolved within-file reference: role/level key → declared columns; `constant_within_level` → declared levels; did-you-mean | the named entry |
+| YS03 | *custom: environment* | declared `reader` neither shipped nor a function in readers.R | source block / readers.R |
+| YS05 | *custom: parseable* | the file is not parseable YAML (parser message embedded; from the 2026-07-13 adversarial battery, hostile-12) | the named file |
+| YS06 | *custom: identity* | a combine level's virtual column collides with a declared column (battery lawyer-18; Liz's ruling 2026-07-13) | the named level |
+
+#### YX — cross-source checks (across files; separate, composable, data-free set-level step)
+
+| Code | Property | Check | Fix routes to |
+|---|---|---|---|
+| YX01 | `identity` (set scope) | duplicate table name across `specs/tables/*.yaml` | the two files named |
+| YX02 | `refers_to` (set scope) | unresolved cross-source reference: join `left`/`right` → tables; `keys` → the side's key columns (combined keys count); `granularity` → a declared level of the "one" side; did-you-mean | joins.yaml entry |
+| YX03 | `custom: completeness` | a join's `keys` do not cover both sides (row present in checks.yaml since Task 5; catalogue row backfilled 2026-07-13) | joins.yaml entry |
+| YX04 | `custom: expected file` | an expected spec file is absent from the set (today's one instance: joins.yaml under `joins = TRUE`, Task 17 / amendment 9d) | add the file, or turn the expectation off (`joins = FALSE`) |
+
+Old→new mapping (amendment 4): Y001→YE01 · Y002→YF03 · Y003→YE04 · Y004/Y005/Y006→YE03 ·
+Y007→YF02+YE05 · Y008→YF05 · Y009→YS02+YE06 · Y010/Y011→YS02 · Y012→YS01 (+YE02/YF01
+for missing/empty names) · Y013→YX01 · Y014/Y015→YX02 · Y016→YF03/YF02/YX02 ·
+Y017/Y019→YE02 · Y018→YS03 · Y020→YF01 · Y021(draft)→YF02 · new: YF04.
 
 ### R — reading/structure (findings; consequence: table skipped → its joins skipped; not certifiable)
 
@@ -161,8 +524,8 @@ mechanical: `join '<left>-<right>' skipped`; `dependent checks on '<column>' not
 | R002 | declared `sheet` absent from workbook | source block |
 | R003 | reader errored (error text relayed) | readers.R / source block |
 | R004 | reader returned non-data-frame | readers.R |
-| R005 | declared column absent from data (incl. name-only columns) | dictionary vs re-export |
-| R006 | undeclared column present (exempt: name-only listed) | dictionary: describe or list by name |
+| R005 | declared column absent from data | dictionary vs re-export |
+| R006 | *retired (amendment 3)* — undeclared source columns are informational, never findings: returned as `unspecified`, reported by `rev_check()`, listed on a certificate annex, dropped from pipeline artifacts | add to the dictionary if wanted |
 
 ### V — per-table validation (findings; per column/rows)
 
@@ -194,54 +557,74 @@ correction (matches nothing). Fix routes to the corrections.csv entry named.
 
 | data-dict | Ours | Status |
 |---|---|---|
-| S01 unresolved FK | — | N/A: no `foreign_key` constraint in v1 (joins declare keys; Y014/Y015) |
-| S02 unknown table | Y014 | adopted |
-| S03 unknown column | Y015 | adopted |
-| S04 invalid join expr | Y015/Y016 | adapted (structured keys, not expressions) |
-| S05 unresolved conflict col | — | N/A: no `conflicts` field v1; overlapping non-key columns get dplyr suffixes + R006 visibility |
-| S06 inconsistent cardinality | Y016 + J002/J003 | adapted (declared vs constraint consistency checked at data level) |
-| S07 wrong representation key | Y003–Y005 | adapted (values/range optionality per type) |
-| S08 units w/o quantity | Y006 | adopted |
+| S01 unresolved FK | — | N/A: no `foreign_key` constraint in v1 (joins declare keys; YX02) |
+| S02 unknown table | YX02 | adopted |
+| S03 unknown column | YX02 | adopted |
+| S04 invalid join expr | YX02/YF03 | adapted (structured keys, not expressions) |
+| S05 unresolved conflict col | — | N/A: no `conflicts` field v1; overlapping non-key columns get dplyr suffixes + unspecified-columns visibility |
+| S06 inconsistent cardinality | YF03/YX02 + J002/J003 | adapted (declared vs constraint consistency checked at data level) |
+| S07 wrong representation key | YE03/YE04 | adapted (values/range permissions per type) |
+| S08 units w/o quantity | YE03 | adapted (permissive: units allowed except boolean, amendment 4) |
 | S09 missing $learn_more | — | N/A: no counterpart field |
-| S10 duplicate name | Y012/Y013 | adopted |
-| S11 empty name | Y012 | adopted (folded) |
-| S12 wrong value type | Y007 | adopted |
-| S13 descending range | Y008 | adopted |
+| S10 duplicate name | YS01/YX01 | adopted |
+| S11 empty name | YE02/YF01 | adopted (folded into required/empty) |
+| S12 wrong value type | YF02/YE05 | adopted |
+| S13 descending range | YF05 | adopted |
 | S14/S15 time zone | — | N/A: datetime dropped from v1 |
 | S16 misplaced single-table description | — | N/A: per-table files by design |
 | S17 malformed version | — | N/A: data-version field not adopted; provenance stamped by pipeline (§3.8) |
 | S18 missing $version | — | N/A: schema versioning deferred to first breaking change |
 | M01 type mismatch | V001 | adapted (coercion-based) |
 | M02 missing column | R005 | adopted |
-| M03 undocumented column | R006 | adopted (finding + name-only acknowledgment) |
-| M04 missing source | Y017/Y019 | adopted |
+| M03 undocumented column | — | adapted (amendment 3): informational unspecified-columns listing, not a finding |
+| M04 missing source | YE02 | adopted (folded) |
 | M05 unreadable source | R001–R004 | adopted + extended (readers) |
 | D01 nulls in required | V004 | adopted |
 
 ---
 
-### Task 1: Dependencies, vendored checkers, branch
+### Task 1: Dependencies, namespace, branch
 
 **Files:**
-- Modify: `DESCRIPTION` (Imports)
-- Create: `R/import-standalone-types-check.R` (+ `R/import-standalone-obj-type.R`, pulled in automatically)
+- Modify: `DESCRIPTION` (Imports; rlang floored >= 1.3.0)
+- Modify: `R/revpiper-package.R` (`@importFrom rlang "%||%"`) + regenerated `NAMESPACE`
 - Modify: `renv.lock` (snapshot)
 
-**Interfaces:** Produces the Imports every later task assumes and `check_string()`,
-`check_bool()`, `check_data_frame()` (vendored) for entry-point validation.
+**Interfaces:** Produces the Imports every later task assumes; entry-point
+validation uses rlang's exported checkers, called qualified —
+`rlang::check_string()`, `rlang::check_bool()`, `rlang::check_data_frame()`
+(exported since the 2026-03 standalone migration; floor 1.3.0 verified) — plus
+`%||%`, the sole namespace import.
 
 - [ ] **Step 1: branch.** `git checkout -b phase-1-core main`
-- [ ] **Step 2: add Imports + vendor standalones** (PPM binaries only; belt-and-braces UA line):
+- [ ] **Step 2: add Imports** (PPM binaries only; belt-and-braces UA line):
 
 ```r
 Rscript -e 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); renv::install(c("yaml","readr","readxl","writexl","dplyr","tidyr","stringi","cli","rlang","tibble"), repos = sub("CODENAME", system("lsb_release -cs", intern = TRUE), "https://packagemanager.posit.co/cran/__linux__/CODENAME/latest"))'
-Rscript -e 'usethis::local_project("."); usethis::use_package("yaml"); usethis::use_package("readr"); usethis::use_package("readxl"); usethis::use_package("writexl"); usethis::use_package("dplyr"); usethis::use_package("tidyr"); usethis::use_package("stringi"); usethis::use_package("cli"); usethis::use_package("rlang"); usethis::use_package("tibble"); usethis::use_standalone("r-lib/rlang", "types-check")'
+Rscript -e 'usethis::local_project("."); usethis::use_package("yaml"); usethis::use_package("readr"); usethis::use_package("readxl"); usethis::use_package("writexl"); usethis::use_package("dplyr"); usethis::use_package("tidyr"); usethis::use_package("stringi"); usethis::use_package("cli"); usethis::use_package("rlang", min_version = "1.3.0"); usethis::use_package("tibble")'
 Rscript -e 'renv::snapshot(prompt = FALSE)'
 ```
 
+Then add the operator import to `R/revpiper-package.R` (between the usethis
+namespace markers) and regenerate NAMESPACE:
+
+```r
+## usethis namespace: start
+#' @importFrom rlang %||%
+## usethis namespace: end
+```
+
+`Rscript -e 'devtools::document()'`
+
 Expected: all binary installs (report any source compile and PAUSE); DESCRIPTION
-gains nine Imports; two `import-standalone-*.R` files appear.
-- [ ] **Step 3: verify check clean.** `Rscript -e 'devtools::check(args = "--no-manual", build_args = "--no-manual", error_on = "note")'` → 0/0/0.
+gains ten Imports with `rlang (>= 1.3.0)`; NAMESPACE gains
+`importFrom(rlang,"%||%")`. No vendored files (amendment 2026-07-10: upstream
+moved the needed checkers into rlang's exports).
+- [ ] **Step 3: verify check.** `Rscript -e 'devtools::check(args = "--no-manual", build_args = "--no-manual", error_on = "warning")'` →
+  0 errors / 0 warnings / exactly one NOTE ("Namespaces in Imports field not
+  imported from" — the declared-but-not-yet-used packages). The note is expected
+  and shrinks as Tasks 2-13 land code; Task 14 Step 4's `error_on = "note"` gate
+  requires it gone.
 - [ ] **Step 4: commit** with the dependency justifications (from "Decisions embedded" #2) in the body.
 
 ### Task 2: Spec-error infrastructure (`utils-messages.R`)
@@ -251,7 +634,7 @@ gains nine Imports; two `import-standalone-*.R` files appear.
 **Interfaces — Produces:**
 - `suggest_name(name, known)` → closest of `known` within adist ≤ 2 (case-insensitive) or `NA_character_`
 - `spec_problem(file, entry, code, message, suggestion = NULL)` → one-row problem tibble
-- `abort_spec(problems)` → `cli_abort` (class `revpiper_spec_error`) listing every problem as `code file / entry: message (did you mean ...?)`
+- `stop_spec(problems)` → `cli_abort` (class `revpiper_spec_error`) listing every problem as `code file / entry: message (did you mean ...?)`
 
 - [ ] **Step 1: failing tests**
 
@@ -260,18 +643,18 @@ gains nine Imports; two `import-standalone-*.R` files appear.
 test_that("suggest_name finds near misses and refuses far ones", {
   expect_equal(suggest_name("descrption", c("description", "type")), "description")
   expect_equal(suggest_name("VALUES", c("values", "range")), "values")
-  expect_true(is.na(suggest_name("zebra", c("description", "type"))))
+  expect_identical(suggest_name("zebra", c("description", "type")), NA_character_)
 })
 
-test_that("abort_spec reports every problem with file, entry, and code", {
+test_that("stop_spec reports every problem with file, entry, and code", {
   p <- rbind(
     spec_problem("specs/tables/estimates.yaml", "column 'mean_age'", "Y001",
                  "unknown field 'rnge'", suggestion = "range"),
     spec_problem("specs/joins.yaml", "join 1", "Y014", "unknown table 'robb'",
                  suggestion = "rob")
   )
-  expect_error(abort_spec(p), class = "revpiper_spec_error")
-  expect_snapshot(error = TRUE, abort_spec(p))
+  expect_error(stop_spec(p), class = "revpiper_spec_error")
+  expect_snapshot(error = TRUE, stop_spec(p))
 })
 ```
 
@@ -292,12 +675,11 @@ spec_problem <- function(file, entry, code, message, suggestion = NULL) {
   )
 }
 
-abort_spec <- function(problems) {
-  lines <- vapply(seq_len(nrow(problems)), \(i) {
-    p <- problems[i, ]
-    hint <- if (!is.na(p$suggestion)) sprintf(" (did you mean '%s'?)", p$suggestion) else ""
-    sprintf("%s %s / %s: %s%s", p$code, p$file, p$entry, p$message, hint)
-  }, character(1))
+stop_spec <- function(problems) {
+  hint <- ifelse(is.na(problems$suggestion), "",
+                 sprintf(" (did you mean '%s'?)", problems$suggestion))
+  lines <- sprintf("%s %s / %s: %s%s",
+                   problems$code, problems$file, problems$entry, problems$message, hint)
   names(lines) <- rep("x", length(lines))
   cli::cli_abort(
     c("Spec validation failed ({nrow(problems)} problem{?s}):", lines),
@@ -311,6 +693,11 @@ abort_spec <- function(problems) {
 
 ### Task 3: Dictionary loading + field/type Y-checks (`spec-dictionary.R`, part 1)
 
+> **Executed 2026-07-10 as written (commits 199465a, c3c945e). SUPERSEDED by
+> Task 3b (amendment 4): the hand-written checks below are replaced by
+> schema-driven validators and the Y-codes by the YF/YE/YS/YX catalogue. Kept
+> as the record of what ran; do not execute again.**
+
 **Files:** Create `R/spec-dictionary.R`, `tests/testthat/test-spec-dictionary.R`,
 fixtures under `tests/testthat/fixtures/specs-good/tables/estimates.yaml` and
 `fixtures/specs-bad/…` (one bad yaml per Y-code exercised).
@@ -320,10 +707,10 @@ fixtures under `tests/testthat/fixtures/specs-good/tables/estimates.yaml` and
   `source` list(file, sheet = NULL, reader = NULL), `roles` named list (chr column or
   list(combine = chr(), separator = chr)), `levels` named list of chr(),
   `columns` tibble(name, type, values <list>, range <list>, units, required, unique,
-  missing <list>, constant_within_level, description, acknowledged <lgl>), `path` chr)
-  — or `abort_spec()` listing ALL problems.
-- Constants: `REV_TYPES <- c("text","integer","decimal","boolean","date")`,
-  `DICT_FIELDS`, `COLUMN_FIELDS`, `SOURCE_FIELDS` (closed field sets).
+  missing <list>, constant_within_level, description), `path` chr)
+  — or `stop_spec()` listing ALL problems.
+- Constants: `spec_types <- c("text","integer","decimal","boolean","date")`,
+  `dict_fields`, `column_fields`, `source_fields` (closed field sets).
 
 Good fixture (used across later tasks — keep exactly):
 
@@ -354,16 +741,20 @@ columns:
     type: integer
     values: [1, 2, 9]
   - name: notes_temp
+    type: text
 ```
 
 - [ ] **Step 1: failing tests** — parse the good fixture and assert every slot above
-  (types, values list, name-only `acknowledged`); then one `expect_snapshot(error =
+  (types, values list, defaults); then one `expect_snapshot(error =
   TRUE, rev_read_dictionary(<bad fixture>))` per bad fixture: unknown top-level field
   (Y001 with suggestion), unknown column field (Y001), bad type (Y002), values+range
   together (Y003), values on date (Y004), range on text (Y005), units on text (Y006),
   mixed values `[1, two]` (Y007), descending range (Y008), duplicate column (Y012),
-  missing `source:` (Y017), missing `source.file` (Y019). Write each bad yaml fixture
-  as a minimal copy of the good one with the single defect.
+  column entry with no `name` (Y012), column entry with no `type` (Y017 per column),
+  a valueless field e.g. bare `range:` (Y020), missing `source:` (Y017), missing
+  `source.file` (Y019). Write each bad yaml fixture as a minimal copy of the good
+  one with the single defect. Plus one non-fixture case: a nonexistent path →
+  snapshot of the classed missing-file error (amendment 3).
 - [ ] **Step 2: run, expect FAIL.**
 - [ ] **Step 3: implement.** Structure (complete the per-check helpers following
   these two models — every check appends `spec_problem()` rows, nothing aborts until
@@ -371,22 +762,28 @@ columns:
 
 ```r
 # R/spec-dictionary.R
-REV_TYPES <- c("text", "integer", "decimal", "boolean", "date")
-DICT_FIELDS <- c("table", "description", "source", "roles", "levels", "columns")
-SOURCE_FIELDS <- c("file", "sheet", "reader")
-COLUMN_FIELDS <- c("name", "type", "values", "range", "units", "required",
+spec_types <- c("text", "integer", "decimal", "boolean", "date")
+dict_fields <- c("table", "description", "source", "roles", "levels", "columns")
+source_fields <- c("file", "sheet", "reader")
+column_fields <- c("name", "type", "values", "range", "units", "required",
                    "unique", "missing", "constant_within_level", "description")
 
 rev_read_dictionary <- function(path) {
-  check_string(path)
+  rlang::check_string(path)
+  if (!file.exists(path)) {
+    cli::cli_abort(
+      "Dictionary file {.file {path}} does not exist.",
+      class = "revpiper_spec_error", call = NULL
+    )
+  }
   raw <- yaml::read_yaml(path)
   pr <- rbind(
-    check_known_fields(raw, DICT_FIELDS, path, "top level"),
+    check_known_fields(raw, dict_fields, path, "top level"),
     check_required_fields(raw, c("table", "source", "columns"), path),   # Y017
     check_source_block(raw$source, path),                                # Y001/Y019
     check_columns_block(raw$columns, path)                               # Y001-Y008, Y012
   )
-  if (nrow(pr) > 0) abort_spec(pr)
+  if (nrow(pr) > 0) stop_spec(pr)
   new_dictionary(raw, path)
 }
 
@@ -399,13 +796,17 @@ check_known_fields <- function(x, known, file, entry) {          # -> Y001 rows
 
 check_column <- function(col, file) {                            # one column's checks
   entry <- sprintf("column '%s'", col$name %||% "<unnamed>")
-  pr <- check_known_fields(col, COLUMN_FIELDS, file, entry)
-  if (is.null(col$type)) return(pr)                              # name-only: acknowledged
-  if (!col$type %in% REV_TYPES)
-    pr <- rbind(pr, spec_problem(file, entry, "Y002",
-      sprintf("unknown type '%s'", col$type), suggest_name(col$type, REV_TYPES)))
-  if (!is.null(col$values) && !is.null(col$range))
+  pr <- rbind(
+    check_known_fields(col, column_fields, file, entry),         # Y001
+    check_required_fields(col, "type", file, entry),             # Y017 (per column)
+    check_empty_fields(col, file, entry)                         # Y020 (description exempt)
+  )
+  if (!is.null(col$values) && !is.null(col$range))               # Y003: type-independent, so pre-return
     pr <- rbind(pr, spec_problem(file, entry, "Y003", "'values' and 'range' are mutually exclusive"))
+  if (is.null(col$type)) return(pr)                              # type-DEPENDENT checks need a type
+  if (!col$type %in% spec_types)
+    pr <- rbind(pr, spec_problem(file, entry, "Y002",
+      sprintf("unknown type '%s'", col$type), suggest_name(col$type, spec_types)))
   if (!is.null(col$values) && isTRUE(col$type %in% c("boolean", "date")))
     pr <- rbind(pr, spec_problem(file, entry, "Y004", sprintf("'values' is not allowed on type '%s'", col$type)))
   if (!is.null(col$range) && isTRUE(col$type %in% c("text", "boolean")))
@@ -419,74 +820,313 @@ check_column <- function(col, file) {                            # one column's 
 
 plus `check_values_range_types()` (homogeneous non-empty values matching the declared
 type; range length-2, ascending, type-matching → Y007/Y008), `check_columns_block()`
-(maps `check_column`, adds Y012 for duplicate/empty names), `check_source_block()`
-(Y001 on unknown source fields, Y019), `check_required_fields()` (Y017), and
-`new_dictionary()` (tibble-ise columns; `acknowledged = is.na(type)`; defaults:
-required/unique FALSE, missing = list(character(0))).
+(maps `check_column`, adds Y012 for duplicate/empty/missing names), `check_source_block()`
+(Y001 on unknown source fields, Y019), `check_required_fields()` (Y017; called at the
+top level and per column entry), `check_empty_fields()` (Y020: any field present with
+a NULL value, `description` exempt), and `new_dictionary()` (tibble-ise columns;
+defaults: required/unique FALSE, missing = list(character(0))).
 - [ ] **Step 4: run, expect PASS** (accept snapshots after reading each).
 - [ ] **Step 5:** format, lint, commit.
 
-### Task 4: Cross-reference Y-checks (roles/levels/combine; multi-file) (`spec-dictionary.R`, part 2)
+### Task 3b: Schema-driven validation rewrite (amendment 4)
 
-**Files:** Modify `R/spec-dictionary.R`; extend `test-spec-dictionary.R` + bad fixtures.
+**Files:** Create `inst/schema/fields.yaml`, `R/schema.R`,
+`tests/testthat/test-schema.R`; rewrite `R/spec-dictionary.R` internals (public
+interface unchanged); rewrite `tests/testthat/test-spec-dictionary.R` (two-layer);
+rename `fixtures/specs-bad/*` to new codes; update the two example codes in
+`test-utils-messages.R` (Y001→YE01, Y014→YX02) and regenerate snapshots.
 
 **Interfaces — Produces:**
-- `rev_read_dictionaries(dir)` → named list of `rev_dictionary` (reads
-  `<dir>/tables/*.yaml`; adds cross-file Y013)
-- Within-file additions to `rev_read_dictionary()`: Y009 (roles: unknown column /
-  invalid combine — unknown or duplicate parts, missing separator; a valid combine
-  registers a **virtual column** named by the role), Y010 (level keys must be
-  declared or virtual columns), Y011 (`constant_within_level` names a declared level).
-- `dictionary_key_columns(dict)` → chr of all real+virtual columns usable as keys.
+- `field_schema(level)` → tibble of schema rows for `"top"|"source"|"column"|"combine"`
+  (loaded once from `inst/schema/fields.yaml`, cached in a package environment)
+- `schema_types()` → chr(5), read from the `type` row's inline domain
+- Scope-classed validators, each one definition driven by schema rows:
+  within-field `check_empty` (YF01), `check_shape` (YF02: element type + cardinality,
+  `one_or_many` normalises scalar→list), `check_domain` (YF03, did-you-mean),
+  `check_unique_entries` (YF04), `check_ordered` (YF05); within-entry
+  `check_vocabulary` (YE01), `check_required` (YE02), `check_permitted` (YE03),
+  `check_excludes` (YE04), `check_content_typed` (YE05). Per-context battery:
+  `check_entry(x, level, file, entry)` runs all ten with that level's schema slice.
+- `rev_read_dictionary(path)` — same export, same return shape, now YF/YE-complete
+  per entry plus YS01 (duplicate column names); still aborts once via `stop_spec()`.
+- Ordering gates preserved: YE01 first; YF01/YF02 before content checks; YE04
+  type-independent; type-dependent checks suppressed without a valid `type`.
 
-- [ ] **Step 1: failing tests** — good fixture with
-  `study_id: {combine: [author, year], separator: "_"}` parses and
-  `dictionary_key_columns()` includes `study_id`; bad fixtures for Y009 (combine
-  names unknown column; duplicate parts; missing separator), Y010, Y011, and a
-  two-file fixture dir with duplicate `table:` names for Y013 via
-  `rev_read_dictionaries()`. Snapshot each error.
+- [ ] **Step 1: schema file.** One field per line (flow style: field-level diffs);
+  ALL properties explicit; `any`/`null` are stated, never implied:
+
+```yaml
+# inst/schema/fields.yaml — single source of truth for spec-field validation.
+# Properties: field, level, required, shape (string|boolean|scalar|block|
+# named_list|list_of_blocks), cardinality (one|one_or_many|two), empty_ok,
+# domain (inline list or null), permitted_types (any | list of types),
+# excludes, content_typed, ordered (ascending|null), unique_entries,
+# refers_to (columns|levels|null), identity, default.
+fields:
+  - {field: table, level: [top], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
+  - {field: description, level: [top, column], required: false, shape: string, cardinality: one, empty_ok: true, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: source, level: [top], required: true, shape: block, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: roles, level: [top], required: false, shape: named_list, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: columns, identity: false, default: null}
+  - {field: levels, level: [top], required: false, shape: named_list, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
+  - {field: columns, level: [top], required: true, shape: list_of_blocks, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: file, level: [source], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: sheet, level: [source], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: reader, level: [source], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: name, level: [column], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null}
+  - {field: type, level: [column], required: true, shape: string, cardinality: one, empty_ok: false, domain: [text, integer, decimal, boolean, date], permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: values, level: [column], required: false, shape: scalar, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: [range], content_typed: true, ordered: null, unique_entries: true, refers_to: null, identity: false, default: null}
+  - {field: range, level: [column], required: false, shape: scalar, cardinality: two, empty_ok: false, domain: null, permitted_types: [integer, decimal, date], excludes: [values], content_typed: true, ordered: ascending, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: units, level: [column], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+  - {field: required, level: [column], required: false, shape: boolean, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
+  - {field: unique, level: [column], required: false, shape: boolean, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false}
+  - {field: missing, level: [column], required: false, shape: string, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: null, identity: false, default: []}
+  - {field: constant_within_level, level: [column], required: false, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: levels, identity: false, default: null}
+  - {field: combine, level: [combine], required: true, shape: string, cardinality: one_or_many, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null}
+  - {field: separator, level: [combine], required: true, shape: string, cardinality: one, empty_ok: false, domain: null, permitted_types: any, excludes: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null}
+```
+
+> Follow-up (2026-07-11, Liz's 3b review): shape vocabulary consolidated —
+> `block`/`named_list`/`list_of_blocks` become `mapping`/`list_of_mappings`
+> plus an explicit `context` property (the level to validate a mapping's
+> contents as; null = user-chosen keys are data). Recursion into
+> source/columns is now schema-driven (`check_contexts()`), and the
+> file-scope identity check generalised (`check_mapping_list()`). NEW Task 4
+> agenda item: role KEYS are pipeline vocabulary (`study_id`), not free
+> names — should unknown roles be checked? (Liz's "who owns the keys" lens.)
+
+(Task 5 appends `level: [join]` rows — `left`/`right`/`keys`/`granularity`/
+`relationship`/`unmatched_ok` — to this same file; `refers_to` for
+roles/levels/cwl is consumed in Task 4.)
+- [ ] **Step 2: failing schema tests** (`test-schema.R`): `field_schema("column")`
+  returns one row per column field with all fifteen properties non-missing;
+  `schema_types()` == the five types; SELF-VALIDATION — every property value is in
+  its closed vocabulary, every `permitted_types`/`content_typed` list ⊆
+  `schema_types()`, every `excludes`/`refers_to` target exists, `domain` only on
+  rows where it is a list, exactly one `identity` row per scope. Run: FAIL
+  (loader absent).
+- [ ] **Step 3: loader** (`R/schema.R`): `yaml::read_yaml` +
+  `tibble` conversion, cached via `local()` env; accessors above. Run: PASS.
+- [ ] **Step 4: failing property-matrix tests** (rewritten
+  `test-spec-dictionary.R`, layer 1): a generator builds a minimal valid
+  dictionary as an R list; for every schema row × property the matrix mutates one
+  aspect and asserts the mapped code fires — and asserts silence on the
+  complementary set (required false → deletion silent; each `one_or_many` field
+  accepts scalar AND list; every permitted type × constraint silent; every banned
+  type → YE03; etc.). Codes asserted programmatically via
+  `err$problems` (stop_spec gains a `problems` field on the condition for this).
+  Layer 2: curated fixtures renamed (`ye01-top-level.yaml`, `yf03-bad-type.yaml`,
+  … one per code incl. YF04-new; many-defects kept), snapshot each. Run: FAIL.
+- [ ] **Step 5: rewrite `R/spec-dictionary.R`** — the ten validators + battery per
+  the Interfaces block, consuming `field_schema()`; delete the hand-written
+  check family; keep `rev_read_dictionary()` signature, guard, `new_dictionary()`
+  (defaults now read from schema `default`), `stop_spec()` call. Run: PASS;
+  READ every snapshot (renumbered codes are new product voice).
+- [ ] **Step 6:** `air format .`, zero lints, full `devtools::test()`, commit.
+
+### Task 4: Within-source references + set-level step (`spec-dictionary.R`, part 2)
+
+> **Gate status (2026-07-11):** a walkthrough was approved, then superseded -
+> Liz wants a FRESH walkthrough from the next session before execution.
+> Execution NOT started. Decisions resolved at the 2026-07-11 walkthrough:
+> (a) **Role keys are user-chosen, never policed** (no key_domain property, no
+> YF06): a role's VALUE is still YS02-checked, joins catch key mismatches via
+> YX02, and pipeline consumers that look up a known role (`study_id`, Task 10)
+> report its absence informationally - never as a finding. (b) **The
+> "complete-example"/kitchen-sink fixture is DROPPED** (considered and
+> rejected: the matrix + good fixture + boundary-legal test carry positive
+> coverage; docs completeness comes from the generated reference, realism
+> from the miniproject; do not resurrect). (c) **/simplify trial**: run on
+> the task diff after tests are green and before the final commit; its edits
+> are reviewed jointly with Liz before keeping; treat as review feedback
+> (verify against conventions, re-run suite, report at check-in).
+
+**Files:** Modify `R/spec-dictionary.R`; extend `test-spec-dictionary.R` + fixtures.
+
+**Interfaces — Produces:**
+- Within-file additions to `rev_read_dictionary()` (completes YS scope; standalone
+  rule holds — one file, zero knowledge of other sources): YE06 (role entry
+  neither string nor combine block — union dispatch; a valid combine block is
+  validated as a `combine`-level context and registers a **virtual column** named
+  by the role), YS02 via the schema's `refers_to` (role strings + level keys +
+  combine parts → declared columns; `constant_within_level` → declared levels;
+  did-you-mean vs the collection), YS01 (duplicate column names — `identity`,
+  file scope).
+- `dictionary_key_columns(dict)` → chr of real + virtual columns usable as keys.
+- `rev_read_dictionaries(dir)` → named list of `rev_dictionary` PLUS the
+  data-free set-level step: YX01 (duplicate `table` across files — `identity`,
+  set scope). Loads each file standalone, then validates the set.
+
+- [ ] **Step 1: failing tests** — good fixture variant with
+  `study_id: {combine: [author, year], separator: "_"}` parses;
+  `dictionary_key_columns()` includes `study_id`; matrix additions for `refers_to`
+  (each referring field × resolves/doesn't); curated fixtures: ye06 (role entry a
+  number), ys02 (combine part unknown; cwl names undeclared level), yf04
+  (duplicate combine parts), ys01 stays, yx01 two-file dir. Snapshot each.
 - [ ] **Step 2: run, expect FAIL.**
-- [ ] **Step 3: implement** (`check_roles_block()`, `check_levels_block()`,
-  `check_cwl()` appended into `rev_read_dictionary`'s problem collection;
-  `rev_read_dictionaries()` = `lapply` + Y013 scan over `vapply(dicts, \(d) d$table, "")`).
-- [ ] **Step 4: run, expect PASS.**  - [ ] **Step 5:** format, lint, commit.
+- [ ] **Step 3: implement** — `resolve_references(dict_raw, file)` (one resolver,
+  schema-driven collections), `check_role_entries()` (dispatch + combine context
+  via the battery), identity check at both scopes,
+  `rev_read_dictionaries()` = per-file `rev_read_dictionary()` + set-level
+  identity scan.
+- [ ] **Step 4: run, expect PASS; read snapshots.**
+- [ ] **Step 5:** format, lint, commit.
 
-### Task 5: Joins spec (`spec-joins.R`)
+> Follow-up (2026-07-11, Liz's Task 4 review, after the task's main commit):
+> (a) `roles:` renamed `identifiers:` — the broad future-roles vision is
+> REJECTED (Liz: for later purposes users reference their own column names
+> directly); schema row, YE06 registry entry (message/params/fix), code,
+> tests, and fixtures renamed; do not reintroduce "role". (b) `identities_of`
+> renamed `entry_names`; plain-language terminology (entry, name, collection,
+> identifier, virtual column) added to dev/conventions.md Terminology.
+> (c) OPEN — decide at the Task 5 walkthrough: drop `levels:` and joins'
+> `granularity`? Liz judges granularity context-bound and per-join (join keys
+> and cardinality vary between joins), so a table-level grouping vocabulary
+> may not be parsimonious; candidate simplification is
+> `constant_within_level` naming key column(s) directly and J002 deriving
+> uniqueness from `keys` + `relationship`. Affects Task 5 (granularity, J002,
+> rob fixture levels), Task 8 V006 (fix route wording), Task 13 skeleton
+> (`levels: {}`), and a contained Task 4 rework (schema rows, walkers,
+> matrix regenerates).
+> (d) Flagged smell, later structural follow-up: early
+> `return(no_problems())` exits rely on the promise "shape problem already
+> reported one level up" — held today by the matrix's exact-code assertions,
+> but deserves an explicit single gate rather than a comment.
+> (e) Vocabulary settled (Liz, same review; recorded in conventions
+> Terminology with a retired-words list): five researcher-first words —
+> file, section, entry, field, name — plus kind (file/source/column/
+> combine). Schema properties `level:`→`appears_in:`, `context:`→
+> `contains:`, value `top`→`file`; "block"→"section"; "collection" retired
+> (`declared_collection`→`declared_names`); YS01 params {kind,name}; YS02/
+> YX02 param {section}; YE06 says "a combination of columns". Registries
+> are keyed by entry name (duplicates fail at parse; single-source section
+> gained the registry-key-uniqueness rule). Task 5 inherits this vocabulary
+> — its schema rows are `appears_in: [join]` etc.
+> (f) Parked design discussion (Liz 2026-07-12, closing Task 4): kinds/
+> sections/refers_to and identifiers/levels each deal with overlapping
+> things — a possible design smell, deliberately left until more of the
+> pipeline exists. Considerations to return to: identifiers may need
+> NESTING (unique participants within clusters; identifying unique
+> participants vs unique studies); levels' practical use is still unclear
+> (substudies within a study, feeding constant-within checks?); a column
+> can be BOTH an identifier and a level — e.g. checking a column is
+> consistent within the identifier column(s) — so the two may be one
+> concept. Liz also floated a `levels` field nested under an identifier
+> entry (usage to be explained by her). Revisit at/after the Task 5
+> walkthrough together with (c); do not redesign unilaterally.
+
+### Task 5: Joins spec (`spec-joins.R`) — RESTATED by execution amendment 7
 
 **Files:** Create `R/spec-joins.R`, `tests/testthat/test-spec-joins.R`, fixtures
-`fixtures/specs-good/joins.yaml` + bad variants.
+`fixtures/specs-good/joins.yaml` + bad variants. Step 0 also touches
+`inst/schema/fields.yaml`, `inst/schema/checks.yaml`, `R/schema.R`,
+`R/spec-dictionary.R`, the property matrix, and the good table fixtures.
 
 Good fixture:
 
 ```yaml
 # tests/testthat/fixtures/specs-good/joins.yaml
 joins:
-  - left: estimates
+  - adds: variables
+    left: estimates
     right: rob
     keys:
       estimates: [study]
       rob: [study_id]
-    granularity: study
     relationship: one-to-many
     unmatched_ok: false
 ```
 
-(Requires a second good table fixture `fixtures/specs-good/tables/rob.yaml`: table
-`rob`, source file `data/raw/rob.csv`, columns `study_id` (text, required) +
-`rob_direct` (text, values [low, high]); levels `study: [study_id]`.)
+(Second good table fixture `fixtures/specs-good/tables/rob.yaml`: table `rob`,
+source file `data/raw/rob.csv`, columns `study_id` (text, required) +
+`rob_direct` (text, values [low, high]); `levels: {study: study_id}`. In
+`estimates.yaml`, `identifiers:` + `levels:` merge to `levels: {study: study}`.)
+
+- [x] **Step 0 (amendment 7 rework of Task 4's surface; own commit; TDD):**
+  fields.yaml restructured — `kinds:` list added; fields nested under their
+  kind; `appears_in` dissolved; `combine` kind dissolved into `level` (fields
+  `keys`/`combine`/`separator` (default "", requires: combine)/`within`
+  (refers_to: levels)); `identifiers` row deleted; new properties `requires` +
+  `permitted_adds` declared in `properties:`. schema.R loads groups
+  (`field_schema(kind)` unchanged for callers). spec-dictionary.R:
+  `check_identifier_entries()` becomes `check_level_entries()` (union dispatch:
+  string | mapping), YE07 requires check, YS04 nesting-cycle check (forward
+  references legal), YE06 reworded. Failing tests first: merged estimates
+  fixture parses; level combine variant registers its virtual column in
+  `dictionary_key_columns()`; `within:` chain resolves; curated fixtures +
+  snapshots for ys04 (cycle), ye07 (separator beside keys), ye06 (entry
+  neither form), ys02 (`within:` names unknown level); conformance tests
+  (group headers ⊆ kinds, `contains` ⊆ kinds, same-named-field property
+  drift); matrix regenerates over the nested schema.
 
 **Interfaces — Produces:**
-- `rev_read_joins(path, dictionaries)` → tibble(left, right, keys_left <list chr>,
-  keys_right <list chr>, granularity, relationship, unmatched_ok) with Y-checks:
-  Y001 (unknown fields), Y014 (unknown table), Y015 (key not in
-  `dictionary_key_columns()` of its side), Y016 (bad relationship / granularity not a
-  declared level of the "one" side / non-boolean unmatched_ok). Missing joins.yaml →
-  zero-row tibble (single-table projects are valid).
+- Schema rows. `join_file` kind: `joins` (required, list of join entries —
+  the only legal field in joins.yaml). `join` kind: `adds` (required string,
+  `domain: [variables, observations]`), `left`/`right` (required strings,
+  resolved against the loaded set's table names — YX02), `keys` (required
+  mapping side → column(s); mapping keys must be exactly the two sides; each
+  side's values resolve against that side's `dictionary_key_columns()` — the
+  one context-parameterised reference, thin custom code), `relationship`
+  (`permitted_adds: [variables]`, required there, `domain: [one-to-one,
+  one-to-many, many-to-one, many-to-many]`), `unmatched_ok`
+  (`permitted_adds: [variables]`, boolean, `default: false`). Requiredness
+  applies only where a field is permitted. The battery + resolver do the
+  rest: YE01/YE02/YF02/YF03/YE07 per entry; YX02 for unresolved
+  tables/keys.
+- `rev_read_joins(path, dictionaries)` → tibble(adds, left, right,
+  keys_left <list chr>, keys_right <list chr>, relationship (NA on
+  observation appends), unmatched_ok). Missing joins.yaml → zero-row tibble
+  (single-table projects are valid). This is the across-source (YX)
+  validation step — data-free, composable, callable on its own; table
+  certification never depends on it (amendment 7d).
+- checks.yaml: YX02 flips `implemented: true`.
 
-- [ ] **Steps 1–5:** failing tests (good parse incl. defaults `unmatched_ok = FALSE`;
-  snapshot per bad fixture; absent file → zero rows), watch fail, implement
-  (`check_join_entry()` per join, same problem-collection pattern), watch pass,
-  format+lint, commit.
+- [x] **Steps 1–5 (joins proper; DONE 2026-07-12, incl. /simplify pass):**
+  failing tests (good parse incl. default
+  `unmatched_ok = FALSE`; an `adds: observations` good variant with
+  relationship legally absent; matrix covers the join rows via regeneration;
+  snapshot per curated bad fixture — unknown table, unknown key column, bad
+  relationship value, relationship on an observations join, keys naming a
+  non-side table; absent file → zero rows), watch fail, implement, watch
+  pass, format+lint, commit.
+- Data-side J-semantics for many-to-many and observation appends: parked to
+  Task 11's walkthrough (amendment 7e).
+
+> **Task 5-close checkpoints (recorded 2026-07-12, Liz):**
+> (1) **Format review** — the user-facing spec format against goals, before
+> Task 6's walkthrough: the whole spec surface exists and nothing is built
+> on it yet, so simplification is cheapest here. Agenda: convolution check
+> (Liz's standing concern); the schema vocabulary gaps held from Step 0
+> (a mapping-of-entries container shape, scalar shorthand as a property,
+> a one-of requirement, acyclic refers_to — each would replace custom level
+> code with schema rows); generalising permitted_types + permitted_adds
+> into one conditional-permission property naming its own discriminator
+> (permitted_when — referred here from the Task 5 /simplify pass, Liz
+> 2026-07-12; decides the YE03/YE08 message unification with it); the
+> "kind" wording; the recorded same-named-field divergence list
+> (currently: keys). The internal parsimony review stays at Task 14
+> (amendment 7h), with full check inventory in view.
+> (2) **Collaborator deliverable** — prepared after the format review, via
+> the academic-planning skill; Liz owns the structure. Audience: three
+> reviews at spec/dictionary design stage (two pre-data-collection, one
+> retrofitting completed collection for clean/derive/vis). Framing (Liz
+> 2026-07-12): NOT mechanics-first — show why the spec stage exists and how
+> it enables the rest of the automation; this workflow is a paradigm shift
+> from messy-dataset + hand-cleaning + copy-pasted code, and even git/
+> versioning is new to these users, so (a) show it is manageable, (b) show
+> why: efficiency, transparency, ease of reproduction and rerun, machine-
+> and human-friendly artifacts, AI-enablement-ready as capabilities mature,
+> future-proofed building blocks over these reviews' timeframes. Make
+> flexibility EXPLICIT for the pre-spec collaborators: the dictionary is
+> not a lock-in — piloting and extraction changes are expected and allowed;
+> the spec evolves with the review. Invite engagement and refinement.
+> Describe (not demo) the certificate and draft generator as coming.
+> Quarto source; AI-use disclosure statement; seeds the Phase 3 vignette.
+
+> **Tasks 6–13 below MOVED out of Phase 1 by execution amendment 8** —
+> old 6, 7, 13 and the findings half of 9 to Phase 2 (load); old 8, 10, 11
+> and the data half of 12 to Phase 3 (process). Their text is frozen here
+> as source material for those phases' plans; do NOT execute from this
+> plan. Phase 1 continues at Tasks 15–18.
 
 ### Task 6: Generic readers + dispatch + R-checks (`read.R`)
 
@@ -501,22 +1141,25 @@ skip-if-absent now; committed synthetic derivative belongs to Phase 3's designed
 synthetic review).
 
 **Interfaces — Produces:**
-- `rev_read_table(dict, project)` → list(`data` = all-character tibble | NULL,
-  `findings` = rev_findings-shaped tibble (Task 9 constructor not yet available —
-  return `fnd_stub()` rows: plain tibble with the findings columns; Task 9 swaps the
-  constructor in one place))
+- `rev_read_table(dict, project)` → list(`data` = all-character tibble | NULL
+  (declared columns only, amendment 3), `findings` = rev_findings-shaped tibble
+  (Task 9 constructor not yet available — return `fnd_stub()` rows: plain tibble
+  with the findings columns; Task 9 swaps the constructor in one place),
+  `unspecified` = chr of source columns not in the dictionary)
 - Internal: `read_generic(source, project)` (`.csv` via
   `readr::read_csv(col_types = readr::cols(.default = readr::col_character()),
   show_col_types = FALSE)`; `.xls`/`.xlsx` via
   `readxl::read_excel(col_types = "text")`; extension dispatch; R001/R002), `resolve_reader(source,
   project)` (NULL → generic; "covidence" → registry; else function named in
-  `readers.R`, sourced via `source(local = new.env())`; unknown → Y018 abort),
-  R003/R004 wrapping, R005/R006 against `dict$columns` (name-only exempt from R006).
+  `readers.R`, sourced via `source(local = new.env())`; unknown → YS03 abort),
+  R003/R004 wrapping, R005 against `dict$columns`; source columns absent from the
+  dictionary go to `unspecified` and are dropped from `data` (amendment 3).
 
-- [ ] **Steps 1–5:** failing tests (good read returns 5×6 character tibble; missing
-  file → R001 finding row + NULL data; missing declared column → R005; extra_col →
-  R006 with fix_options mentioning name-only listing; erroring user reader → R003
-  carrying the error text), watch fail, implement, watch pass, format+lint, commit.
+- [ ] **Steps 1–5:** failing tests (good read returns a 5×5 character tibble of the
+  declared columns, with `extra_col` in `unspecified` and absent from `data`, no
+  finding; missing file → R001 finding row + NULL data; missing declared column →
+  R005; erroring user reader → R003 carrying the error text), watch fail, implement,
+  watch pass, format+lint, commit.
 - [ ] **Step 6: local real-workbook breadth test (skip-if-absent).** In
   `test-read.R`, guarded by
   `skip_if_not(file.exists(test_path("fixtures-local", "family-comparison.xlsx")))`:
@@ -580,9 +1223,10 @@ Column-name grammar (from the real export): `Result data: <outcome> (<timepoint>
   composed key columns appended), `log` tibble(column, op, count),
   `failures` tibble(column, value, rows <list>) for V001,
   `skipped` chr (columns whose dependent checks must not run))
-- Ops in order (each skippable per column via dictionary `clean:` map — add `clean`
-  to `COLUMN_FIELDS` in Task 3's constant, values validated as named list of booleans
-  with op names → else Y001): `encoding`, `trim`, `missing`, `coerce`, `canonicalise`.
+- Ops in order (each skippable per column via dictionary `clean:` map — add a
+  `clean` field row to `inst/schema/fields.yaml` (level column, shape named_list);
+  op-name/boolean validation via the battery → YE01/YF02): `encoding`, `trim`,
+  `missing`, `coerce`, `canonicalise`.
 
 - [ ] **Step 1: failing tests**
 
@@ -641,31 +1285,40 @@ test_that("standardisation is idempotent", {
   into `log`.
 - [ ] **Step 4: run, expect PASS.**  - [ ] **Step 5:** format, lint, commit.
 
-### Task 9: Findings object + certificate (`findings.R`)
+### Task 9: Stage-report machinery + findings (`report.R`, `findings.R`)
 
-**Files:** Create `R/findings.R`, `tests/testthat/test-findings.R`; modify `R/read.R`
-(swap `fnd_stub()` for the real constructor — one call site).
+**Files:** Create `R/report.R`, `tests/testthat/test-report.R`, `R/findings.R`,
+`tests/testthat/test-findings.R`; modify `R/read.R` (swap `fnd_stub()` for the
+real constructor — one call site).
 
-**Interfaces — Produces:**
-- `new_finding(code, consequence, table, variable = NA, study_id = NA,
-  rows = integer(), message, fix_options)` → one-row `rev_findings`
-- `bind_findings(...)` → `rev_findings` (tibble subclass, class
-  `c("rev_findings","tbl_df","tbl","data.frame")`); `no_findings()` → zero-row
-- `print.rev_findings` — grouped by consequence, counts + instances, user vocabulary
-  (snapshot-tested)
-- `rev_export_findings(findings, path)` → writes xlsx via `writexl::write_xlsx`
-  (rows list-column collapsed to `"3, 7, 12"`)
-- `rev_certificate(findings, acknowledgments)` → list(status =
-  `"CERTIFIED"|"NOT CERTIFIED"`, n_findings, acknowledgments chr);
-  `print.rev_certificate` snapshot-tested for both statuses
-- Consequence constants: `csq_not_certifiable()`, `csq_join_skipped(left, right)`,
-  `csq_checks_skipped(column)`
+**Interfaces — Produces (amendment 5: one machinery, all stages):**
+- `new_stage_report(stage, items, acknowledgments = character(0),
+  unspecified = character(0))` → `rev_report`: list(stage chr
+  ("spec"|"check"|later "correct"|"derive"), timestamp, items (stage's item
+  tibble: problems for spec, findings for check), status = "CERTIFIED" iff zero
+  standing items, acknowledgments chr, unspecified chr)
+- `print.rev_report` — certificate header (one format, stage line: "Stage:
+  specification — CERTIFIED") then items grouped per stage's conventions;
+  snapshot-tested per stage × both statuses, incl. the unspecified annex
+- `rev_export_report(report, dir = "output/reports")` → writes
+  `<stage>-<runstamp>.xlsx` (items; list-columns collapsed, e.g. rows →
+  `"3, 7, 12"`) + `<stage>-<runstamp>-certificate.txt` (rendered certificate);
+  returns paths invisibly; creates dir
+- Check-stage item schema (`R/findings.R`): `new_finding(code, consequence,
+  table, variable = NA, study_id = NA, rows = integer(), message, fix_options)`
+  → one-row `rev_findings`; `bind_findings(...)`; `no_findings()`;
+  `print.rev_findings` grouped by consequence (snapshot-tested); consequence
+  constants `csq_not_certifiable()`, `csq_join_skipped(left, right)`,
+  `csq_checks_skipped(column)`. Spec-stage items are the Task 2 problems tibble
+  — no new schema needed.
 
-- [ ] **Steps 1–5:** failing tests (constructor field types; print snapshot with 2
-  findings across 2 consequences; certificate snapshots for certified-with-
-  acknowledgments and not-certified; xlsx export → `readxl::read_excel` round-trip
-  has the collapsed rows string), watch fail, implement, watch pass (accept
-  snapshots), format+lint, commit.
+- [ ] **Steps 1–5:** failing tests (report constructor: status derivation both
+  stages; print snapshots spec/check × certified/not; export → files exist,
+  `readxl::read_excel` round-trip has collapsed rows string, certificate txt
+  contains stage line + status; findings constructor field types; findings print
+  snapshot with 2 findings across 2 consequences), watch fail, implement, watch
+  pass (READ snapshots — certificate wording is the product's public record),
+  format+lint, commit.
 
 ### Task 10: Per-table validation (`validate.R`)
 
@@ -722,37 +1375,48 @@ test_that("standardisation is idempotent", {
 `tests/testthat/fixtures/miniproject/` completed: `specs/tables/estimates.yaml`,
 `specs/tables/rob.yaml`, `specs/joins.yaml` (copies of the good fixtures with paths
 pointing at `data/raw/*.csv` from Task 6), plus a second all-clean fixture project
-`fixtures/miniproject-clean/` whose data contains no defects and whose dictionary
-lists `extra_col` name-only.
+`fixtures/miniproject-clean/` whose data contains no defects; `extra_col` stays
+undeclared and appears only in the certificate's informational annex.
 
 **Interfaces — Produces:**
 - `rev_check_specs(project = ".")` → validates ALL spec files with **no data
   required** (dictionaries via `rev_read_dictionaries()`, joins via
-  `rev_read_joins()`); on problems, the standard `abort_spec()` listing; on success,
-  prints "All specs valid: {n} table{?s}, {n} join{?s}." (snapshot-tested) and
-  returns the loaded specs invisibly. Serves the prespecification workflow
-  (dictionary authored before data collection as the extraction instrument's source
-  of truth) — spec validation deliberately checks that `source.file` is *declared*,
-  never that it exists.
-- `rev_check(project = ".", quiet = FALSE)` → invisibly `rev_findings` with
-  attributes `certificate` (`rev_certificate`) and `assembled` (tibble | NULL).
+  `rev_read_joins()`, catching the constructors' classed aborts via their
+  `problems` condition field). ALWAYS completes: prints the spec report, writes
+  `output/reports/spec-<runstamp>.xlsx` + certificate (amendment 5), returns the
+  `rev_report` invisibly (loaded specs as attribute when certified). NO abort on
+  problems — status "NOT CERTIFIED" (consistent with `rev_check()` on findings);
+  snapshot-tested both statuses. Serves the prespecification workflow
+  (dictionary authored before data collection as the extraction instrument's
+  source of truth; the CERTIFIED report is the registerable artifact) — spec
+  validation deliberately checks that `source.file` is *declared*, never that it
+  exists.
+- `rev_check(project = ".", quiet = FALSE)` → invisibly the check-stage
+  `rev_report` (items = findings) with attribute `assembled` (tibble | NULL).
   Internally begins with the same loading step as `rev_check_specs()`.
   Sequence per D4: read dictionaries + joins spec (spec errors abort) → per table:
   `rev_read_table` → `rev_standardise` → `rev_validate_table` → `rev_join_tables` →
-  bind findings → certificate (acknowledgments from name-only columns actually
-  present + `unmatched_ok` joins) → unless `quiet`, print certificate then findings →
-  write `output/diagnostics/preprocessed-<table>.csv` and
-  `findings-<format(Sys.time(), "%Y%m%d-%H%M%S")>.xlsx` (skip xlsx when zero
-  findings). Never touches `data/raw/` (test asserts mtimes unchanged).
+  bind findings → `new_stage_report("check", ...)` (acknowledgments from
+  `unmatched_ok` joins; informational annex = unspecified columns per table) →
+  unless `quiet`, print the report →
+  write `output/diagnostics/preprocessed-<table>.csv` and the check-stage
+  report via `rev_export_report()` (`output/reports/check-<runstamp>.xlsx` +
+  certificate; runstamp `format(Sys.time(), "%Y%m%d-%H%M%S")`; always written,
+  even certified). If the spec stage is NOT CERTIFIED, write the spec report and
+  return it — data stages are impossible without valid specs. Never touches
+  `data/raw/` (test asserts mtimes unchanged).
 
-- [ ] **Step 1: failing tests** — `rev_check_specs()`: on the miniproject → success
-  message snapshot + invisible specs list; on a copy whose data/raw/ is DELETED →
-  still succeeds (no data required); on a bad-spec fixture → `revpiper_spec_error`.
+- [ ] **Step 1: failing tests** — `rev_check_specs()`: on the miniproject →
+  CERTIFIED report snapshot + spec report files exist under `output/reports/`;
+  on a copy whose data/raw/ is DELETED → still CERTIFIED (no data required); on
+  a bad-spec fixture → completes with status "NOT CERTIFIED", problems as items,
+  report files written, no error thrown.
   `rev_check()` on the miniproject: returns findings containing codes
-  `{"R006","V003","J004"}` at least; certificate status "NOT CERTIFIED";
+  `{"V003","J004"}` at least (`extra_col` sits in the unspecified annex, not in
+  findings); report status "NOT CERTIFIED";
   `output/diagnostics/preprocessed-estimates.csv` exists and its row numbering
   matches the `rows` in the V003 finding; raw file mtimes unchanged.
-  miniproject-clean: zero findings, "CERTIFIED", acknowledgments mention
+  miniproject-clean: zero findings, "CERTIFIED", the informational annex mentions
   `extra_col`; full console output snapshot for both projects.
 - [ ] **Steps 2–5:** watch fail, implement, watch pass (read snapshots carefully —
   this is the product's voice), format+lint, commit.
@@ -822,12 +1486,142 @@ build-ignored).
   the miniproject fixture; `devtools::document()`; reference complete-but-terse
   (vignettes are Phase 3).
 - [ ] **Step 4: full pre-push suite** — `air format .` (no diff),
-  `lintr::lint_package()` (0), `devtools::test()` (all pass),
-  `devtools::check(args = "--no-manual", build_args = "--no-manual", error_on =
-  "note")` (0/0/0). Fix anything found; commit.
+  `pkgload::load_all(); lintr::lint_package()` (0), `devtools::test()` (all
+  pass), `devtools::check(args = "--no-manual", build_args = "--no-manual",
+  error_on = "note")` (0/0/0), plus the phase's duplication/abstraction audit
+  (amendment 6): sweep the whole package for facts with two homes, literals in
+  code that belong in a registry, and parallel code that failed to generalise;
+  and the structural reviews (amendment 7h): the fact-home/schematic structure
+  across registries (including the same-named-fields divergence list) and
+  check parsimony (no per-element checks where one schema-generated check
+  covers all). Findings fixed or explicitly justified before handoff. Fix
+  anything found; commit.
 - [ ] **Step 5: handoff.** Report to Liz: branch `phase-1-core` ready; she fetches,
   pushes, opens the PR (squash-merge; CI green gate). Spec §4 one-line amendment
   (rev_check diagnostics, Decision 1) rides the same PR.
+
+### Task 15: Spec-axis file reorganisation (amendment 8)
+
+**Files:** rename `R/spec-joins.R` → `R/spec-join.R` (+ test twin + its
+`_snaps/` file); split `R/spec-dictionary.R` into `R/spec-generic.R` (the
+generic schema-driven battery: `run_entry_checks`/`run_contents_checks`/
+`run_list_checks`/`run_field_checks`, the YF/YE check definitions,
+`matches_shape`/`matches_type`, problem plumbing, `entry_names`/
+`entry_label`) and `R/spec-source.R` (`read_dictionary`,
+`read_dictionaries` incl. the set-level identity check, level entries +
+nesting, reference resolution wiring, the constructor,
+`dictionary_key_columns`; internal names per amendment 9). `read_joins`
+stays in the renamed `R/spec-join.R`; `R/spec-run.R` (`rev_spec_run()`,
+amendment 9) is already axis-named and does not move.
+`tests/testthat/test-spec-dictionary.R` splits along the same seam;
+snapshots relocate with their test files.
+
+- [x] **Step 1:** mechanical moves only — no behaviour change. Full suite
+  green before and after; relocated snapshots re-accepted only where
+  content is identical. (Done 2026-07-12, commit 1a0f5d2: sorted-line
+  content-identity verified for the R split, the test split, and the
+  snapshot split; the joins trio byte-identical. Placement judgment
+  calls, by the genericity rule: check_identity, check_reference, and
+  the plumbing predicates → spec-generic.R because spec-join.R calls
+  them; shared test helpers → helper-spec.R for parallel test
+  processes; the shape_phrase wording test rides with the battery
+  tests.)
+- [x] **Step 2:** `air format .`, zero lints, commit. (Done, same
+  commit; 345 pass, 9 pre-existing session-dependent lints — the Task
+  18 lint-gate question.)
+
+### Task 16: Spec report machinery (`report.R`) — old Task 9's core, spec instantiation only
+
+**Interfaces — Produces:** `new_stage_report(stage, items, annex =
+character(0))` → `rev_report`; `is_certified(report)` — the
+certification rule's one home (zero standing items); `print.rev_report`
+certificate with the stage line, appending `annex` (pre-rendered
+stage-specific lines the audit supplies, e.g. the joins disposition)
+verbatim; INTERNAL `export_report(report, dir)` →
+`<dir>/<stage>-<runstamp>.xlsx`
++ `<stage>-<runstamp>-certificate.txt`, returning paths invisibly
+(un-exported at Liz's review 2026-07-12: the audit always writes, so no
+user door is needed — export later if a real need appears; the
+`output/reports/` layout fact lands with Task 17, the one caller).
+Nothing in report.R is exported — the machinery serves the audits; the
+print method registers for the class. Certificate wording has one home
+(`format.rev_report`; the certificate file is the same text). Spec-
+stage items = the Task 2 problems tibble. The findings item schema is NOT
+built here (Phase 2, load). Signature revised at the simplify pass
+(2026-07-12): `acknowledgments` dropped as a dead parameter — it
+returns in Phase 2 WITH its cancellation logic; the spec-specific
+`unspecified` field generalised to `annex` (its rendering was
+stage-knowledge leaked into the generic formatter; the load audit will
+render its own unspecified-columns line).
+
+- [x] **Steps 1–5:** TDD per old Task 9, restricted to the spec
+  instantiation; certificate snapshots for both statuses, read before
+  acceptance (the certificate is the product's public record). (Done
+  2026-07-12, commits 87be99a + the simplify-pass commit; certificate
+  snapshots for CERTIFIED, NOT CERTIFIED, and the annex presented to
+  Liz at the check-in.)
+
+### Task 17: Spec-step audit
+
+**Interfaces — Produces:** `rev_spec_audit()` (named by amendment 9; its
+`joins` parameter and TRUE default per amendment 9d).
+Data-free: loads dictionaries + joins via the internal readers, catching their
+classed aborts through the `problems` condition field; ALWAYS completes —
+writes the report via internal `export_report()` and returns it
+VISIBLY (Liz's review 2026-07-13: no internal printing, no invisible()
+— auto-print renders the certificate via the registered method exactly
+when the call is unassigned; capture is the user opting into
+programmatic handling via is_certified(); composition benefit:
+rev_run() controls display by capturing), and ALWAYS emits exactly one
+cli status line on the message stream — outcome + certificate path
+(e.g. "Spec step CERTIFIED — certificate written to <path>") — so the
+status is seen whatever the calling pattern (Liz 2026-07-13, the
+parsimony review: goal 1 = one cli call; both outcomes message, one
+rule; wording is a pointer, never a restatement of certificate
+content; snapshot-tested). Loaded specs ride as an
+attribute when certified; NOT CERTIFIED on
+problems, no abort. Deliberately checks that `source.file` is declared,
+never that it exists (prespecification workflow: the CERTIFIED spec report
+is the registerable artifact).
+
+- [x] **Steps 1–5:** TDD per old Task 12's spec-only half — good-spec
+  fixture set → CERTIFIED snapshot + report files exist; bad-spec variant →
+  completes NOT CERTIFIED, problems as items, files written, no error; a
+  copy with data/raw/ deleted → still CERTIFIED (no data required).
+  (Done 2026-07-13, commits 19b6025 + 91f0326: rev_spec_audit() in
+  spec-audit.R; YX04 registered, catalogue row added, YX03's missing
+  row backfilled; the multi-file accumulation test uses two broken
+  dictionaries; certificate + status-line snapshots presented to Liz at
+  the check-in; simplify pass extracted dictionary_files(), reused
+  spec_set() for the specs attribute, moved output_reports_dir to
+  report.R as export_report()'s default.)
+
+### Task 18: Phase 1 close-out (old Task 14, re-scoped to the spec step)
+
+- [x] **Step 1:** CLAUDE.md relocation + `.Rbuildignore` + pkgdown
+  verification (old Task 14 Step 1, unchanged). (Done 2026-07-13,
+  3c1b23a: package_mds() verified empty.)
+- [x] **Step 2:** roxygen pass for the spec-stage exports (runnable
+  examples on the spec fixtures); NEWS bullets re-scoped to the spec step
+  (authoring, checking, certification before data collection). (Done
+  2026-07-13: examples run on inst/extdata/specs-example/.)
+- [x] **Step 3:** full pre-push suite + the duplication/abstraction audit
+  and structural reviews (amendments 6 and 7h) scoped to spec-stage code;
+  the full-inventory check-parsimony review moves to the process phase's
+  close-out. (Done 2026-07-13: 381 tests green; check 0 errors /
+  0 warnings / 0 notes after Liz's two rulings — the five Phase 2-3
+  Imports removed 6ab0ce9, and object_usage_linter excluded for
+  tests/testthat (its runner-environment model makes test-side verdicts
+  session-dependent; all other linters keep covering tests) → zero
+  lints deterministically. Audit defects fixed (section_label,
+  root_entry_label, iso_date one-homes); structural notes for Phase 2
+  recorded in spec §10; non-ASCII portability warning fixed.)
+- [x] **Step 4:** handoff — Liz fetches, pushes, opens the Phase 1 PR
+  (squash-merge; CI green gate). (Sandbox side complete 2026-07-13;
+  commands in the check-in.)
+
+**PHASE 1 (spec step) COMPLETE on the sandbox side, 2026-07-13** —
+exports: rev_spec_run(), rev_spec_audit(); awaiting Liz's push + PR.
 
 ## Self-review (performed at authoring)
 

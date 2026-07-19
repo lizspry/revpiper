@@ -1,0 +1,66 @@
+# inst/schema/fields.yaml — single source of truth for spec-field validation.
+# `kinds:` is the closed set of entry kinds; `properties:` defines the
+# property vocabulary (meanings, loading types, allowed values); `fields:`
+# instantiates it, one field per line, grouped under the kind the field
+# belongs to. Grouping is the statement of legality (there is no appears_in
+# property), and parse-time duplicate-key failure polices field names at the
+# right scope: one meaning per field name per kind, while the same name may
+# carry different properties under different kinds. The loader (R/schema.R)
+# and the conformance tests both read `kinds:` and `properties:` — kind
+# names, property names, and their handling exist nowhere in code.
+kinds: [file, source, column, level, join, join_file]
+properties:
+  field: {meaning: the key as written in user YAML, type: string, allowed: null}
+  kind: {meaning: "kind of entry the field belongs to — its group header under fields:, drawn from the kinds list", type: string, allowed: null}
+  required: {meaning: must be present in its kind of entry, type: boolean, allowed: null}
+  shape: {meaning: element type the value must have, type: string, allowed: [string, boolean, scalar, mapping, list_of_mappings]}
+  cardinality: {meaning: how many elements; one_or_many accepts a scalar and normalises it to a one-element list, type: string, allowed: [one, one_or_many, two]}
+  contains: {meaning: kind of entry a container field holds inside; null means keys are user data, type: string, allowed: null}
+  empty_ok: {meaning: a bare key with no value is legal, type: boolean, allowed: null}
+  domain: {meaning: "closed set of legal values (did-you-mean), always inline", type: list_of_strings, allowed: null}
+  permitted_types: {meaning: column types this field may appear on; the sentinel any means unrestricted, type: list_of_strings, allowed: null}
+  excludes: {meaning: fields that may not co-occur with this one, type: list_of_strings, allowed: null}
+  requires: {meaning: a sibling field that must be present for this one to be legal, type: string, allowed: null}
+  content_typed: {meaning: entries must match the column's declared type, type: boolean, allowed: null}
+  ordered: {meaning: entries must ascend (numeric or chronological), type: string, allowed: [ascending]}
+  unique_entries: {meaning: entries must be unique within the list, type: boolean, allowed: null}
+  refers_to: {meaning: values must name something the named section declares, type: string, allowed: [columns, levels, key columns]}
+  identity: {meaning: this field holds the entry's name; duplicates among siblings are policed, type: boolean, allowed: null}
+  default: {meaning: value assumed when absent; null means absent stays absent, type: verbatim, allowed: null}
+  permitted_adds: {meaning: join types (values of adds) this field may appear on; the sentinel any means unrestricted, type: list_of_strings, allowed: null}
+fields:
+  file:
+    table: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null, permitted_adds: any}
+    description: {required: false, shape: string, cardinality: one, contains: null, empty_ok: true, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    source: {required: true, shape: mapping, cardinality: one, contains: source, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    levels: {required: false, shape: mapping, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: key columns, identity: false, default: null, permitted_adds: any}
+    columns: {required: true, shape: list_of_mappings, cardinality: one_or_many, contains: column, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+  source:
+    file: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    sheet: {required: false, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    reader: {required: false, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+  column:
+    name: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: true, default: null, permitted_adds: any}
+    description: {required: false, shape: string, cardinality: one, contains: null, empty_ok: true, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    type: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: [text, integer, decimal, boolean, date], permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    values: {required: false, shape: scalar, cardinality: one_or_many, contains: null, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: [range], requires: null, content_typed: true, ordered: null, unique_entries: true, refers_to: null, identity: false, default: null, permitted_adds: any}
+    range: {required: false, shape: scalar, cardinality: two, contains: null, empty_ok: false, domain: null, permitted_types: [integer, decimal, date], excludes: [values], requires: null, content_typed: true, ordered: ascending, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    units: {required: false, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: [text, integer, decimal, date], excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    required: {required: false, shape: boolean, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false, permitted_adds: any}
+    unique: {required: false, shape: boolean, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false, permitted_adds: any}
+    missing: {required: false, shape: string, cardinality: one_or_many, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: true, refers_to: null, identity: false, default: [], permitted_adds: any}
+    constant_within_level: {required: false, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: levels, identity: false, default: null, permitted_adds: any}
+  join_file:
+    joins: {required: true, shape: list_of_mappings, cardinality: one_or_many, contains: join, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+  join:
+    adds: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: [variables, observations], permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    left: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    right: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: any}
+    keys: {required: true, shape: mapping, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: true, refers_to: null, identity: false, default: null, permitted_adds: any}
+    relationship: {required: true, shape: string, cardinality: one, contains: null, empty_ok: false, domain: [one-to-one, one-to-many, many-to-one, many-to-many], permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: null, permitted_adds: [variables]}
+    unmatched_ok: {required: false, shape: boolean, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: false, permitted_adds: [variables]}
+  level:
+    keys: {required: false, shape: string, cardinality: one_or_many, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: [combine], requires: null, content_typed: false, ordered: null, unique_entries: true, refers_to: key columns, identity: false, default: null, permitted_adds: any}
+    combine: {required: false, shape: string, cardinality: one_or_many, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: [keys], requires: null, content_typed: false, ordered: null, unique_entries: true, refers_to: columns, identity: false, default: null, permitted_adds: any}
+    separator: {required: false, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: combine, content_typed: false, ordered: null, unique_entries: false, refers_to: null, identity: false, default: "", permitted_adds: any}
+    within: {required: false, shape: string, cardinality: one, contains: null, empty_ok: false, domain: null, permitted_types: any, excludes: null, requires: null, content_typed: false, ordered: null, unique_entries: false, refers_to: levels, identity: false, default: null, permitted_adds: any}
