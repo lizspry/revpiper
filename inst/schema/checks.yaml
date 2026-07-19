@@ -182,8 +182,8 @@ checks:
     scope: cross-source
     property: identity
     meaning: two spec files claim the same table name
-    message_template: "duplicate table name '{table}'"
-    params: [table]
+    message_template: "duplicate table name '{table}' \u2014 declared by {files}"
+    params: [table, files]
     fix: the two files named
     implemented: true
   YX02:

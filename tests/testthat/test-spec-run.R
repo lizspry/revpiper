@@ -56,3 +56,18 @@ test_that("usage errors still abort before any checking", {
   )
   expect_error(rev_spec_run("no/such/dir"), class = "revpiper_spec_error")
 })
+
+test_that("single-file joins mode skips reference resolution (review gap)", {
+  root <- spec_project("specs-good")
+  writeLines(
+    paste0(
+      "joins:\n  - {adds: variables, left: ghost, right: phantom, ",
+      "keys: {ghost: [a], phantom: [b]}, relationship: one-to-many}"
+    ),
+    file.path(root, "specs", "joins.yaml")
+  )
+  withr::local_dir(root)
+  one <- suppressMessages(rev_spec_run("specs", file = "joins.yaml"))
+  expect_identical(nrow(one$joins), 1L)
+  expect_length(one$tables, 0)
+})

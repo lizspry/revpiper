@@ -180,24 +180,31 @@ report_lines <- function(outcome) {
   )
 }
 
+# Every prebuilt line is interpolated as a VALUE ("{line}"), never as a
+# cli template: filenames are user-controlled and may contain braces
+# (review finding, 2026-07-19).
 announce_spec <- function(outcome) {
   lines <- report_lines(outcome)
-  cli::cli_text(lines$overall[[1]])
+  first <- lines$overall[[1]]
+  cli::cli_text("{first}")
   for (extra in lines$overall[-1]) {
-    cli::cli_alert_success(extra)
+    cli::cli_alert_success("{extra}")
   }
   for (i in seq_along(lines$per_file)) {
+    line <- lines$per_file[[i]]
     if (lines$ok[[i]]) {
-      cli::cli_alert_success(lines$per_file[[i]])
+      cli::cli_alert_success("{line}")
     } else {
-      cli::cli_alert_danger(lines$per_file[[i]])
+      cli::cli_alert_danger("{line}")
     }
   }
   if (!is.null(lines$written)) {
-    cli::cli_alert_success(lines$written)
+    written <- lines$written
+    cli::cli_alert_success("{written}")
   }
   if (!is.null(lines$excluded)) {
-    cli::cli_alert_info(lines$excluded)
+    excluded <- lines$excluded
+    cli::cli_alert_info("{excluded}")
   }
 }
 

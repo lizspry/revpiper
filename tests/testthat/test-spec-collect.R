@@ -122,3 +122,25 @@ test_that("joins = FALSE skips an EXISTING joins spec too (review gap)", {
   expect_named_records(out, c("estimates.yaml", "rob.yaml"))
   expect_identical(nrow(out$specs$joins), 0L)
 })
+
+test_that("two FAILED files claiming one table: YX01 on both, related names both (Liz)", {
+  root <- spec_project("specs-good")
+  tables <- file.path(root, "specs", "tables")
+  broken <- c(
+    "table: estimates",
+    "source: {file: a.csv}",
+    "columns:",
+    "  - {nam: study, type: text}"
+  )
+  writeLines(broken, file.path(tables, "estimates.yaml"))
+  writeLines(broken, file.path(tables, "estimates-old.yaml"))
+  out <- collect_spec_step(file.path(root, "specs"))
+  expect_true("YX01" %in% record(out, "estimates.yaml")$problems$code)
+  expect_true("YX01" %in% record(out, "estimates-old.yaml")$problems$code)
+  joins_related <- record(out, "joins.yaml")$problems$related
+  expect_true(any(grepl(
+    "estimates-old.yaml, estimates.yaml",
+    joins_related,
+    fixed = TRUE
+  )))
+})

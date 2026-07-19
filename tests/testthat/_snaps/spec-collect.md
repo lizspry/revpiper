@@ -5,8 +5,10 @@
     Output
                                       file          entry code
       1 estimates-a.yaml, estimates-b.yaml dictionary set YX01
-                                 message suggestion related
-      1 duplicate table name 'estimates'       <NA>    <NA>
+                                                                                  message
+      1 duplicate table name 'estimates' — declared by estimates-a.yaml, estimates-b.yaml
+        suggestion related
+      1       <NA>    <NA>
 
 # zero dictionaries is a standing problem, never vacuous (battery)
 

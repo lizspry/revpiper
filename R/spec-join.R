@@ -141,7 +141,10 @@ resolve_join_references <- function(
   # 2026-07-19); an unreadable table field asserts no link.
   related_for <- function(v) {
     if (v %in% names(failed_tables)) {
-      sprintf(related_phrases$incomplete_file, failed_tables[[v]])
+      sprintf(
+        related_phrases$incomplete_file,
+        paste(failed_tables[[v]], collapse = ", ")
+      )
     }
   }
   bind_problems(lapply(seq_along(raw$joins), \(i) {

@@ -25,9 +25,10 @@ the function that hands the validated specs onward.
 Checks every spec file and reports, per file — it never errors on
 spec problems, and never returns a usable spec object. Every table
 dictionary is checked standalone with problems accumulated across all
-files, the across-dictionary identity check runs over the
-dictionaries that loaded, and (with \code{joins = TRUE}) the joins spec is
-checked against them. One plain-text report per input spec file is
+files, the across-dictionary identity check runs over every DECLARED
+table name — loaded, or readable from a failed file's raw \verb{table:}
+field — and (with \code{joins = TRUE}) the joins spec is checked against
+the dictionaries that loaded. One plain-text report per input spec file is
 written to a fresh run folder under \verb{output/reports/} — a summary of
 the file's contents when it certifies, its error log when it does not
 — and the console states each file's certification with a pointer to

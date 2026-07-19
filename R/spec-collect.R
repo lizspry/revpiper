@@ -11,7 +11,14 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
   read <- lapply(files, read_dictionary)
   loaded <- !vapply(read, \(r) is.null(r$value), logical(1))
   tables <- name_by_table(lapply(read[loaded], `[[`, "value"))
-  identity <- check_table_identity(names(tables), files[loaded])
+  intended <- intended_tables(files[!loaded])
+  # Identity polices every DECLARED table name — loaded, or readable
+  # from a failed file's raw table: field — so two broken files claiming
+  # one table are visible too (Liz, 2026-07-19, battery follow-up).
+  identity <- check_table_identity(
+    c(names(tables), intended$tables),
+    c(files[loaded], intended$files)
+  )
   # Exact membership, never substring matching: s.yaml must not inherit
   # estimates.yaml's YX01 (review finding, 2026-07-19).
   identity_files <- strsplit(identity$file, ", ", fixed = TRUE)
@@ -25,6 +32,7 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
     new_record(basename(files[[i]]), "dictionary", own, read[[i]]$value)
   })
   failed_tables <- intended_tables(files[!loaded])
+  failed_tables <- split(basename(intended$files), intended$tables)
   if (length(files) == 0) {
     # Zero dictionaries never certifies vacuously (battery decision,
     # Liz 2026-07-19): a spec set that describes nothing is a standing
@@ -84,17 +92,24 @@ new_outcome <- function(records, joins_excluded = FALSE) {
 }
 
 # The table each failed file INTENDED, read straight from its raw YAML;
-# an unreadable or non-string table field asserts no link (related is
-# deterministic or absent, never guessed).
+# an unreadable or non-string table field asserts nothing (related and
+# identity stay deterministic or absent, never guessed). Every intending
+# file is kept (accumulate, Liz 2026-07-19): the related note names them
+# all, and the identity check sees them all.
 intended_tables <- function(failed_files) {
-  out <- character(0)
-  for (f in failed_files) {
-    table <- tryCatch(yaml::read_yaml(f)$table, error = \(e) NULL)
-    if (is_string(table)) {
-      out[[table]] <- basename(f)
-    }
-  }
-  out
+  tables <- vapply(
+    failed_files,
+    \(f) {
+      table <- tryCatch(yaml::read_yaml(f)$table, error = \(e) NULL)
+      if (is_string(table)) table else NA_character_
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
+  list(
+    tables = tables[!is.na(tables)],
+    files = failed_files[!is.na(tables)]
+  )
 }
 
 collect_joins <- function(dir, tables, failed_tables) {
@@ -170,11 +185,13 @@ spec_joins_path <- function(dir) {
 check_table_identity <- function(tables, files) {
   dupes <- unique(tables[duplicated(tables)])
   bind_problems(lapply(dupes, \(d) {
+    involved <- paste(basename(files[tables == d]), collapse = ", ")
     flag_problem(
-      paste(basename(files[tables == d]), collapse = ", "),
+      involved,
       "dictionary set",
       "YX01",
-      table = d
+      table = d,
+      files = involved
     )
   }))
 }

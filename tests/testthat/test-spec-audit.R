@@ -63,3 +63,14 @@ test_that("joins = FALSE is stated wherever the summary appears (review)", {
   )
   expect_snapshot(print(out), transform = scrub_runstamp)
 })
+
+test_that("filenames with braces never crash the console (review)", {
+  root <- spec_project("specs-good")
+  file.rename(
+    file.path(root, "specs", "tables", "rob.yaml"),
+    file.path(root, "specs", "tables", "rob{1}.yaml")
+  )
+  withr::local_dir(root)
+  expect_no_error(out <- suppressMessages(rev_spec_audit("specs")))
+  expect_true(out$certified)
+})
