@@ -41,6 +41,13 @@ abort). The `related` column is filled by two deterministic rules only.
   lands in this branch (Task 10), per outward-docs-never-fork-the-design.
 - Examples in roxygen must write only under `tempdir()` (both functions now
   write reports).
+- Test idiom: withr (`withr::local_*`) for fixtures and state — adopted
+  Liz 2026-07-19, recorded in dev/conventions.md §Style & formatting.
+  withr enters Suggests at its first use (Task 5). No new setwd/on.exit
+  or tempfile/on.exit pairs; existing ones migrate in Tasks 5-7 rewrites.
+- First instance of any new pattern is a decision point: surface it at
+  the task walkthrough for sign-off, never default silently
+  (conventions.md rule, adopted 2026-07-19).
 - One open wording point, flagged for Liz at Task 6's walkthrough: the
   per-file report header reads `revpiper spec report — <file>` (neutral,
   because run writes the identical file), a deviation from the design
@@ -181,8 +188,8 @@ test_that("relate_same_entry links co-located errors deterministically", {
 # location, never causation. Rule 2 (set at flag time) wins where present.
 relate_same_entry <- function(problems) {
   key <- paste(problems$file, problems$entry, sep = "\r")
-  n_at <- ave(rep(1L, length(key)), key, FUN = sum)
-  fill <- n_at > 1 & is.na(problems$related)
+  shared <- key %in% key[duplicated(key)]
+  fill <- shared & is.na(problems$related)
   problems$related[fill] <- "other error in this entry"
   problems
 }
@@ -347,22 +354,26 @@ verbatim: `sprintf("spec file %s has standing errors", failed_tables[[v]])`.
 
 ```r
 test_that("a join side naming a failed file's table carries the cross-file related", {
-  dicts <- list(rob = read_dictionary(fixture_path("rob.yaml")))
-  joins_path <- fixture_path("joins.yaml")  # declares estimates <-> rob
+  # rob loads; estimates' dictionary is absent (failed): the join's left
+  # side cannot resolve. With failed_tables knowledge, related states why.
+  dicts <- good_dictionaries()["rob"]
+  path <- withr::local_tempfile(fileext = ".yaml")
+  yaml::write_yaml(list(joins = list(minimal_join())), path)
   e <- tryCatch(
-    read_joins(joins_path, dicts, failed_tables = c(estimates = "estimates.yaml")),
+    read_joins(path, dicts, failed_tables = c(estimates = "estimates.yaml")),
     revpiper_spec_error = identity
   )
   yx02 <- e$problems[e$problems$code == "YX02", ]
   expect_true("spec file estimates.yaml has standing errors" %in% yx02$related)
   # without the failed-tables knowledge: plain YX02, related NA
-  e2 <- tryCatch(read_joins(joins_path, dicts), revpiper_spec_error = identity)
+  e2 <- tryCatch(read_joins(path, dicts), revpiper_spec_error = identity)
   expect_true(all(is.na(e2$problems$related[e2$problems$code == "YX02"])))
 })
 ```
 
-(Reuse the file's existing fixture accessors; `fixture_path()` stands for
-whatever helper test-spec-join.R already uses.)
+(`good_dictionaries()` and `minimal_join()` are test-spec-join.R's
+existing helpers; the temp-yaml round-trip mirrors its `joins_from_list()`
+idiom, done inline because this call needs the `failed_tables` argument.)
 
 - [ ] **Step 2: Run to verify failure.**
 
@@ -488,15 +499,26 @@ test_that("single-file mode collects one record, within-file only", {
 })
 ```
 
-Add the tiny helpers (`specs_example_copy`, `break_file`, `record`,
-`expect_named_records`) to `tests/testthat/helper-spec.R` — Tasks 6, 7,
-and 8's tests use them too. `specs_example_copy()` copies
-`system.file("extdata", "specs-example", package = "revpiper")` into a
-`withr::local_tempdir()` (with `.local_envir = parent.frame()`) and
-returns the copy's path; `break_file(dir, file)` rewrites `name:` to
-`nam:` in the last column entry of `<dir>/tables/<file>`; `record(out,
-name)` returns the record whose `$name` matches; `expect_named_records(
-out, names)` asserts the records' names setequal `names`.
+Helpers, all in `tests/testthat/helper-spec.R` (Tasks 6-8 use them too;
+withr idiom per the adopted convention — add `withr` to DESCRIPTION
+Suggests in this task, its first use):
+- `spec_project(fixture)` — PROMOTED from test-spec-audit.R (delete it
+  there in Task 7's rewrite), reimplemented with
+  `dir <- withr::local_tempdir(.local_envir = parent.frame())`, copying
+  `test_path("fixtures", fixture)` in as `<dir>/specs`, returning `dir`.
+  Callers that need the cwd use `withr::local_dir(spec_project(...))`;
+  Task 5's collector tests pass `file.path(root, "specs")` directly.
+- `scrub_runstamp()` — PROMOTED from test-spec-audit.R verbatim.
+- `break_file(root, file)` — rewrites `name:` to `nam:` in the last
+  column entry of `<root>/specs/tables/<file>`.
+- `record(out, name)` — the record whose `$name` matches.
+- `expect_named_records(out, names)` — records' names setequal `names`.
+- Migrate `joins_from_list()`'s `tempfile`/`on.exit` pair to
+  `withr::local_tempfile()` (test-spec-join.R keeps working unchanged).
+In the Task 5-8 test code below, read `specs_example_copy()` as
+`file.path(spec_project("specs-good"), "specs")` for collector calls, and
+as `withr::local_dir(spec_project("specs-good"))` + `"specs"` where the
+test also exercises report-writing (Tasks 6-8).
 
 - [ ] **Step 2: Run to verify failure** — collect_spec_step not found.
 
@@ -709,6 +731,13 @@ test_that("export writes one txt per input file in a per-run folder", {
 (Report filename: `<spec filename with .yaml stripped>.txt` — matches the
 design mock `estimates.txt`.)
 
+`unique_run_dir(dir, stem)` (same file): returns `file.path(dir, stem)`
+if it does not exist, else the first of `<stem>-2`, `<stem>-3`, ... that
+does not — the design's never-overwrite promise held even for two runs
+within one second. Test (add to the export test): call
+`export_spec_reports(out)` twice in the same second; expect two distinct
+existing directories.
+
 - [ ] **Step 2: Run to verify failure.**
 
 - [ ] **Step 3: Implement** (in `R/report.R`)
@@ -765,7 +794,7 @@ format_problem_table <- function(problems) {
 }
 
 export_spec_reports <- function(outcome, dir = output_reports_dir) {
-  run_dir <- file.path(dir, sprintf("%s-%s", outcome$stage, runstamp()))
+  run_dir <- unique_run_dir(dir, sprintf("%s-%s", outcome$stage, runstamp()))
   dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
   files <- vapply(outcome$files, \(record) {
     path <- file.path(

@@ -71,6 +71,15 @@ source), not here — this document covers code conventions only.
 ## Style & formatting
 - Tidyverse style guide, uncustomised. Air formats everything (air.toml
   committed, defaults only). Never hand-format; never argue with Air.
+- The style commitment is tidyverse-throughout, tooling included — not
+  only the style guide's letter. Tests use withr (`withr::local_*` /
+  `with_*`) for fixtures and state, never hand-rolled setwd/on.exit or
+  tempfile/on.exit pairs (adopted Liz 2026-07-19, after a base-idiom
+  drift; withr already rides with testthat, declared in Suggests).
+- The first instance of any new pattern — idiom, tooling, test
+  scaffolding, file layout — is a decision point: surface it for Liz's
+  sign-off at the walkthrough; never resolve a gap in these conventions
+  by silent default (adopted Liz 2026-07-19).
 - snake_case; `<-` for assignment; native pipe `|>` in new code.
 - Comment section headers are single `# Text` lines with a blank line
   above; subheaders name the check code they implement. No decorative
