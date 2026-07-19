@@ -72,8 +72,10 @@ test_that("usage errors still abort: file must be a filename, not a path", {
 
 test_that("duplicate table names across files flag YX01, snapshotted", {
   files <- list.files(bad_path("yx01-duplicate-table"), full.names = TRUE)
-  dicts <- name_by_table(lapply(files, \(f) read_dictionary(f)$value))
-  expect_snapshot(as.data.frame(check_table_identity(names(dicts), files)))
+  dicts <- read_dicts(bad_path("yx01-duplicate-table"))
+  expect_snapshot(
+    as.data.frame(check_table_identity(names(dicts), files)$problems)
+  )
 })
 
 test_that("zero dictionaries is a standing problem, never vacuous (battery)", {

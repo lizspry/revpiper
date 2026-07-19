@@ -7,11 +7,10 @@
 # table when not. The header says "report" — audit and run write the
 # identical file (Liz, 2026-07-19).
 format_file_report <- function(record, joins_excluded = FALSE) {
-  n <- nrow(record$problems)
   status <- if (record$certified) {
     "Status: CERTIFIED"
   } else {
-    sprintf("Status: NOT CERTIFIED (%d error%s)", n, if (n == 1) "" else "s")
+    sprintf("Status: NOT CERTIFIED (%s)", n_errors_label(nrow(record$problems)))
   }
   c(
     sprintf("revpiper spec report \u2014 %s", record$name),
@@ -30,6 +29,12 @@ format_file_report <- function(record, joins_excluded = FALSE) {
 # A certified file's summary: its own contents only — a dictionary's
 # report never describes joins (Liz, 2026-07-19); joins.yaml gets the
 # join lines.
+# The pluralized error count: one home for both the report status line
+# and the console per-file line.
+n_errors_label <- function(n) {
+  sprintf("%d error%s", n, if (n == 1) "" else "s")
+}
+
 format_summary <- function(record) {
   if (record$kind == "joins") {
     joins <- record$value
@@ -44,7 +49,7 @@ format_summary <- function(record) {
         )
       }
     )
-  } else {
+  } else if (record$kind == "dictionary") {
     d <- record$value
     levels <- names(d$levels)
     c(
@@ -60,14 +65,28 @@ format_summary <- function(record) {
         if (length(levels) == 0) "none" else paste(levels, collapse = ", ")
       )
     )
+  } else {
+    cli::cli_abort(
+      "Internal error: no summary renders a {.val {record$kind}} record."
+    )
   }
 }
 
 # The error table as text: headers plain, every cell left-aligned,
 # contents-width columns, NA shown empty. The file column is dropped —
 # the report is per-file.
+# The problem-display column set: one home, shared with the tests'
+# projection helper.
+problem_display_columns <- c(
+  "entry",
+  "code",
+  "message",
+  "suggestion",
+  "related"
+)
+
 format_problem_table <- function(problems) {
-  columns <- c("entry", "code", "message", "suggestion", "related")
+  columns <- problem_display_columns
   cells <- vapply(
     columns,
     \(column) {
@@ -117,7 +136,9 @@ export_spec_reports <- function(outcome, dir = output_reports_dir) {
 }
 
 # The joins disposition, stated wherever the summary appears (Liz,
-# 2026-07-19: an excluded joins spec must never read as certified).
+# 2026-07-19: an excluded joins spec must never read as certified; the
+# phrase lives whole per conventions, hence the long line).
+# nolint next: line_length_linter.
 joins_excluded_line <- "joins excluded (joins = FALSE) and therefore not audited/run"
 
 # The console/print lines, from one source (design mocks, signed off
@@ -129,95 +150,93 @@ report_lines <- function(outcome) {
   paths <- outcome$paths
   n <- length(outcome$files)
   ok <- vapply(outcome$files, `[[`, logical(1), "certified")
-  overall <- if (outcome$certified) {
-    c(
-      sprintf("revpiper spec %s: SUCCESS", outcome$verb),
-      sprintf(
-        "all input files CERTIFIED (%d of %d files certified)",
-        sum(ok),
-        n
+  tag <- function(level, text) list(level = level, text = text)
+  lines <- if (outcome$certified) {
+    list(
+      tag("plain", sprintf("revpiper spec %s: SUCCESS", outcome$verb)),
+      tag(
+        "success",
+        sprintf(
+          "all input files CERTIFIED (%d of %d files certified)",
+          sum(ok),
+          n
+        )
       )
     )
   } else {
-    sprintf(
-      "revpiper spec %s: NOT CERTIFIED (%d of %d files certified)",
-      outcome$verb,
-      sum(ok),
-      n
-    )
+    list(tag(
+      "plain",
+      sprintf(
+        "revpiper spec %s: NOT CERTIFIED (%d of %d files certified)",
+        outcome$verb,
+        sum(ok),
+        n
+      )
+    ))
   }
-  per_file <- vapply(
-    seq_along(outcome$files),
-    \(i) {
-      record <- outcome$files[[i]]
-      if (record$certified) {
-        sprintf("%s \u2014 CERTIFIED", record$name)
-      } else {
-        n_err <- nrow(record$problems)
+  per_file <- lapply(seq_along(outcome$files), function(i) {
+    record <- outcome$files[[i]]
+    if (record$certified) {
+      tag("success", sprintf("%s \u2014 CERTIFIED", record$name))
+    } else {
+      # path by index, never by name: two records may share a name
+      # (review finding, 2026-07-19)
+      tag(
+        "danger",
         sprintf(
-          "%s \u2014 NOT CERTIFIED (%d error%s) \u2014 see %s",
+          "%s \u2014 NOT CERTIFIED (%s) \u2014 see %s",
           record$name,
-          n_err,
-          if (n_err == 1) "" else "s",
-          # by index, never by name: two records may share a name
-          # (review finding, 2026-07-19)
+          n_errors_label(nrow(record$problems)),
           paths$files[[i]]
         )
-      }
-    },
-    character(1)
-  )
-  written <- if (outcome$certified) {
-    sprintf("reports written to %s/", paths$dir)
+      )
+    }
+  })
+  lines <- c(lines, per_file)
+  if (outcome$certified) {
+    lines <- c(
+      lines,
+      list(tag("success", sprintf("reports written to %s/", paths$dir)))
+    )
   }
-  excluded <- if (isTRUE(outcome$joins_excluded)) joins_excluded_line
-  list(
-    overall = overall,
-    per_file = per_file,
-    ok = ok,
-    written = written,
-    excluded = excluded
-  )
+  if (isTRUE(outcome$joins_excluded)) {
+    lines <- c(lines, list(tag("info", joins_excluded_line)))
+  }
+  lines
 }
 
-# Every prebuilt line is interpolated as a VALUE ("{line}"), never as a
-# cli template: filenames are user-controlled and may contain braces
-# (review finding, 2026-07-19).
+# One level -> (cli verb, glyph) map: the console and print() consume the
+# same tagged lines, so they cannot drift. Every prebuilt line is
+# interpolated as a VALUE ("{text}"), never as a cli template: filenames
+# are user-controlled and may contain braces (review, 2026-07-19).
+line_cli <- list(
+  plain = cli::cli_text,
+  success = cli::cli_alert_success,
+  danger = cli::cli_alert_danger,
+  info = cli::cli_alert_info
+)
+line_glyphs <- c(success = "\u2714", danger = "\u2716", info = "\u2139")
+
 announce_spec <- function(outcome) {
-  lines <- report_lines(outcome)
-  first <- lines$overall[[1]]
-  cli::cli_text("{first}")
-  for (extra in lines$overall[-1]) {
-    cli::cli_alert_success("{extra}")
-  }
-  for (i in seq_along(lines$per_file)) {
-    line <- lines$per_file[[i]]
-    if (lines$ok[[i]]) {
-      cli::cli_alert_success("{line}")
-    } else {
-      cli::cli_alert_danger("{line}")
-    }
-  }
-  if (!is.null(lines$written)) {
-    written <- lines$written
-    cli::cli_alert_success("{written}")
-  }
-  if (!is.null(lines$excluded)) {
-    excluded <- lines$excluded
-    cli::cli_alert_info("{excluded}")
+  for (line in report_lines(outcome)) {
+    text <- line$text # nolint: object_usage_linter. Consumed by cli's glue.
+    line_cli[[line$level]]("{text}")
   }
 }
 
 # print() repeats exactly what the call announced, glyphs included.
 #' @export
 format.rev_report <- function(x, ...) {
-  lines <- report_lines(x)
-  c(
-    lines$overall[[1]],
-    if (length(lines$overall) > 1) paste("\u2714", lines$overall[-1]),
-    paste(ifelse(lines$ok, "\u2714", "\u2716"), lines$per_file),
-    if (!is.null(lines$written)) paste("\u2714", lines$written),
-    if (!is.null(lines$excluded)) paste("\u2139", lines$excluded)
+  vapply(
+    report_lines(x),
+    function(line) {
+      if (line$level == "plain") {
+        line$text
+      } else {
+        paste(line_glyphs[[line$level]], line$text)
+      }
+    },
+    character(1)
   )
 }
 

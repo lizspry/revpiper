@@ -61,7 +61,7 @@
 # a self-join is flagged with or without dictionaries (YE09, battery)
 
     Code
-      as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
+      problem_frame(p)
     Output
                entry code                              message suggestion related
       1 join entry 1 YE09 left and right both name 'estimates'       <NA>    <NA>

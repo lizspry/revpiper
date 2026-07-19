@@ -3,22 +3,7 @@ joins_path <- function(fixture) {
 }
 
 good_dictionaries <- function() {
-  files <- list.files(
-    test_path("fixtures", "specs-good", "tables"),
-    full.names = TRUE
-  )
-  name_by_table(lapply(files, \(f) read_dictionary(f)$value))
-}
-
-# A zero-problem join the matrix mutates one aspect at a time.
-minimal_join <- function() {
-  list(
-    adds = "variables",
-    left = "estimates",
-    right = "rob",
-    keys = list(estimates = "study", rob = "study_id"),
-    relationship = "one-to-many"
-  )
+  read_dicts(test_path("fixtures", "specs-good", "tables"))
 }
 
 # Round-trip a joins list through a temp yaml file.
@@ -144,8 +129,7 @@ test_that("a join key may be another table's virtual column", {
     ),
     file.path(dir, "rob.yaml")
   )
-  files <- list.files(dir, full.names = TRUE)
-  dicts <- name_by_table(lapply(files, \(f) read_dictionary(f)$value))
+  dicts <- read_dicts(dir)
   j <- minimal_join()
   j$keys$estimates <- "study_key"
   joins <- joins_from_list(list(j), dicts)$value
@@ -206,8 +190,7 @@ test_that("dictionaries must be rev_dictionary objects", {
 test_that("each single-defect joins file reports naming its problem", {
   dicts <- good_dictionaries()
   read_bad <- function(fixture) {
-    p <- spec_problems(read_joins(bad_path(fixture), dicts))
-    as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
+    problem_frame(spec_problems(read_joins(bad_path(fixture), dicts)))
   }
 
   expect_snapshot(read_bad("joins-yx02-unknown-table.yaml"))
@@ -273,7 +256,5 @@ test_that("a self-join is flagged with or without dictionaries (YE09, battery)",
   expect_true("YE09" %in% spec_problems(standalone)$code)
   resolved <- joins_from_list(list(j))
   p <- spec_problems(resolved)
-  expect_snapshot(
-    as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
-  )
+  expect_snapshot(problem_frame(p))
 })

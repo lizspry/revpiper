@@ -60,8 +60,8 @@ related_phrases <- list(
 # Rule 1 of the related column (design 2026-07-19): a plain fact of
 # location, never causation. Rule 2 (set at flag time) wins where present.
 relate_same_entry <- function(problems) {
-  key <- paste(problems$file, problems$entry, sep = "\r")
-  shared <- key %in% key[duplicated(key)]
+  at <- problems[c("file", "entry")]
+  shared <- duplicated(at) | duplicated(at, fromLast = TRUE)
   fill <- shared & is.na(problems$related)
   problems$related[fill] <- related_phrases$same_entry
   problems

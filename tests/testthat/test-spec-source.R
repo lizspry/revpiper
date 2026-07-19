@@ -240,8 +240,7 @@ test_that("the reader carries the problems table as data, value withheld", {
 
 test_that("each single-defect dictionary aborts naming its problem", {
   read_bad <- function(fixture) {
-    p <- spec_problems(read_dictionary(bad_path(fixture)))
-    as.data.frame(p[c("entry", "code", "message", "suggestion", "related")])
+    problem_frame(spec_problems(read_dictionary(bad_path(fixture))))
   }
 
   expect_snapshot(read_bad("ye01-file-entry.yaml"))

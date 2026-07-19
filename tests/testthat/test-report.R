@@ -65,19 +65,18 @@ test_that("console pointers survive duplicate record names (review, battery B6)"
     ),
     file.path(root, "specs", "tables", "joins.yaml")
   )
-  writeLines(
-    paste0(
-      "joins:\n  - {adds: variables, left: nope, right: rob, ",
-      "keys: {nope: [a], rob: [study_id]}, relationship: one-to-many}"
-    ),
+  j <- minimal_join()
+  j$left <- "nope"
+  j$keys <- list(nope = "a", rob = "study_id")
+  yaml::write_yaml(
+    list(joins = list(j)),
     file.path(root, "specs", "joins.yaml")
   )
   withr::local_dir(root)
-  out <- collect_spec_step("specs")
-  out$verb <- "audit"
-  out$paths <- export_spec_reports(out)
-  lines <- report_lines(out)
-  joins_line <- lines$per_file[[length(lines$per_file)]]
+  out <- suppressMessages(rev_spec_audit("specs"))
+  lines <- format(out)
+  joins_line <- lines[startsWith(lines, "\u2716 joins.yaml ")]
+  expect_length(joins_line, 1)
   expect_match(joins_line, "spec-[0-9-]+/joins\\.yaml\\.txt")
   expect_no_match(joins_line, "tables/joins\\.yaml\\.txt")
 })

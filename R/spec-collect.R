@@ -12,6 +12,7 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
   loaded <- !vapply(read, \(r) is.null(r$value), logical(1))
   tables <- name_by_table(lapply(read[loaded], `[[`, "value"))
   intended <- intended_tables(files[!loaded])
+  failed_tables <- split(basename(intended$files), intended$tables)
   # Identity polices every DECLARED table name — loaded, or readable
   # from a failed file's raw table: field — so two broken files claiming
   # one table are visible too (Liz, 2026-07-19, battery follow-up).
@@ -19,20 +20,15 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
     c(names(tables), intended$tables),
     c(files[loaded], intended$files)
   )
-  # Exact membership, never substring matching: s.yaml must not inherit
-  # estimates.yaml's YX01 (review finding, 2026-07-19).
-  identity_files <- strsplit(identity$file, ", ", fixed = TRUE)
   records <- lapply(seq_along(files), \(i) {
-    involved <- vapply(
-      identity_files,
-      \(names) basename(files[[i]]) %in% names,
+    hit <- vapply(
+      identity$involved,
+      \(involved) basename(files[[i]]) %in% involved,
       logical(1)
     )
-    own <- rbind(read[[i]]$problems, identity[involved, ])
+    own <- rbind(read[[i]]$problems, identity$problems[hit, ])
     new_record(basename(files[[i]]), "dictionary", own, read[[i]]$value)
   })
-  failed_tables <- intended_tables(files[!loaded])
-  failed_tables <- split(basename(intended$files), intended$tables)
   if (length(files) == 0) {
     # Zero dictionaries never certifies vacuously (battery decision,
     # Liz 2026-07-19): a spec set that describes nothing is a standing
@@ -43,7 +39,10 @@ collect_spec_step <- function(dir, joins = TRUE, file = NULL) {
       "YX05",
       path = spec_tables_dir(dir)
     )
-    records <- c(list(new_record("tables", "set", problems, NULL)), records)
+    records <- c(
+      list(new_record(spec_tables_dirname, "set", problems, NULL)),
+      records
+    )
   }
   if (joins) {
     records <- c(records, list(collect_joins(dir, tables, failed_tables)))
@@ -179,21 +178,24 @@ spec_joins_path <- function(dir) {
 }
 
 # YX01: two spec files claim the same table name — a set-level fact, at
-# home with the set's assembly. Deliberately not check_identity: code,
-# params, entry label, and file semantics all differ, and set-level
-# tables are never NA (table is required per file).
+# home with the set's assembly. Returns the fact structurally beside the
+# rows (involvement is data; the comma-joined string exists only for
+# display) so the collector never parses prose. Deliberately not
+# check_identity: code, params, entry label, and file semantics differ.
 check_table_identity <- function(tables, files) {
   dupes <- unique(tables[duplicated(tables)])
-  bind_problems(lapply(dupes, \(d) {
-    involved <- paste(basename(files[tables == d]), collapse = ", ")
+  involved <- lapply(dupes, \(d) basename(files[tables == d]))
+  problems <- bind_problems(lapply(seq_along(dupes), \(i) {
+    display <- paste(involved[[i]], collapse = ", ")
     flag_problem(
-      involved,
+      display,
       "dictionary set",
       "YX01",
-      table = d,
-      files = involved
+      table = dupes[[i]],
+      files = display
     )
   }))
+  list(problems = problems, involved = involved)
 }
 
 # The shared spine: exactly what both audit and run do, once (design

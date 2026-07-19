@@ -101,3 +101,29 @@ expect_named_records <- function(outcome, names) {
     names
   )
 }
+
+# Load every dictionary in a tables dir, named by table: the reader
+# recipe the suite shares (three former copy sites).
+read_dicts <- function(dir) {
+  files <- list.files(dir, full.names = TRUE)
+  name_by_table(lapply(files, \(f) read_dictionary(f)$value))
+}
+
+# The problems tibble projected to the display columns, as a plain
+# data.frame for snapshots — the column set is format_problem_table's
+# own (problem_display_columns), so the two can never drift.
+problem_frame <- function(problems) {
+  as.data.frame(problems[problem_display_columns])
+}
+
+# A zero-problem join the matrix mutates one aspect at a time (moved
+# from test-spec-join.R when other files needed it too).
+minimal_join <- function() {
+  list(
+    adds = "variables",
+    left = "estimates",
+    right = "rob",
+    keys = list(estimates = "study", rob = "study_id"),
+    relationship = "one-to-many"
+  )
+}

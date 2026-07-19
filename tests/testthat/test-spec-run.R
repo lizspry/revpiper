@@ -59,11 +59,12 @@ test_that("usage errors still abort before any checking", {
 
 test_that("single-file joins mode skips reference resolution (review gap)", {
   root <- spec_project("specs-good")
-  writeLines(
-    paste0(
-      "joins:\n  - {adds: variables, left: ghost, right: phantom, ",
-      "keys: {ghost: [a], phantom: [b]}, relationship: one-to-many}"
-    ),
+  j <- minimal_join()
+  j$left <- "ghost"
+  j$right <- "phantom"
+  j$keys <- list(ghost = "a", phantom = "b")
+  yaml::write_yaml(
+    list(joins = list(j)),
     file.path(root, "specs", "joins.yaml")
   )
   withr::local_dir(root)
