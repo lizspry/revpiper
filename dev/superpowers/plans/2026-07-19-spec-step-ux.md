@@ -25,6 +25,18 @@ abort). The `related` column is filled by two deterministic rules only.
 **Tech Stack:** R (>= 4.2), cli, rlang, tibble, yaml. testthat edition 3
 (snapshot tests for console/report text). writexl is REMOVED.
 
+## Deferred-deletions ledger (check off AT the named task; none may
+## survive the branch)
+
+- Task 7: old report machinery (`new_stage_report`, `is_certified`,
+  `export_report`, old format/print bodies) + their test-report.R tests;
+  `audit_joins()`; test-spec-audit.R's file-local `spec_project`/
+  `scrub_runstamp` shadows; **writexl out of DESCRIPTION Imports**
+  (deferred from Task 6 — its last caller dies here).
+- Task 8: `stop_spec()`; `read_dictionaries()` (retire if no runtime
+  caller remains — expected); helper.R's `thrown_problems()`;
+  spec-run.R's interim single-file/run_spec_set paths.
+
 ## Global Constraints
 
 - Branch: `spec-step-ux`. Never commit to main. Git author/committer must
@@ -608,14 +620,9 @@ test_that("export writes one txt per input file in a per-run folder", {
 ```
 
 (Report filename: `<spec filename with .yaml stripped>.txt` — matches the
-design mock `estimates.txt`.)
-
-`unique_run_dir(dir, stem)` (same file): returns `file.path(dir, stem)`
-if it does not exist, else the first of `<stem>-2`, `<stem>-3`, ... that
-does not — the design's never-overwrite promise held even for two runs
-within one second. Test (add to the export test): call
-`export_spec_reports(out)` twice in the same second; expect two distinct
-existing directories.
+design mock `estimates.txt`. Same-second collision handling deliberately
+NOT built — Liz 2026-07-19: runs under one second apart are out of
+scope; a second run in the same second reuses the folder.)
 
 - [ ] **Step 2: Run to verify failure.**
 
@@ -673,7 +680,7 @@ format_problem_table <- function(problems) {
 }
 
 export_spec_reports <- function(outcome, dir = output_reports_dir) {
-  run_dir <- unique_run_dir(dir, sprintf("%s-%s", outcome$stage, runstamp()))
+  run_dir <- file.path(dir, sprintf("%s-%s", outcome$stage, runstamp()))
   dir.create(run_dir, recursive = TRUE, showWarnings = FALSE)
   files <- vapply(outcome$files, \(record) {
     path <- file.path(
