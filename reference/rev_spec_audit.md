@@ -43,7 +43,7 @@ specs_dir <- system.file("extdata", "specs-example", package = "revpiper")
 owd <- setwd(tempdir())
 report <- rev_spec_audit(dir = specs_dir)
 #> ✔ Spec step CERTIFIED — certificate written to
-#> output/reports/spec-20260719-040541-certificate.txt.
+#> output/reports/spec-20260719-042753-certificate.txt.
 report
 #> revpiper spec report
 #> Status: CERTIFIED
@@ -52,7 +52,7 @@ report
 #> Dictionary: rob.yaml — table 'rob'
 #> Joins: included
 list.files("output/reports")
-#> [1] "spec-20260719-040541-certificate.txt"
-#> [2] "spec-20260719-040541.xlsx"           
+#> [1] "spec-20260719-042753-certificate.txt"
+#> [2] "spec-20260719-042753.xlsx"           
 setwd(owd)
 ```
