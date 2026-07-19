@@ -35,10 +35,13 @@ implementation, per the outward-docs-never-fork-the-design rule.
   Frictionless `validate`, Great Expectations checkpoints).
 - **Audit never errors on spec problems, never returns a usable spec
   object.** It returns certification information only.
-- **Run always completes all checking for the step first** (no first-file
-  abort), then on any failure raises one clear error: no object returned,
-  no later pipeline step executes. On success it returns the spec set
-  invisibly.
+- **Run performs, writes, and prints exactly what audit does — literally
+  the same commands** (same checks, same per-file reports including the
+  certified reports on success, same console lines). It always completes
+  all checking first (no first-file abort). It differs only in its final
+  act: on success it returns the spec set invisibly; on any failure it
+  raises one clear error — nothing returned, no later pipeline step
+  executes.
 - An audit finishes examining everything **independent** and explicitly
   marks — rather than attempts — everything **dependent** on a failure
   (e.g. a join referencing a table whose file failed). It never continues
@@ -46,11 +49,13 @@ implementation, per the outward-docs-never-fork-the-design rule.
   structural: a failed spec step yields no object, so no later step can
   check data against an unsound spec.
 
-## Audit: per-file reports (replaces xlsx workbook + certificate)
+## Per-file reports, written by audit and run alike
+## (replaces xlsx workbook + certificate)
 
 - One plain-text report **per input spec file**, written to a per-run
   folder, never overwriting prior runs:
-  `output/reports/spec-audit-<runstamp>/<specfile>.txt`.
+  `output/reports/spec-<runstamp>/<specfile>.txt` (folder name neutral —
+  both functions write it).
 - Certified dictionary report: status + summary of the file's own contents
   (table, source, columns, levels). **No joins information in a
   dictionary's report** — joins summaries and errors belong solely to
@@ -113,20 +118,26 @@ Audit — points to the reports it wrote:
 ```
 revpiper spec audit: NOT CERTIFIED (1 of 3 files certified)
 ✔ rob.yaml — CERTIFIED
-✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-audit-20260719-101502/estimates.txt
-✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-audit-20260719-101502/joins.txt
+✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-20260719-101502/estimates.txt
+✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-20260719-101502/joins.txt
 ```
 
-Run, failure — points to the reports it wrote:
+(Audit success: the same shape — overall line, per-file CERTIFIED lines,
+reports-written line as in run's success mock below.)
+
+Run, failure — identical to audit, then the halting error (R always
+prints a final `Error:` line when a script is stopped; it is kept to one
+short sentence):
 
 ```
 revpiper spec run: NOT CERTIFIED (1 of 3 files certified)
 ✔ rob.yaml — CERTIFIED
-✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-audit-20260719-101502/estimates.txt
-✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-audit-20260719-101502/joins.txt
+✖ estimates.yaml — NOT CERTIFIED (2 errors) — see output/reports/spec-20260719-101502/estimates.txt
+✖ joins.yaml — NOT CERTIFIED (1 error) — see output/reports/spec-20260719-101502/joins.txt
+Error: spec set not certified and not returned.
 ```
 
-Run, success — invisible return; detail routes to audit:
+Run, success — invisible return:
 
 ```
 revpiper spec run: SUCCESS
@@ -134,7 +145,8 @@ revpiper spec run: SUCCESS
 ✔ estimates.yaml — CERTIFIED
 ✔ rob.yaml — CERTIFIED
 ✔ joins.yaml — CERTIFIED
-✔ data object/s returned for next pipeline stage
+✔ reports written to output/reports/spec-20260719-101502/
+✔ spec set returned, ready for the load step
 ```
 
 ## Returns
@@ -142,8 +154,10 @@ revpiper spec run: SUCCESS
 - `rev_spec_audit()`: certification information only — per-file statuses,
   standing problems, report paths. Printable. The `attr(report, "specs")`
   ride-along is removed.
-- `rev_spec_run()`: as per `rev_spec_audit()`, plus the spec set returned **invisibly** on success
-  Single-file mode (`file =`) retained, same presentation.
+- `rev_spec_run()`: identical side effects to `rev_spec_audit()` (same
+  reports, same console lines). Return value: the spec set, **invisibly**,
+  on success; on failure nothing is returned — the error above halts the
+  script. Single-file mode (`file =`) retained, same presentation.
 
 ## Error footer
 
